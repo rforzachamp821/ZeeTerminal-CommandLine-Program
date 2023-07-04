@@ -7,7 +7,7 @@ Colours are also brighter, making it more attractive for anyone. There are also 
 TerminalAppGen3 also now has new UI interfaces, where you can select using arrow keys and navigate through 'screens' using arrow keys. 
 Also, due to the support of arguments, speed of navigation can increase, and can teach new users how terminals may work by arguments.
 
-All of these above points, technologies and ease-of-use additions improve the TerminalApp series by a crazy amount. TerminalAppGen3 is now even more fun, and I hope you may try it today.
+All of these above points, technologies and ease-of-use additions improve TerminalAppGen3 by a crazy amount. The TerminalApp series is now even more fun, and I hope you may try it today.
 
 ## License Info
 This program is protected under the MIT license, which you can find in the LICENSE file in the files table. It's really not a bad license and it's not hard to follow, as it allows freedom of use and distribution. However, read it anyway, as you may not download this program if you disagree with the license.
