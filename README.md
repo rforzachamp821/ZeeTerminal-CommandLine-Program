@@ -4,7 +4,7 @@ TerminalAppGen3 is a new addition to the TerminalApp series of programs. With a 
 TerminalAppGen3 sports so many new things compared to the previous version (TerminalAppGen2), such as multithreading on some commands, word wrapping, RGB colours, some exception handling, and argument support for almost every command.
 Colours are also brighter, making it more attractive for anyone. There are also so many more settings that you can adjust, to make your TerminalAppGen3 like home.
 
-TerminalAppGen3 also now has new UI interfaces, where you can select using arrow keys and navigate through 'screens' using arrow keys. 
+TerminalAppGen3 also now has new UI interfaces which make it so much easier to use, where you can select options using arrow keys and navigate through 'screens' using arrow keys. 
 Also, due to the support of arguments, speed of navigation can increase, and can teach new users how terminals may work by arguments.
 
 All of these above points, technologies and ease-of-use additions improve TerminalAppGen3 by a crazy amount. The TerminalApp series is now even more fun, and I hope you may try it today.
