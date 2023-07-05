@@ -18,3 +18,5 @@ TerminalAppGen2 is available here: https://github.com/rforzachamp821/TerminalApp
 TerminalApp Gen 1 is available in the following archive: https://github.com/rforzachamp821/Console-Based_Collection 
 
 **Note:** If you find any bugs or issues, or you want to give feedback, please do so in the 'Issues' tab above. It would be really helpful, thanks!
+
+TerminalAppGen3 was made by Ryan Zorkot. (c) 2023 Ryan Zorkot.
