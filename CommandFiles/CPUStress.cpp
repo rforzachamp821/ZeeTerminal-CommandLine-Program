@@ -109,7 +109,7 @@ void CpuBenchmark(short int nSingleOrMulti, long long int nArgNum = -1) {
 	if (nSingleOrMulti == 1) {
 
 		// Start timer and call the cpu benchmark worker only once for single core
-		std::cout << "Starting single-core benchmark with " << nReiterationCount << " reiterations.\n";
+		std::cout << "Starting single-core benchmark with " << nReiterationCount << " reiterations, 1 core.\n";
 		slowcolourfn(LGRN, sColourGlobalBack, "Single-core benchmark has started...\n");
 		clearkeebbuf();
 
@@ -139,7 +139,7 @@ void CpuBenchmark(short int nSingleOrMulti, long long int nArgNum = -1) {
 		std::vector<std::thread> vThreads(nLogicalCoreCount);
 
 		// Start timer and call the cpu benchmark worker nLogicalCoreCount times
-		std::cout << "Starting multi-core benchmark with " << nReiterationCount << " reiterations.\n";
+		std::cout << "Starting multi-core benchmark with " << nReiterationCount << " reiterations, " << nLogicalCoreCount << " logical cores.\n";
 		slowcolourfn(LGRN, sColourGlobalBack, "Multi-core benchmark has started...\n");
 		clearkeebbuf();
 
@@ -157,7 +157,7 @@ void CpuBenchmark(short int nSingleOrMulti, long long int nArgNum = -1) {
 				break;
 			}
 			// Output progress
-			std::cout << "Progress: " << (nCurrentReiterationNum * 100) / nReiterationCount << "%\r";
+			std::cout << "Progress: " << (nCurrentReiterationNum * 100) / nReiterationCount << "%    \r";
 		}
 
 		StopCpuStress = true;

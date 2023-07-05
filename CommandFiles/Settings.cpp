@@ -608,8 +608,8 @@ void CursorSettings(short int nChoice = 0, short int nChoiceBlink = 0, short int
 			oseShape.nSizeOfOptions = 3;
 			std::string sOptions[] = {
 				"Block Shape",
-				"Underline-style Shape"
-				"Bar Shape (Default)",
+				"Underline-style Shape",
+				"Bar Shape (Default)"
 			};
 			oseShape.sOptions = sOptions;
 
@@ -705,9 +705,9 @@ void OtherSettings(short int nChoice = 0, int nChoiceSlowChSpeed = 0, bool bFrom
 			CentreColouredText(" ___SLOWCHAR SPEED SETINGS___ ", 1);
 			std::cout << "\n";
 			colourSubheading(); // extra info colour is the same as subheading colour
-			std::cout << "Higher numbers are faster.";
+			std::cout << "Higher numbers are faster." << NOULINE_STR;
 			colour(sColourGlobal, sColourGlobalBack);
-			std::cout << "\nDefault Speed: 45\n" << wordWrap("Input 0 to disable SlowChar entirely, and input a negative number to exit.") << '\n';
+			std::cout << "\nDefault Speed: 45\nCurrent Speed: " << nSlowCharSpeed << "\n\n" << wordWrap("Input 0 to disable SlowChar entirely, and input a negative number to exit.") << '\n';
 
 			nChoiceSlowChSpeed = num("Please input how fast you want SlowChar to be: > ");
 		}
@@ -791,4 +791,6 @@ void OtherSettings(short int nChoice = 0, int nChoiceSlowChSpeed = 0, bool bFrom
 
 		return;
 	}
+
+	return;
 }

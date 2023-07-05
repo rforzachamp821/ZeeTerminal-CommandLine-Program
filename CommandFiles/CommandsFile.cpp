@@ -186,7 +186,7 @@ void ColourBackground(int nChoice = 0) {
 		oseColourBack.sOptions = sOptions;
 
 		// Display options
-		int nChoice = oseColourBack.OptionSelect("Please choose your desired background colour below:", " ___COLOUR___ ");
+		nChoice = oseColourBack.OptionSelect("Please choose your desired background colour below:", " ___COLOUR___ ");
 	}
 	else if (nChoice == 17) {
 		colour(YLW, sColourGlobalBack);
@@ -408,7 +408,7 @@ void help() {
 	sneHelp.nSizeOfScreens = 3;
 	std::string sScreens[] =
 	{
-		"___LIST OF COMMANDS___\n\n[1] Help\n[2] Exit\n[3] Tutorial\n[4] DevOptions\n[5] CPUStress\n[6] Colour\n[7] Settings\n[8] Title\n[9] Date\n[10] ColourNumbers\n\nMore will be added soon!\n",
+		"___LIST OF COMMANDS___\n\n[1] Help\n[2] Exit\n[3] Tutorial\n[4] DevTools\n[5] CPUStress\n[6] Colour\n[7] Settings\n[8] Title\n[9] Date\n[10] ColourNumbers\n\nMore will be added soon!\n",
 
 		"___FREQUENTLY ASKED QUESTIONS___\n\n"
 		"1) I can't see the terminal text. How can I zoom in?\n  1a) You can zoom in, of course. Press and hold the Ctrl button and scroll with the mouse to your desired text size.\n",
@@ -739,7 +739,7 @@ void DevTools(short int nToolNum) {
 		CentreColouredText(" ___ANSI VT TESTING ENVIRONMENT___ ", 1);
 		std::cout << std::endl;
 		colourSubheading();
-		slowcharCentredFn(true, "This is a sandbox-style testing enviroment for ANSI (VT) escape codes. For experienced users only.");
+		slowcharCentredFn(true, "This is a sandbox-style testing enviroment for ANSI (VT) escape codes.");
 		colour(sColourGlobal, sColourGlobalBack);
 
 		std::cout << NOULINE_STR << "\n\n" << wordWrap("You can test any ANSI escape code here. Everything will be reset after exiting the sandbox (by typing in 0 or \"zero\").");
@@ -1881,6 +1881,15 @@ void Commands(const std::string sCommand, char* cCommandArgs, std::string* sStri
 				break;
 			case 6:
 				AnsiSettings();
+				break;
+			case 7:
+				WordWrapSettings();
+				break;
+			case 8:
+				CursorSettings();
+				break;
+			case 9:
+				OtherSettings();
 				break;
 
 			default:
