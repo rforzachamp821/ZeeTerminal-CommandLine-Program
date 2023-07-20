@@ -13,11 +13,15 @@
 #include <Windows.h>
 #include <mmsystem.h>
 #include <random>
+#include <AtlBase.h>
+#include <atlconv.h>
 #include "Engine\ScreenNavigateEngine.cpp"
 #include "Engine\OptionSelectEngine.cpp"
 #include "Engine\TableEngine.cpp"
 #include "Engine\RGBColourPreset-System.cpp"
+#include "Engine\MultimediaEngine.cpp"
 #include "CommandFiles\CommandsFile.cpp"
+
 
 #pragma comment(lib, "winmm.lib") // To access MMSYSTEM libs
 
@@ -35,6 +39,7 @@ bool bRandomColoursOnStartup = false;
 bool bShowCursor = true;
 bool bWordWrapToggle = true;
 bool bCursorBlink = true;
+bool bTermCustomThemeSupport = false;
 
 int nSlowCharSpeed = 45;
 int nCursorShape = 5; // TYPES are: block blinking (1), block steady (2), underline blinking (3), underline steady (4), bar blinking (5), bar steady (6)
@@ -83,8 +88,15 @@ void SetCursorAttributes() {
 // Sets the colour and background colour
 void colour(std::string sColourForegroundChoice, std::string sColourBackgroundChoice) {
 	if (bAnsiVTSequences) {
+
 		// Foreground
 		std::cout << "\x1b[38;2;" << sColourForegroundChoice << "m";
+
+		// Support for transparency in Windows Terminal; black is usually default background colour so will be default here
+		if (sColourBackgroundChoice == BLK && bTermCustomThemeSupport) {
+			std::cout << "\x1b[49m";
+			return;
+		}
 
 		// Background
 		std::cout << "\x1b[48;2;" << sColourBackgroundChoice << "m";
@@ -184,9 +196,9 @@ void SetCursorPosition(int x, int y) {
 //
 // This takes in an std::string as an argument, and returns another std::string with the word wrapping in the string.
 std::string wordWrap(std::string text) {
-	unsigned per_line;
-	unsigned line_begin = 0;
 	int width = 0;
+	std::string result = "";
+    int counter = 0;
 
 	// Cannot do word wrapping if disabled
 	if (bWordWrapToggle == false) return text;
@@ -195,35 +207,33 @@ std::string wordWrap(std::string text) {
 	CONSOLE_SCREEN_BUFFER_INFO csbiWordWrap;
 	GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbiWordWrap);
 	width = csbiWordWrap.srWindow.Right - csbiWordWrap.srWindow.Left + 1;
-	per_line = width;
 
-	while (line_begin < text.size()) {
-		const unsigned ideal_end = line_begin + per_line;
-		unsigned line_end = ideal_end < text.size() ? ideal_end : text.size() - 1;
-
-		if (line_end == text.size() - 1)
-			++line_end;
-		else if (std::isspace(text[line_end])) {
-			text[line_end] = '\n';
-			++line_end;
+	int lastSpace = -1;
+	for (int i = 0; i < text.length(); i++) {
+		if (text[i] == '\n') {
+			counter = 0;
+			lastSpace = -1;
 		}
-		else {   // backtrack
-			unsigned end = line_end;
-			while (end > line_begin && !std::isspace(text[end]))
-				--end;
-
-			if (end != line_begin) {
-				line_end = end;
-				text[line_end++] = '\n';
+		else if (text[i] == '\t') { // tabstop is usually 8 spaces; might be dynamic in future
+			counter += 8;
+		}
+		else if (counter == width) {
+			if (lastSpace != -1) {
+				result[lastSpace] = '\n';
+				counter = i - lastSpace - 1;
 			}
-			else
-				text.insert(line_end++, 1, '\n');
+			else {
+				result += '\n';
+				counter = 0;
+			}
 		}
-
-		line_begin = line_end;
+		if (text[i] == ' ') {
+			lastSpace = result.length();
+		}
+		result += text[i];
+		counter++;
 	}
-
-	return text;
+	return result;
 }
 
 // Function to display extra help information for specific commands
@@ -243,11 +253,11 @@ void DirectionsDisplay(std::string sPrompt) {
 void VerbosityDisplay(std::string sPrompt) {
 	if (bDisplayVerboseMessages == true && bAnsiVTSequences == true) {
 		colour(GRAY, BLK);
-		std::cout << "Verbose Message: " << sPrompt << std::endl;
+		std::cerr << "Verbose Message: " << sPrompt << std::endl;
 		colour(sColourGlobal, sColourGlobalBack);
 	}
 	else if (bDisplayVerboseMessages == true && bAnsiVTSequences == false) {
-		std::cout << "Verbose Message: " << sPrompt << std::endl;
+		std::cerr << "Verbose Message: " << sPrompt << std::endl;
 	}
 	return;
 }
@@ -314,7 +324,7 @@ bool YesNo(std::string sPrompt) {
 			break;
 		}
 	}
-	if (cInput == 'y') return true; else return false;
+	if (cInput == 'y' || cInput == 'Y') return true; else return false;
 }
 
 // WindowTitleSet - Function to set title for the console window.
@@ -450,6 +460,8 @@ void slowcharCentredFn(bool bNewLine, std::string sText) {
 		sleep(nSlowCharSpeed);
 		std::cout << sText[i];
 	}
+	// Output newline if call says so
+	if (bNewLine) std::cout << std::endl;
 	// In case a key was pressed while operation was commencing
 	clearkeebbuf();
 	return;
@@ -630,7 +642,7 @@ void ProgramInitialisation() {
 	SetCursorAttributes();
 
 	// Set window title to 'TerminalAppGen3'
-	WindowTitleSet("___TerminalAppGen3___");
+	WindowTitleSet("TerminalApp Gen 3");
 
 	// Finally, close away all of the initialisation messages with cls()
 	cls();

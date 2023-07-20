@@ -10,6 +10,7 @@ void colourSubheading();
 bool isNumber(const std::string);
 bool WindowTitleSet(std::string);
 void slowcharCentredFn(bool, std::string);
+void slowcharfn(bool, std::string);
 std::string CentreText(std::string);
 void SetCursorAttributes();
 
@@ -20,11 +21,194 @@ extern std::string sColourGlobal;
 extern std::string sColourGlobalBack;
 
 void Commands(const std::string, char*, std::string*, const std::string);
+void help();
 
 
 // Tutorial function
 void Tutorial() {
-	std::cout << "Sorry, but the tutorial is inaccessible at this time.\nExiting...";
+	std::string sInput;
+	cls();
+	slowcolourfn(LBLU, sColourGlobalBack, "Using this terminal is very straightforward, and all terminals are similar in some way.");
+	slowcolourfn(GRN, sColourGlobalBack, "\nFirstly, let's begin with the normal terminal screen:\n\n");
+	slowcolourfn(sColourGlobal, sColourGlobalBack, "Command: > \n\n");
+	slowcolourfn("255;165;0", sColourGlobalBack, "The 'Help' command tells us what commands are in this terminal.\n");
+	
+	// Input 'help' to continue
+	while (true) {
+		slowcolourfn(sColourGlobal, sColourGlobalBack, "Type in \"Help\" to see what happens: > ");
+		sInput = str("");
+		if (sInput == "Help" || sInput == "help") {
+			bool bPreviousHelpMsg = bDisplayDirections;
+			bDisplayDirections = true; // only temporary; gets put back to normal next 2 lines
+			help();
+			bDisplayDirections = bPreviousHelpMsg;
+			break;
+		}
+		else {
+			colour(RED, sColourGlobalBack);
+			std::cout << "Please try again.\n";
+		}
+	}
+	slowcharfn(true, "\nThat previous command also taught you how to use the ScreenNavigate engine.\nYou can move left and right between 'screens' to scroll through information that is in the command.\n");
+	
+	// OptionSelect Engine Tutorial
+	slowcolourfn(GRN, sColourGlobalBack, "\nNow is the next step, the OptionSelect engine.\nThis will teach you how to select options in this terminal.\n");
+	OptionSelectEngine oseTutorial;
+	oseTutorial.nSizeOfOptions = 3;
+	std::string sOptions[] = {
+		"Option 1",
+		"Option 2",
+		"Option 3"
+	};
+	oseTutorial.sOptions = sOptions;
+
+	bool bPreviousHelpMsg = bDisplayDirections;
+	bDisplayDirections = true; // only temporary; gets put back to normal afterwards
+
+	// Start option 1
+	int nOption1 = 0;
+	while (nOption1 != 1) {
+		nOption1 = oseTutorial.OptionSelect("Please select Option 1 from the set of options:", "___OPTIONSELECT TUTORIAL___");
+		switch (nOption1) {
+		case 1:
+			colour(LGRN, sColourGlobalBack);
+			std::cout << "That is correct!\n";
+			colour(sColourGlobal, sColourGlobalBack);
+			break;
+		case 2:
+			colour(RED, sColourGlobalBack);
+			std::cout << "Incorrect. Please try again.\n";
+			colour(sColourGlobal, sColourGlobalBack);
+			break;
+		case 3:
+			colour(RED, sColourGlobalBack);
+			std::cout << "Incorrect. Please try again.\n";
+			colour(sColourGlobal, sColourGlobalBack);
+			break;
+		case -1:
+			// Put help messages setting back to original value
+			bDisplayDirections = bPreviousHelpMsg;
+			Exiting();
+
+			return;
+		default:
+			colour(RED, sColourGlobalBack);
+			std::cout << "An unknown error occured. Please try again.\n";
+			colour(sColourGlobal, sColourGlobalBack);
+			break;
+		}
+	}
+
+	// Start option 3
+	int nOption3 = 0;
+	while (nOption3 != 3) {
+		nOption3 = oseTutorial.OptionSelect("Please select Option 3 from the set of options:", "___OPTIONSELECT TUTORIAL___");
+		switch (nOption3) {
+		case 1:
+			colour(RED, sColourGlobalBack);
+			std::cout << "Incorrect. Please try again.\n";
+			colour(sColourGlobal, sColourGlobalBack);
+			break;
+		case 2:
+			colour(RED, sColourGlobalBack);
+			std::cout << "Incorrect. Please try again.\n";
+			colour(sColourGlobal, sColourGlobalBack);
+			break;
+		case 3:
+			colour(LGRN, sColourGlobalBack);
+			std::cout << "That is correct!!\n";
+			colour(sColourGlobal, sColourGlobalBack);
+			break;
+		case -1:
+			// Put help messages setting back to original value
+			bDisplayDirections = bPreviousHelpMsg;
+			Exiting();
+
+			return;
+		default:
+			colour(RED, sColourGlobalBack);
+			std::cout << "An unknown error occured. Please try again.\n";
+			colour(sColourGlobal, sColourGlobalBack);
+			break;
+		}
+	}
+
+	// Start option 2
+	int nOption2 = 0;
+	while (nOption2 != 2) {
+		nOption2 = oseTutorial.OptionSelect("Please select Option 2 from the set of options:", "___OPTIONSELECT TUTORIAL___");
+		switch (nOption2) {
+		case 1:
+			colour(RED, sColourGlobalBack);
+			std::cout << "Incorrect. Please try again.\n";
+			colour(sColourGlobal, sColourGlobalBack);
+			break;
+		case 2:
+			colour(LGRN, sColourGlobalBack);
+			std::cout << "That is correct!!!\n";
+			colour(sColourGlobal, sColourGlobalBack);
+			break;
+		case 3:
+			colour(RED, sColourGlobalBack);
+			std::cout << "Incorrect. Please try again.\n";
+			colour(sColourGlobal, sColourGlobalBack);
+			break;
+		case -1:
+			// Put help messages setting back to original value
+			bDisplayDirections = bPreviousHelpMsg;
+			Exiting();
+
+			return;
+		default:
+			colour(RED, sColourGlobalBack);
+			std::cout << "An unknown error occured. Please try again.\n";
+			colour(sColourGlobal, sColourGlobalBack);
+			break;
+		}
+	}
+	// Put help messages setting back to original value
+	bDisplayDirections = bPreviousHelpMsg;
+
+	// Yes/No prompt tutorial
+	slowcolourfn(GRN, sColourGlobalBack, "OptionSelectEngine tutorial finished, now for the final tutorial: the Yes/No prompt.\n\n");
+	slowcharfn(true, "Yes/No prompts are really important, as they manage the most important terminal functions.");
+	slowcolourfn("255;165;0", sColourGlobalBack, "\nThey require you to input the letter 'y' (for yes) or the letter 'n' (for no).\n");
+	slowcharfn(true, "\nHere is a yes/no prompt. Answer 'y' for this:\n");
+
+	// The yes prompt
+	bool bInput = false;
+	while (bInput != true) {
+		bInput = YesNo("Is this program called TerminalAppGen3? [y/n] > ");
+		if (bInput == true) {
+			colour(LGRN, sColourGlobalBack);
+			std::cout << "Well done!\n";
+			colour(sColourGlobal, sColourGlobalBack);
+			break;
+		}
+		else {
+			colour(RED, sColourGlobalBack);
+			std::cout << "Incorrect input. Please try again.\n";
+			colour(sColourGlobal, sColourGlobalBack);
+		}
+	}
+
+	// The no prompt
+	slowcharfn(true, "Here is another yes/no prompt. Answer 'n' for this:\n");
+	while (bInput != false) {
+		bInput = YesNo("Is this program called TerminalAppGen3? [y/n] > ");
+		if (bInput == false) {
+			colour(LGRN, sColourGlobalBack);
+			std::cout << "Well done!\nCongratulations, you have finished the tutorial!\n";
+			colour(sColourGlobal, sColourGlobalBack);
+			break;
+		}
+		else {
+			colour(RED, sColourGlobalBack);
+			std::cout << "Incorrect input. Please try again.\n";
+			colour(sColourGlobal, sColourGlobalBack);
+		}
+	}
+
 	return;
 }
 
@@ -408,13 +592,13 @@ void help() {
 	sneHelp.nSizeOfScreens = 3;
 	std::string sScreens[] =
 	{
-		"___LIST OF COMMANDS___\n\n[1] Help\n[2] Exit\n[3] Tutorial\n[4] DevTools\n[5] CPUStress\n[6] Colour\n[7] Settings\n[8] Title\n[9] Date\n[10] ColourNumbers\n\nMore will be added soon!\n",
+		"___LIST OF COMMANDS___\n\n[1] Help\n[2] Exit\n[3] Tutorial\n[4] DevTools\n[5] CPUStress\n[6] Colour\n[7] Settings\n[8] Title\n[9] Date\n[10] ColourNumbers\n[11] MediaPlayer\n[12] TTS\n[13] Stopwatch\n\nMore will be added soon!\n",
 
 		"___FREQUENTLY ASKED QUESTIONS___\n\n"
 		"1) I can't see the terminal text. How can I zoom in?\n  1a) You can zoom in, of course. Press and hold the Ctrl button and scroll with the mouse to your desired text size.\n",
 
-		"___ABOUT THIS PROGRAM___\n\nThis is a TerminalAppGen3 Test Build.\n" +
-		wordWrap("This is a very early alpha test build of TerminalAppGen3, with an entirely new engine and components.") +
+		"___ABOUT THIS PROGRAM___\n\nThis is a TerminalAppGen3 Alpha Build.\n" +
+		wordWrap("This is an early alpha build of TerminalAppGen3, with an entirely new engine and components.") +
 		"\n(c) Ryan Zorkot 2023. Protected by the MIT License.\n"
 	};
 
@@ -861,18 +1045,19 @@ void Commands(const std::string sCommand, char* cCommandArgs, std::string* sStri
 			if (cCommandArgs[i] == 'h') {
 				CentreColouredText(" ___HELP___ ", 1);
 
+				std::cout << '\n';
 				colourSubheading();
-				std::cout << "\nWhat this command does:\n" << NOULINE_STR;
+				std::cout << "What this command does:" << NOULINE_STR;
 				colour(sColourGlobal, sColourGlobalBack);
-				std::cout << wordWrap("- Lists all possible commands in TerminalApp Gen3.") << '\n'
+				std::cout << '\n' << wordWrap("- Lists all possible commands in TerminalApp Gen3.") << '\n'
 					<< wordWrap("- Displays some frequently asked questions with answers.") << '\n'
 					<< wordWrap("- Displays information about the program, such as copyright information, credits and basic program information.") << "\n\n";
 
 				colourSubheading();
-				std::cout << "Possible arguments for this command:" << NOULINE_STR << "\n\n";
+				std::cout << "Possible arguments for this command:" << NOULINE_STR;
 				colour(sColourGlobal, sColourGlobalBack);
 
-				std::cout << wordWrap("-h\tDisplays this help message.") << "\n\n";
+				std::cout << '\n' << wordWrap("-h\tDisplays this help message.") << "\n\n";
 
 				return;
 			}
@@ -892,7 +1077,7 @@ void Commands(const std::string sCommand, char* cCommandArgs, std::string* sStri
 				
 				std::cout << '\n';
 				colourSubheading();
-				std::cout << "What it does:" << NOULINE_STR;
+				std::cout << "What this command does:" << NOULINE_STR;
 				colour(sColourGlobal, sColourGlobalBack);
 				std::cout << '\n' << wordWrap("- This command starts a short tutorial on how to use the terminal.") << "\n\n";
 
@@ -945,15 +1130,16 @@ void Commands(const std::string sCommand, char* cCommandArgs, std::string* sStri
 			if (cCommandArgs[i] == 'h') {
 				CentreColouredText(" ___CLS___ ", 1);
 
+				std::cout << '\n';
 				colourSubheading();
-				std::cout << "\nWhat this command does:\n" << NOULINE_STR;
+				std::cout << "What this command does:" << NOULINE_STR;
 				colour(sColourGlobal, sColourGlobalBack);
-				std::cout << wordWrap("This command clears the terminal window. Nothing more, nothing less.") << "\n\n";
+				std::cout << '\n' << wordWrap("This command clears the terminal window. Nothing more, nothing less.") << "\n\n";
 
 				colourSubheading();
-				std::cout << "\nPossible arguments for this command\n" << NOULINE_STR;
+				std::cout << "Possible arguments for this command:" << NOULINE_STR;
 				colour(sColourGlobal, sColourGlobalBack);
-				std::cout << wordWrap("-h\tDisplays this help message.") << "\n\n";
+				std::cout << '\n' << wordWrap("-h\tDisplays this help message.") << "\n\n";
 
 				return;
 			}
@@ -971,15 +1157,16 @@ void Commands(const std::string sCommand, char* cCommandArgs, std::string* sStri
 			if (cCommandArgs[i] == 'h') {
 				CentreColouredText(" ___DEVTOOLS___ ", 1);
 
+				std::cout << '\n';
 				colourSubheading();
-				std::cout << "\nWhat this command does:\n" << NOULINE_STR;
+				std::cout << "What this command does:" << NOULINE_STR;
 				colour(sColourGlobal, sColourGlobalBack);
-				std::cout << wordWrap("This command provides an interface to access a set of developer tools that YOU can use if you're building your own program.") << "\n\n";
+				std::cout << '\n' << wordWrap("This command provides an interface to access a set of developer tools that YOU can use if you're building your own program.") << "\n\n";
 
 				colourSubheading();
-				std::cout << "\nPossible arguments for this command:\n" << NOULINE_STR;
+				std::cout << "Possible arguments for this command:" << NOULINE_STR;
 				colour(sColourGlobal, sColourGlobalBack);
-				std::cout << wordWrap(" -h\tDisplays this help message.") << '\n'
+				std::cout << '\n' << wordWrap(" -h\tDisplays this help message.") << '\n'
 					<< wordWrap(" -1\tAutomatically starts Colour Tester.") << '\n'
 					<< wordWrap(" -2\tAutomatically starts Beep Sound Test.") << '\n'
 					<< wordWrap(" -3\tAutomatically starts Colour Numbers.") << '\n'
@@ -1104,16 +1291,17 @@ void Commands(const std::string sCommand, char* cCommandArgs, std::string* sStri
 			if (cCommandArgs[i] == 'h') {
 				CentreColouredText(" ___CPUSTRESS___ ", 1);
 				
+				std::cout << '\n';
 				colourSubheading();
-				std::cout << "\nWhat this command does:\n" << NOULINE_STR;
+				std::cout << "What this command does:" << NOULINE_STR;
 				colour(sColourGlobal, sColourGlobalBack);
-				std::cout << wordWrap("- Stresses your CPU and can be used for stability checks and throttling tests.") << '\n'
+				std::cout << '\n' << wordWrap("- Stresses your CPU and can be used for stability checks and throttling tests.") << '\n'
 					<< wordWrap("- Can benchmark your CPU to see performance metrics.") << "\n\n";
 
 				colourSubheading();
-				std::cout << "Possible arguments for this command:\n" << NOULINE_STR;
+				std::cout << "Possible arguments for this command:" << NOULINE_STR;
 				colour(sColourGlobal, sColourGlobalBack);
-				std::cout << wordWrap(" -h\t\tDisplays this help message.") << '\n'
+				std::cout << '\n' << wordWrap(" -h\t\tDisplays this help message.") << '\n'
 					<< wordWrap(" -1 --<rnum>\tStarts the Single Core benchmarker. You can optionally set your reiterations in place of <rnum>.") << '\n'
 					<< wordWrap(" -2 --<rnum>\tStarts the Multi Core benchmarker. You can optionally set your reiterations in place of <rnum>.") << '\n'
 					<< wordWrap(" -3\t\tStarts the Single Core stress test.") << '\n'
@@ -1206,18 +1394,19 @@ void Commands(const std::string sCommand, char* cCommandArgs, std::string* sStri
 			if (cCommandArgs[i] == 'h') {
 				CentreColouredText(" ___COLOUR___ ", 1);
 
+				std::cout << '\n';
 				colourSubheading();
-				std::cout << "\nWhat it does:" << NOULINE_STR << '\n';
+				std::cout << "What it does:" << NOULINE_STR;
 				colour(sColourGlobal, sColourGlobalBack);
-				std::cout << wordWrap("- Adjusts the foreground colour of the terminal (text).") << '\n'
+				std::cout << '\n' << wordWrap("- Adjusts the foreground colour of the terminal (text).") << '\n'
 					<< wordWrap("- Adjusts the background colour of the terminal.") << '\n'
 					<< wordWrap("- Edit and apply custom RGB colour presets.") << '\n'
 					<< wordWrap("- Resets colours to default at request.") << "\n\n";
 
 				colourSubheading();
-				std::cout << "Possible arguments for this command:" << NOULINE_STR << '\n';
+				std::cout << "Possible arguments for this command:" << NOULINE_STR;
 				colour(sColourGlobal, sColourGlobalBack);
-				std::cout << wordWrap(" -h\t\t\tDisplays this help message.") << '\n'
+				std::cout << '\n' << wordWrap(" -h\t\t\tDisplays this help message.") << '\n'
 					<< wordWrap(" -f --<colournum>\tAdjusts foreground colour. Put colour number in place of <colournum>.") << '\n'
 					<< wordWrap(" -b --<colournum>\tAdjusts background colour. Put desired colour number in place of <colournum>.") << '\n'
 					<< wordWrap(" -r\t\t\tResets colours to default values (excluding RGB colour profiles).") << "\n\n"
@@ -1376,15 +1565,16 @@ void Commands(const std::string sCommand, char* cCommandArgs, std::string* sStri
 			if (cCommandArgs[i] == 'h') {
 				CentreColouredText(" ___SETTINGS___ ", 1);
 
+				std::cout << '\n';
 				colourSubheading();
-				std::cout << "\nWhat it does:" << NOULINE_STR << '\n';
+				std::cout << "What it does:" << NOULINE_STR;
 				colour(sColourGlobal, sColourGlobalBack);
-				std::cout << wordWrap("- The Settings command allows you to adjust common settings in the terminal, such as colour settings, verbosity and direction messages, and ANSI settings.") << "\n\n";
+				std::cout << '\n' << wordWrap("- The Settings command allows you to adjust common settings in the terminal, such as colour settings, verbosity and direction messages, and ANSI settings.") << "\n\n";
 
 				colourSubheading();
-				std::cout << "Possible arguments for the Settings command:" << NOULINE_STR << '\n';
+				std::cout << "Possible arguments for the Settings command:" << NOULINE_STR;
 				colour(sColourGlobal, sColourGlobalBack);
-				std::cout << wordWrap(" --highlightfore --<num>\tModifies the highlight foreground colour. Set your colour number in place of <num>.") << '\n'
+				std::cout << '\n' << wordWrap(" --highlightfore --<num>\tModifies the highlight foreground colour. Set your colour number in place of <num>.") << '\n'
 					<< wordWrap(" --highlightback --<num>\tModifies the highlight background colour. Set your colour number in place of <num>.") << '\n'
 					<< wordWrap(" --titlefore --<num>\t\tModifies the title foreground colour. Set your colour number in place of <num>.") << '\n'
 					<< wordWrap(" --titleback --<num>\t\tModifies the title background colour. Set your colour number in place of <num>.") << '\n'
@@ -1398,7 +1588,8 @@ void Commands(const std::string sCommand, char* cCommandArgs, std::string* sStri
 					<< wordWrap(" --showcursor -t/f\t\tToggles cursor visibility. Set either true (-t) or false (-f) in place of -t/f.") << '\n'
 					<< wordWrap(" --cursorstyle --<style>\tSets the style of the cursor. Set the style (block, underline, bar) in place of <style>.") << '\n'
 					<< wordWrap(" --slowcharspeed --<num>\tSets the speed of SlowChar. Set the speed in place of <num>.") << '\n'
-					<< wordWrap(" --randcolstartup -t/f\t\tToggles random colours on startup. Set either true (-t) or false (-f) in place of -t/f.") << "\n\n"
+					<< wordWrap(" --randcolstartup -t/f\t\tToggles random colours on startup. Set either true (-t) or false (-f) in place of -t/f.") << '\n'
+					<< wordWrap(" --customtheme -t/f\t\tToggles terminal custom theme support. Set either true (-t) or false (-f) where t/f is.") << "\n\n"
 					<< wordWrap("Example: --titlefore --1") << "\n\n"
 					<< wordWrap("Note: You can get colour numbers by executing the \"ColourNumbers\" command.") << "\n\n";
 
@@ -1838,6 +2029,36 @@ void Commands(const std::string sCommand, char* cCommandArgs, std::string* sStri
 
 				return;
 			}
+			else if (sStringCommandArgs[0] == "customtheme") {
+				int nArgPos = sCommandArgsBuffer.find("--customtheme") + 2;
+				int nDashPos = sCommandArgsBuffer.find(" -", nArgPos) + 2;
+				int nSpacePos = sCommandArgsBuffer.find(" ", nDashPos);
+
+				if (nDashPos - 2 != std::string::npos && nSpacePos != std::string::npos) {
+					if (sCommandArgsBuffer.substr(nDashPos, nSpacePos - nDashPos) == "t") {
+						OtherSettings(3, 0, true, 0, 1);
+					}
+					else if (sCommandArgsBuffer.substr(nDashPos, nSpacePos - nDashPos) == "f") {
+						OtherSettings(3, 0, true, 0, 2);
+					}
+					else {
+						colour(RED, sColourGlobalBack);
+						std::cout << wordWrap("An error occured. Your setting option seems to be incorrect. Make sure it's \"-t\" or \"-f\" and try again.") << std::endl
+							<< wordWrap("Type \"settings -h\" for more info.");
+						colour(sColourGlobal, sColourGlobalBack);
+						return;
+					}
+				}
+				else {
+					colour(RED, sColourGlobalBack);
+					std::cout << wordWrap("An error occured. It seems like no option was found. Check your syntax, make sure an option is present and try again.") << std::endl
+						<< wordWrap("Type \"settings -h\" for more info.");
+					colour(sColourGlobal, sColourGlobalBack);
+					return;
+				}
+
+				return;
+			}
 		}
 
 		OptionSelectEngine oseSettings;
@@ -1945,15 +2166,16 @@ void Commands(const std::string sCommand, char* cCommandArgs, std::string* sStri
 			if (cCommandArgs[i] == 'h') {
 				CentreColouredText(" ___DATE___ ", 1);
 
+				std::cout << '\n';
 				colourSubheading();
-				std::cout << "\nWhat this command does:" << NOULINE_STR << '\n';
+				std::cout << "What this command does:" << NOULINE_STR;
 				colour(sColourGlobal, sColourGlobalBack);
-				std::cout << wordWrap("- This command displays the time and date in 24 hour time. Nothing more, nothing less.") << "\n\n";
+				std::cout << '\n' << wordWrap("- This command displays the time and date in 24 hour time. Nothing more, nothing less.") << "\n\n";
 
 				colourSubheading();
-				std::cout << "Possible arguments for this command:" << NOULINE_STR << '\n';
+				std::cout << "Possible arguments for this command:" << NOULINE_STR;
 				colour(sColourGlobal, sColourGlobalBack);
-				std::cout << wordWrap(" -h\tDisplays this help message.") << "\n\n"
+				std::cout << '\n' << wordWrap(" -h\tDisplays this help message.") << "\n\n"
 					<< wordWrap("Example: date -h") << "\n\n";
 
 				return;
@@ -1988,15 +2210,16 @@ void Commands(const std::string sCommand, char* cCommandArgs, std::string* sStri
 			if (cCommandArgs[i] == 'h') {
 				CentreColouredText(" ___COLOURNUMBERS___ ", 1);
 
+				std::cout << '\n';
 				colourSubheading();
-				std::cout << "\nWhat this command does:" << NOULINE_STR << '\n';
+				std::cout << "What this command does:" << NOULINE_STR;
 				colour(sColourGlobal, sColourGlobalBack);
-				std::cout << wordWrap("- This command displays the colour numbers for all default colours. Nothing more, nothing less.") << "\n\n";
+				std::cout << '\n' << wordWrap("- This command displays the colour numbers for all default colours. Nothing more, nothing less.") << "\n\n";
 				
 				colourSubheading();
 				std::cout << "Possible arguments for this command:" << NOULINE_STR << '\n';
 				colour(sColourGlobal, sColourGlobalBack);
-				std::cout << wordWrap(" -h\tDisplays this help message.") << "\n\n"
+				std::cout << '\n' << wordWrap(" -h\tDisplays this help message.") << "\n\n"
 					<< wordWrap("Example: colournumbers -h") << "\n\n";
 				
 				return;
@@ -2004,15 +2227,257 @@ void Commands(const std::string sCommand, char* cCommandArgs, std::string* sStri
 		}
 
 		// Display all colours in the colour array inside Settings.cpp
+		std::cout << '\n';
 		colourSubheading();
-		std::cout << "\nColour numbers are below:" << NOULINE_STR << '\n';
+		std::cout << "Colour numbers are below:" << NOULINE_STR;
 		colour(sColourGlobal, sColourGlobalBack);
+		std::cout << '\n';
 
 		for (int i = 0; i < 16; i++) {
 			std::cout << '[' << (i + 1) << "] "<< sOptionsColour[i] << "\n";
 		}
 		std::cout << std::endl << wordWrap("The colour number for each colour is in between the square brackets.") << std::endl;
 
+		return;
+	}
+
+	// MediaPlayer
+	else if (sCommand == "mediaplayer") {
+
+		std::wstring wsFilePath;
+
+		// Arguments Interface
+		for (int i = 0; i < 128; i++) {
+			if (cCommandArgs[i] == 'h') {
+				CentreColouredText(" ___MEDIA PLAYER___ ", 1);
+
+				std::cout << '\n';
+				colourSubheading();
+				std::cout << "What this command does: " << NOULINE_STR;
+				colour(sColourGlobal, sColourGlobalBack);
+				std::cout << '\n';
+				std::cout << wordWrap("- Can play media and audio of specific types.") << '\n'
+					<< wordWrap("- Can view images of specific types.") << '\n'
+					<< wordWrap("- Supported file formats: WMA, WMV, AIFF, AU, AVI, MIDI, SND, WAV, MP3 (Only MPEG Audio Layer-3 codec), JPG and BMP.") << "\n\n";
+
+				std::cout << '\n';
+				colourSubheading();
+				std::cout << "Possible arguments for this command: " << NOULINE_STR;
+				colour(sColourGlobal, sColourGlobalBack);
+				std::cout << '\n';
+				std::cout << wordWrap(" -h\t\tDisplays this help message.") << '\n'
+					<< wordWrap(" --<FILE>\tOpens a file for playback/viewing. Put the exact filepath in place of <FILE>.\n\nExample: mediaplayer --\"C:\\Media\\media test.mp3\"\n\n")
+					<< wordWrap("Note: You need to use quotes like shown in the example to use a filename with ANY spaces.\n\n");
+
+				return;
+			}
+			else if (sStringCommandArgs[0] != " ") {
+
+				std::string sFilePath = sCommandArgsBuffer;
+
+				// Check if the start of the first argument has a speechmark; 
+				// if there is one, use filepath from the start to the ending speechmark (if there is one)
+				if (sStringCommandArgs[0][0] == '\"') {
+					int nFirstMarkPos = sFilePath.find("--\"", 0) + 3;
+					int nFinalMarkPos = sFilePath.find('\"', nFirstMarkPos) - 3;
+					sFilePath = sFilePath.substr(nFirstMarkPos, nFinalMarkPos); 
+					VerbosityDisplay("Executing file " + sFilePath + "...\n");
+				}
+				else sFilePath = sStringCommandArgs[0];
+
+				CA2W ca2w(sFilePath.c_str());
+				MultimediaEngine meArgInterface;
+
+				std::wstring wsPath;
+				wsPath = ca2w;
+				meArgInterface.MultimediaPlayer(wsPath);
+
+				return;
+			}
+		}
+
+		CentreColouredText(" ___MEDIA PLAYER___ ", 1);
+
+		// Information
+		colourSubheading();
+		std::cout << wordWrap("\n\nThe following file formats are supported:\n") << NOULINE_STR;
+		colour(LCYN, sColourGlobalBack);
+		std::cout << wordWrap("WMA, WMV, AIFF, AU, AVI, MIDI, SND, WAV, MP3(Only MPEG Audio Layer - 3 codec), JPG, BMP\n\n");
+		colour(sColourGlobal, sColourGlobalBack);
+
+		// Prompt
+		std::cout << "Enter your desired audio/video/image file path (0 to exit): > ";
+		colour(LYLW, sColourGlobalBack);
+		std::getline(std::wcin, wsFilePath);
+		colour(sColourGlobal, sColourGlobalBack);
+
+		// Exit on 0
+		if (wsFilePath == L"0") {
+			Exiting();
+			return;
+		}
+
+		// Execute multimedia player with the inputted file path
+		MultimediaEngine meMediaPlayer;
+		meMediaPlayer.MultimediaPlayer(wsFilePath);
+
+		return;
+
+	}
+
+	// TTS
+	else if (sCommand == "tts") {
+		
+		// Arguments interface
+		for (int i = 0; i < 128; i++) {
+			if (cCommandArgs[i] == 'h') {
+				CentreColouredText(" ___TEXT TO SPEECH___ ", 1);
+
+				std::cout << '\n';
+				colourSubheading();
+				std::cout << "What this command does: " << NOULINE_STR;
+				colour(sColourGlobal, sColourGlobalBack);
+				std::cout << wordWrap("\n- Takes in input and outputs it with a human-like voice through the speaker.\n\n");
+
+				colourSubheading();
+				std::cout << "Possible arguments for this command: " << NOULINE_STR;
+				colour(sColourGlobal, sColourGlobalBack);
+				std::cout << wordWrap("\n -h\t\tDisplays this help message.\n --<MSG>\tInput text to be said by the computer. Put text in place of <MSG>.\n\n")
+					<< wordWrap("Example: tts --\"The quick brown fox jumps over the lazy dog.\"\n\n")
+					<< wordWrap("Note: If the text contains any spaces, put it in speech marks like the example, or it will not work.\n\n");
+
+				return;
+			}
+			else if (sStringCommandArgs[0] != " ") {
+
+				std::string sText = sCommandArgsBuffer;
+
+				// Check if the start of the first argument has a speechmark; 
+				// if there is one, use text from the start to the ending speechmark (if there is one)
+				if (sStringCommandArgs[0][0] == '\"') {
+					int nFirstMarkPos = sText.find("--\"", 0) + 3;
+					int nFinalMarkPos = sText.find('\"', nFirstMarkPos) - 3;
+					sText = sText.substr(nFirstMarkPos, nFinalMarkPos);
+					VerbosityDisplay("Outputting \"" + sText + "\" as TTS...\n");
+				}
+				else sText = sStringCommandArgs[0];
+
+				CA2W ca2w(sText.c_str());
+				std::wstring wsFinalText;
+				wsFinalText = ca2w;
+
+				// Execute text-to-speech
+				MultimediaEngine meTTS;
+				meTTS.TTSOutput(wsFinalText);
+
+				return;
+			}
+		}
+
+		CentreColouredText(" ___TEXT-TO-SPEECH___ ", 1);
+
+		std::cout << "\n\n";
+		colourSubheading();
+		slowcharCentredFn(true, "Text To Speech takes in text and outputs it through the speakers in a human-like voice.\n");
+		colour(sColourGlobal, sColourGlobalBack);
+		std::cout << NOULINE_STR;
+
+		// Take input
+		std::string sText = str("Please input your desired text (0 to exit): > ");
+		if (sText == "0") {
+			Exiting();
+			return;
+		}
+
+		CA2W ca2w(sText.c_str());
+
+		// Pass to wstring
+		std::wstring wsText;
+		wsText = ca2w;
+
+		// Output using MultimediaEngine::TTS()
+		MultimediaEngine meTTS;
+		VerbosityDisplay("Outputting \"" + sText + "\" as TTS...\n");
+		meTTS.TTSOutput(wsText);
+
+		return;
+	}
+
+	// Stopwatch
+	else if (sCommand == "stopwatch") {
+
+		bool bSkipStartScreen = false;
+
+		// Arugments interface
+		for (int i = 0; i < 128; i++) {
+			if (cCommandArgs[i] == 'h') {
+				CentreColouredText(" ___STOPWATCH___ ", 1);
+
+				std::cout << '\n';
+				colourSubheading();
+				std::cout << "What this command does: " << NOULINE_STR;
+				colour(sColourGlobal, sColourGlobalBack);
+				std::cout << wordWrap("\n- Allows for the use for a simple stopwatch. Nothing more, nothing less.\n\n");
+
+				colourSubheading();
+				std::cout << "Possible arguments for this command: " << NOULINE_STR;
+				colour(sColourGlobal, sColourGlobalBack);
+				std::cout << wordWrap("\n -h\tDisplays this help message.\n -i\tStarts the stopwatch immediately on command execution.\n\nExample: stopwatch -i\n\n");
+
+				return;
+			}
+			else if (cCommandArgs[i] == 'i') {
+				bSkipStartScreen = true;
+				break;
+			}
+		}
+
+		CentreColouredText(" ___STOPWATCH___ ", 1);
+		std::cout << '\n';
+		CentreColouredText("This is a simple stopwatch that measures the time in milliseconds.", 2);
+		
+		if (!bSkipStartScreen) {
+			std::cout << wordWrap("\n\nYou can exit the stopwatch at any time by pressing a key on the keyboard.\nPress any key to start, or ESC to exit now...\n");
+			char c = _getch();
+
+			// Exit on ESC key press
+			if (c == 27) {
+				Exiting();
+				return;
+			}
+		}
+		else { 
+			colour(YLW, sColourGlobalBack);
+			std::cout << "\n\nTest starting immediately...\n";
+			colour(sColourGlobal, sColourGlobalBack);
+		}
+
+		// Start stopwatch
+		auto start = std::chrono::steady_clock::now();
+		auto end = std::chrono::steady_clock::now();
+		std::cout << '\n';
+		while (!_kbhit()) {
+			end = std::chrono::steady_clock::now();
+			std::cout << "Time: ";
+			colour(LCYN, sColourGlobalBack);
+			std::cout << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+			colour(sColourGlobal, sColourGlobalBack);
+			std::cout << " milliseconds...\r";
+		}
+
+		// Assume keyboard has been pressed
+		colour(GRN, sColourGlobalBack);
+		std::cout << "\n\nKeyboard pressed.\n";
+		colour(sColourGlobal, sColourGlobalBack);
+
+		// Output final time
+		std::cout << "Final time: ";
+		colour(LCYN, sColourGlobalBack);
+		std::cout << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+		colour(sColourGlobal, sColourGlobalBack);
+		std::cout << " milliseconds.\n\n";
+
+		clearkeebbuf();
 		return;
 	}
 

@@ -6,6 +6,7 @@ void colour(std::string, std::string);
 void colourHighlight();
 void SetCursorPosition(int, int);
 void CentreColouredText(std::string, short int);
+void cls();
 
 extern std::string sColourGlobal;
 extern std::string sColourGlobalBack;

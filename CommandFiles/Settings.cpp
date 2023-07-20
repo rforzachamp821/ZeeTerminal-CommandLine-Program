@@ -17,6 +17,7 @@ extern bool bRandomColoursOnStartup;
 extern bool bShowCursor;
 extern bool bWordWrapToggle;
 extern bool bCursorBlink;
+extern bool bTermCustomThemeSupport;
 
 extern int nSlowCharSpeed;
 extern int nCursorShape;
@@ -684,7 +685,7 @@ void CursorSettings(short int nChoice = 0, short int nChoiceBlink = 0, short int
 	}
 }
 
-void OtherSettings(short int nChoice = 0, int nChoiceSlowChSpeed = 0, bool bFromArg = false , short int nChoiceRandColStartup = 0) {
+void OtherSettings(short int nChoice = 0, int nChoiceSlowChSpeed = 0, bool bFromArg = false , short int nChoiceRandColStartup = 0, short int nTermCustomThemeSupport = 0) {
 
 	// Standard interface
 	if (nChoice == 0) {
@@ -739,7 +740,7 @@ void OtherSettings(short int nChoice = 0, int nChoiceSlowChSpeed = 0, bool bFrom
 			};
 			oseRandCol.sOptions = sOptions;
 
-			oseRandCol.OptionSelect("Please select your choice for Random Colours on Startup:", " ___RANDOM COLOUR ON STARTUP SETTINGS___ ");
+			nChoiceRandColStartup = oseRandCol.OptionSelect("Please select your choice for Random Colours on Startup:", " ___RANDOM COLOUR ON STARTUP SETTINGS___ ");
 		}
 
 		if (nChoiceRandColStartup == 1) {
@@ -759,6 +760,58 @@ void OtherSettings(short int nChoice = 0, int nChoiceSlowChSpeed = 0, bool bFrom
 			return;
 		}
 		else if (nChoiceRandColStartup == -1) {
+			colour(YLW, sColourGlobalBack);
+			std::cout << "Modifying setting terminated.\n";
+			colour(sColourGlobal, sColourGlobalBack);
+
+			return;
+		}
+		else {
+			colour(RED, sColourGlobalBack);
+			std::cout << "An error occured. Please try again later.\n";
+			colour(sColourGlobal, sColourGlobalBack);
+
+			return;
+		}
+	}
+
+	// Terminal Custom Themes Support
+	else if (nChoice == 3) {
+		if (nTermCustomThemeSupport == 0) {
+			OptionSelectEngine oseRandCol;
+			oseRandCol.nSizeOfOptions = 2;
+			std::string sOptions[] = {
+				"Enable Terminal Custom Theme Support",
+				"Disable Terminal Custom Theme Support (Default)"
+			};
+			oseRandCol.sOptions = sOptions;
+
+			nTermCustomThemeSupport = oseRandCol.OptionSelect("Note: This works by making the black background colour the default terminal colour.\nPlease select your choice for Terminal Custom Theme Support:", " ___TERMINAL CUSTOM THEME SETTINGS___ ");
+		}
+
+		if (nTermCustomThemeSupport == 1) {
+			bTermCustomThemeSupport = true;
+			// Clear screen FULLY to make changes take effect
+			if (bAnsiVTSequences) std::cout << "\033c";
+
+			colour(LGRN, sColourGlobalBack);
+			std::cout << "Terminal Custom Theme Support Enabled.\n";
+			colour(sColourGlobal, sColourGlobalBack);
+
+			return;
+		}
+		else if (nTermCustomThemeSupport == 2) {
+			bTermCustomThemeSupport = false;
+			// Clear screen FULLY to make changes take effect
+			cls();
+
+			colour(LGRN, sColourGlobalBack);
+			std::cout << "Terminal Custom Theme Support Disabled.\n";
+			colour(sColourGlobal, sColourGlobalBack);
+
+			return;
+		}
+		else if (nTermCustomThemeSupport == -1) {
 			colour(YLW, sColourGlobalBack);
 			std::cout << "Modifying setting terminated.\n";
 			colour(sColourGlobal, sColourGlobalBack);
