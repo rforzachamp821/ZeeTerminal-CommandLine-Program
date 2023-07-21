@@ -2275,6 +2275,10 @@ void Commands(const std::string sCommand, char* cCommandArgs, std::string* sStri
 
 				std::string sFilePath = sCommandArgsBuffer;
 
+				std::cout << '\n';
+				CentreColouredText(" ___MEDIA PLAYER___ ", 1);
+				std::cout << '\n';
+
 				// Check if the start of the first argument has a speechmark; 
 				// if there is one, use filepath from the start to the ending speechmark (if there is one)
 				if (sStringCommandArgs[0][0] == '\"') {
@@ -2302,7 +2306,7 @@ void Commands(const std::string sCommand, char* cCommandArgs, std::string* sStri
 		colourSubheading();
 		std::cout << wordWrap("\n\nThe following file formats are supported:\n") << NOULINE_STR;
 		colour(LCYN, sColourGlobalBack);
-		std::cout << wordWrap("WMA, WMV, AIFF, AU, AVI, MIDI, SND, WAV, MP3(Only MPEG Audio Layer - 3 codec), JPG, BMP\n\n");
+		std::cout << wordWrap("WMA, WMV, AIFF, AU, AVI, MIDI, SND, WAV, MP3(Only MPEG Audio Layer - 3 codec), JPG, JPEG, BMP\n\n");
 		colour(sColourGlobal, sColourGlobalBack);
 
 		// Prompt
@@ -2448,7 +2452,7 @@ void Commands(const std::string sCommand, char* cCommandArgs, std::string* sStri
 		}
 		else { 
 			colour(YLW, sColourGlobalBack);
-			std::cout << "\n\nTest starting immediately...\n";
+			std::cout << "\n\nStopwatch starting immediately.\n";
 			colour(sColourGlobal, sColourGlobalBack);
 		}
 
@@ -2463,6 +2467,7 @@ void Commands(const std::string sCommand, char* cCommandArgs, std::string* sStri
 			std::cout << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
 			colour(sColourGlobal, sColourGlobalBack);
 			std::cout << " milliseconds...\r";
+			sleep(3); // Optimisation for CPU usage; puts CPU to sleep for 2ms
 		}
 
 		// Assume keyboard has been pressed

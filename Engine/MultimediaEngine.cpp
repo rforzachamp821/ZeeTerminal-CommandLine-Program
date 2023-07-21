@@ -50,7 +50,7 @@ protected:
 public:
 
 	// MultimediaRenderer - Plays a multimedia file using the DirectShow API.
-	// Allowed filetypes are: WMA, WMV, AIFF, AU, AVI, MIDI, SND, WAV
+	// Allowed filetypes are: WMA, WMV, AIFF, AU, AVI, MIDI, SND, WAV, JPG, JPEG, BMP
 	// Arguments: wsInputFilePath - The file path for the multimedia file.
 	// Return values: TRUE or 1 for success, FALSE or 0 for fail.
 	//
@@ -178,6 +178,8 @@ public:
 
 					// Controls
 					if (c == ' ' || c == 'p' || c == 'P') {
+						// Set colour of messages
+						colour(YLW, sColourGlobalBack);
 						// Get cursor position and set it to one higher than media output 
 						GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbiPlayer);
 						CursorPos.Y = csbiPlayer.dwCursorPosition.Y - 1;
@@ -203,14 +205,16 @@ public:
 							}
 						}
 
-						// Finally, reset cursor position
+						// Finally, reset cursor position and colours
 						CursorPos.Y = csbiPlayer.dwCursorPosition.Y;
 						SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), CursorPos);
+						colour(sColourGlobal, sColourGlobalBack);
 
 						continue;
 					}
 					else if (c == 27 || c == 'e' || c == 'E') {
-						std::cout << "\nExiting...\n";
+						std::cout << '\n';
+						Exiting();
 						pControl->Stop();
 						bSuccess = true;
 						goto cleanup;
@@ -247,6 +251,8 @@ public:
 						continue;
 					}
 					else if (c == 'r') {
+						// Set colour of messages
+						colour(YLW, sColourGlobalBack);
 						// Get cursor co-ords
 						GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbiPlayer);
 						CursorPos.Y = csbiPlayer.dwCursorPosition.Y - 2;
@@ -265,8 +271,10 @@ public:
 							bRepeatActivated = true;
 						}
 
+						// Reset co-ords and colours to previous
 						CursorPos.Y = csbiPlayer.dwCursorPosition.Y;
 						SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), CursorPos);
+						colour(sColourGlobal, sColourGlobalBack);
 
 						continue;
 					}
@@ -299,7 +307,7 @@ public:
 			}
 
 			colour(LGRN, sColourGlobalBack);
-			std::cout << "\nPlayback finished.\n";
+			std::cout << '\n' << CentreText("Playback finished.") << '\n';
 			colour(sColourGlobal, sColourGlobalBack);
 		}
 		else {
