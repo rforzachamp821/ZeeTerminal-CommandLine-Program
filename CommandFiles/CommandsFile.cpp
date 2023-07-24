@@ -899,7 +899,9 @@ void DevTools(short int nToolNum) {
 			end = std::chrono::high_resolution_clock::now();
 			std::cout << "Time: ";
 			colour(LCYN, sColourGlobalBack);
-			std::cout << std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count() << " ns\r";
+			std::cout << std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count(); 
+			colour(sColourGlobal, sColourGlobalBack);
+			std::cout << " ns\r";
 			colour(sColourGlobal, sColourGlobalBack);
 		}
 
@@ -1561,6 +1563,7 @@ void Commands(const std::string sCommand, char* cCommandArgs, std::string* sStri
 	// Settings
 	else if (sCommand == "settings") {
 
+		// Arguments Interface
 		for (int i = 0; i < 128; i++) {
 			if (cCommandArgs[i] == 'h') {
 				CentreColouredText(" ___SETTINGS___ ", 1);
@@ -2303,10 +2306,11 @@ void Commands(const std::string sCommand, char* cCommandArgs, std::string* sStri
 		CentreColouredText(" ___MEDIA PLAYER___ ", 1);
 
 		// Information
+		std::cout << "\n\n";
 		colourSubheading();
-		std::cout << wordWrap("\n\nThe following file formats are supported:\n") << NOULINE_STR;
+		std::cout << wordWrap("The following file formats are supported:") << NOULINE_STR;
 		colour(LCYN, sColourGlobalBack);
-		std::cout << wordWrap("WMA, WMV, AIFF, AU, AVI, MIDI, SND, WAV, MP3(Only MPEG Audio Layer - 3 codec), JPG, JPEG, BMP\n\n");
+		std::cout << wordWrap("\nWMA, WMV, AIFF, AU, AVI, MIDI, SND, WAV, MP3(Only MPEG Audio Layer - 3 codec), JPG, JPEG, BMP\n\n");
 		colour(sColourGlobal, sColourGlobalBack);
 
 		// Prompt
@@ -2421,7 +2425,7 @@ void Commands(const std::string sCommand, char* cCommandArgs, std::string* sStri
 				colourSubheading();
 				std::cout << "What this command does: " << NOULINE_STR;
 				colour(sColourGlobal, sColourGlobalBack);
-				std::cout << wordWrap("\n- Allows for the use for a simple stopwatch. Nothing more, nothing less.\n\n");
+				std::cout << wordWrap("\n- Allows for the use for a simple stopwatch, that measures the time in seconds.\n\n");
 
 				colourSubheading();
 				std::cout << "Possible arguments for this command: " << NOULINE_STR;
@@ -2438,7 +2442,7 @@ void Commands(const std::string sCommand, char* cCommandArgs, std::string* sStri
 
 		CentreColouredText(" ___STOPWATCH___ ", 1);
 		std::cout << '\n';
-		CentreColouredText("This is a simple stopwatch that measures the time in milliseconds.", 2);
+		CentreColouredText("This is a simple stopwatch that measures the time in seconds.", 2);
 		
 		if (!bSkipStartScreen) {
 			std::cout << wordWrap("\n\nYou can exit the stopwatch at any time by pressing a key on the keyboard.\nPress any key to start, or ESC to exit now...\n");
@@ -2457,17 +2461,18 @@ void Commands(const std::string sCommand, char* cCommandArgs, std::string* sStri
 		}
 
 		// Start stopwatch
-		auto start = std::chrono::steady_clock::now();
-		auto end = std::chrono::steady_clock::now();
 		std::cout << '\n';
-		while (!_kbhit()) {
-			end = std::chrono::steady_clock::now();
+		std::chrono::duration<long double> elapsedSeconds;
+		auto start = std::chrono::steady_clock::now();
+
+		while (!_kbhit()) { // exit on keypress
+			elapsedSeconds = std::chrono::steady_clock::now() - start;
 			std::cout << "Time: ";
 			colour(LCYN, sColourGlobalBack);
-			std::cout << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+			std::cout << elapsedSeconds.count();
 			colour(sColourGlobal, sColourGlobalBack);
-			std::cout << " milliseconds...\r";
-			sleep(3); // Optimisation for CPU usage; puts CPU to sleep for 2ms
+			std::cout << " seconds...                \r"; // 16 spaces for decimal space buffer
+			sleep(3); // Optimisation for CPU usage; puts CPU to sleep for 3ms
 		}
 
 		// Assume keyboard has been pressed
@@ -2478,9 +2483,9 @@ void Commands(const std::string sCommand, char* cCommandArgs, std::string* sStri
 		// Output final time
 		std::cout << "Final time: ";
 		colour(LCYN, sColourGlobalBack);
-		std::cout << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+		std::cout << elapsedSeconds.count();
 		colour(sColourGlobal, sColourGlobalBack);
-		std::cout << " milliseconds.\n\n";
+		std::cout << " seconds.\n\n";
 
 		clearkeebbuf();
 		return;

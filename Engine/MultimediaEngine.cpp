@@ -12,6 +12,7 @@ void colour(std::string, std::string);
 std::string CentreText(std::string);
 
 class MultimediaEngine {
+
 protected:
 
 	// RemoveFilters - Removes all filters from IGraphBuilder variable.

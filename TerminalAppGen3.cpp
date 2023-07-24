@@ -673,10 +673,10 @@ int main() {
 
 	if (bAnsiVTSequences == true) {
 		std::cout << "\x1b[" << BLINK << 'm';
-		slowcharfn(true, "Welcome to TerminalAppGen3!");
+		slowcharfn(true, "Welcome to TerminalApp Gen 3!");
 		
 	}
-	else slowcharfn(true, "Welcome to TerminalAppGen3!");
+	else slowcharfn(true, "Welcome to TerminalApp Gen 3!");
 
 	colour(LGRN, sColourGlobalBack);
 	std::cout << "\nPress ENTER to begin...\n";

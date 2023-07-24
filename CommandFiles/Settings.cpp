@@ -690,10 +690,11 @@ void OtherSettings(short int nChoice = 0, int nChoiceSlowChSpeed = 0, bool bFrom
 	// Standard interface
 	if (nChoice == 0) {
 		OptionSelectEngine oseOther;
-		oseOther.nSizeOfOptions = 2;
+		oseOther.nSizeOfOptions = 3;
 		std::string sOptions[] = {
 			"SlowChar Speed Value",
-			"Enable/Disable Random Colours on Startup"
+			"Enable/Disable Random Colours on Startup",
+			"Enable/Disable Terminal Custom Theme Support"
 		};
 		oseOther.sOptions = sOptions;
 
@@ -792,7 +793,8 @@ void OtherSettings(short int nChoice = 0, int nChoiceSlowChSpeed = 0, bool bFrom
 		if (nTermCustomThemeSupport == 1) {
 			bTermCustomThemeSupport = true;
 			// Clear screen FULLY to make changes take effect
-			if (bAnsiVTSequences) std::cout << "\033c";
+			colour(sColourGlobal, sColourGlobalBack);
+			cls();
 
 			colour(LGRN, sColourGlobalBack);
 			std::cout << "Terminal Custom Theme Support Enabled.\n";
@@ -803,6 +805,7 @@ void OtherSettings(short int nChoice = 0, int nChoiceSlowChSpeed = 0, bool bFrom
 		else if (nTermCustomThemeSupport == 2) {
 			bTermCustomThemeSupport = false;
 			// Clear screen FULLY to make changes take effect
+			colour(sColourGlobal, sColourGlobalBack);
 			cls();
 
 			colour(LGRN, sColourGlobalBack);
