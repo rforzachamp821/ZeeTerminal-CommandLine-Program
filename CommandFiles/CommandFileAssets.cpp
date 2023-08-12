@@ -154,3 +154,89 @@ void ColourForegroundSwitch(int* nChoice, std::string* sSettingVariableBack, std
 
 	return;
 }
+
+// A switch-case function for the MessageBox command (icon).
+int MessageBoxIconSwitch(std::string sIconName) {
+	// Make argument lowercase
+	for (int i = 0; i < sIconName.length(); i++) {
+		sIconName[i] = std::tolower(sIconName[i]);
+	}
+
+	if (sIconName == "error") {
+		return 16;
+	}
+	else if (sIconName == "question") {
+		return 32;
+	}
+	else if (sIconName == "warning") {
+		return 48;
+	}
+	else if (sIconName == "info") {
+		return 64;
+	}
+	else {
+		colour(RED, sColourGlobalBack);
+		std::cerr << wordWrap("ERROR - The specified icon argument seems to be incorrect.\nPlease add one from the list of icon options.\nSee 'messagebox -h' for more info.\n");
+		colour(sColourGlobal, sColourGlobalBack);
+		return 1;
+	}
+
+	return 1;
+}
+
+// A switch-case function for the MessageBox command (buttons)
+int MessageBoxButtonSwitch(std::string sButtonName) {
+	// Make argument lowercase
+	for (int i = 0; i < sButtonName.length(); i++) {
+		sButtonName[i] = std::tolower(sButtonName[i]);
+	}
+
+	if (sButtonName == "ok") {
+		return 0;
+	}
+	else if (sButtonName == "okcancel") {
+		return 1;
+	}
+	else if (sButtonName == "abortretryignore") {
+		return 2;
+	}
+	else if (sButtonName == "yesnocancel") {
+		return 3;
+	}
+	else if (sButtonName == "yesno") {
+		return 4;
+	}
+	else if (sButtonName == "retrycancel") {
+		return 5;
+	}
+	else if (sButtonName == "canceltrycontinue") {
+		return 6;
+	}
+	else {
+		colour(RED, sColourGlobalBack);
+		std::cerr << wordWrap("ERROR - Your button argument seems to be incorrect.\nPlease make sure it is from the list of button options.\nSee 'messagebox -h' for more info. Using default option...\n");
+		colour(sColourGlobal, sColourGlobalBack);
+
+		return 0;
+	}
+
+	return 0;
+}
+
+/* MessageBox Codes */
+//////////////////////
+/* Message box codes are the following for icons:
+   [16] Error
+   [32] Question Mark
+   [48] Exclamation Mark
+   [64] Information 'I'
+*/
+/* Message box codes are the following for buttons:
+   [0] OK
+   [1] OK + Cancel
+   [2] Abort + Retry + Ignore
+   [3] Yes + No + Cancel
+   [4] Yes + No
+   [5] Retry + Cancel
+   [6] Cancel + Try Again + Continue
+ */

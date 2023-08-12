@@ -1,6 +1,7 @@
 #include <iostream>
 #include <string>
 #include <sstream>
+#include <fstream>
 #include <iomanip>
 #include <vector>
 #include <thread>
@@ -13,13 +14,14 @@
 #include <Windows.h>
 #include <mmsystem.h>
 #include <random>
-#include <AtlBase.h>
-#include <atlconv.h>
+#include <shobjidl.h>
+#include <codecvt>
 #include "Engine\ScreenNavigateEngine.cpp"
 #include "Engine\OptionSelectEngine.cpp"
 #include "Engine\TableEngine.cpp"
 #include "Engine\RGBColourPreset-System.cpp"
 #include "Engine\MultimediaEngine.cpp"
+#include "Engine\FileOpenGUIEngine.cpp"
 #include "CommandFiles\CommandsFile.cpp"
 
 
@@ -29,7 +31,8 @@
 RGBColourPresetSystem RGBPreset[3]; // Possibly [5] in a future update?
 bool bConsoleBugGCSBI = false; // WindowsTerminal Bug PR#14774 Workaround
 std::string sCommandInputRAW = "";
-
+std::string sStringCommandArgs[128]; // Made global because you can't pass an std::string array into a function, therefore Commands() wouldn't work properly
+									 // on multi-argument commands.
 
 // Settings
 bool bAnsiVTSequences = true;
@@ -154,6 +157,22 @@ int randnum(long long int max, long long int min) {
 	return randnum;
 }
 
+// Converter from wide string to string
+std::string ws2s(const std::wstring &wstr) {
+	// Use UTF-8 for this
+	std::wstring_convert<std::codecvt_utf8<wchar_t>, wchar_t> converterX;
+
+	return converterX.to_bytes(wstr);
+}
+
+// Converter from string to wide string
+std::wstring s2ws(const std::string& str) {
+	// Use UTF-8 for this
+	std::wstring_convert<std::codecvt_utf8<wchar_t>, wchar_t> converterX;
+
+	return converterX.from_bytes(str);
+}
+
 // Checks whether std::string argument is a string or not
 bool isNumber(const std::string sNumberTest) {
 	// Not a number as there's nothing in the string
@@ -198,7 +217,7 @@ void SetCursorPosition(int x, int y) {
 std::string wordWrap(std::string text) {
 	int width = 0;
 	std::string result = "";
-    int counter = 0;
+	int counter = 0;
 
 	// Cannot do word wrapping if disabled
 	if (bWordWrapToggle == false) return text;
@@ -611,6 +630,12 @@ void ProgramInitialisation() {
 		HANDLE hColour = GetStdHandle(STD_OUTPUT_HANDLE);
 		SetConsoleTextAttribute(hColour, 15);
 
+		// Set reset definitions to nothing- they will not be needed
+		NOULINE_STR = "";
+		NOBOLD_STR = "";
+		NOBLINK_STR = "";
+		NOSTRIKE_STR = "";
+
 		cls();
 	}
 	else {
@@ -650,20 +675,21 @@ void ProgramInitialisation() {
 	return;
 }
 
-int main() {
+// Main function for running platform
+int main(int argc, char* argv[]) 
+{
 	std::string sCommandInput = "";
 	std::string sCommand = "";
 	std::string sCommandArgsBuffer = "";
-	std::string sStringCommandInputArgs[128] = {};
 	char sCommandInputArgs[128] = {};
 
 	// Get the program ready, sort out environment
 	std::cout << "Getting ready...\n";
 	// Initialise main() variables
-	// sCommandInputArgs and sStringCommandInputArgs
+	// sCommandInputArgs and sStringCommandArgs
 	for (int i = 0; i < 128; i++) {
 		sCommandInputArgs[i] = ' ';
-		sStringCommandInputArgs[i] = " ";
+		sStringCommandArgs[i] = " ";
 	}
 
 	// Initialise everything else in program
@@ -671,12 +697,8 @@ int main() {
 
 	colour(LBLU, sColourGlobalBack);
 
-	if (bAnsiVTSequences == true) {
-		std::cout << "\x1b[" << BLINK << 'm';
-		slowcharfn(true, "Welcome to TerminalApp Gen 3!");
-		
-	}
-	else slowcharfn(true, "Welcome to TerminalApp Gen 3!");
+	if (bAnsiVTSequences == true) std::cout << "\x1b[" << BLINK << 'm';
+	slowcharfn(true, "Welcome to TerminalApp Gen 3!");
 
 	colour(LGRN, sColourGlobalBack);
 	std::cout << "\nPress ENTER to begin...\n";
@@ -703,9 +725,8 @@ int main() {
 		// Prompt and get input
 		std::cout << "\nCommand: > ";
 		colour(LYLW, sColourGlobalBack);
-		getline(std::cin, sCommandInput);
+		std::getline(std::cin, sCommandInput);
 		colour(sColourGlobal, sColourGlobalBack);
-
 
 		// Optimisation for no input
 		if (sCommandInput == "") {
@@ -715,7 +736,7 @@ int main() {
 			// Initialise sCommandInputArgs to make all spaces
 			for (int i = 0; i < 128; i++) {
 				sCommandInputArgs[i] = ' ';
-				sStringCommandInputArgs[i] = " ";
+				sStringCommandArgs[i] = " ";
 			}
 		}
 
@@ -724,7 +745,7 @@ int main() {
 
 		// For loop to start checking from after any spaces inputted by the user
 		for (int i = 0; i < sCommandInput.length(); i++) {
-			getline(sCommandInputIn, sCommand, ' ');
+			std::getline(sCommandInputIn, sCommand, ' ');
 			if (sCommand != "") break;
 		}
 
@@ -752,7 +773,7 @@ int main() {
 		}
 
 		// Copy the rest of the stringstream contents into sCommandArgsBuffer
-		getline(sCommandInputIn, sCommandArgsBuffer, '\n');
+		std::getline(sCommandInputIn, sCommandArgsBuffer, '\n');
 
 		/* The following will be based on editing sCommandArgsBuffer for the actual arguments. */
 		// Copy the letter after a dash into sCommandInputArgs
@@ -772,25 +793,44 @@ int main() {
 
 		}
 
-		// Copy the string after 2 dashes into sStringCommandInputArgs
+		// Copy the string arguments into sStringCommandArgs with correct formatting
 		sCommandArgsBuffer += " ";
-		for (int nDashPos = -1, nSpacePos = 0, i = 0; nSpacePos != std::string::npos && i < 128; i++) { // -1 to cancel out first call of first line
-			// Get next occurence of "--"
-			nDashPos = sCommandArgsBuffer.find("--", nDashPos + 1);
-			if (nDashPos == std::string::npos) break;
-			nSpacePos = sCommandArgsBuffer.find(" ", nDashPos);
-			// Copy from after the dashes to the next space
-			sStringCommandInputArgs[i] = sCommandArgsBuffer.substr((nDashPos + 2), nSpacePos - (nDashPos + 2));
+		for (int nDashPos = -1, nSpacePos = 0, i = 0, nDashPosMain = -1; i < 128; i++) { // -1 to cancel out first call of first line
+			nDashPosMain = nDashPos;
+
+			if (sCommandArgsBuffer.find("--\"", nDashPosMain + 1) != std::string::npos) {
+				nDashPos = sCommandArgsBuffer.find("--\"", nDashPosMain + 1);
+				// Get next occurence of '"'
+				nSpacePos = sCommandArgsBuffer.find("\"", nDashPos + 3);
+				// Use space as fallback if there is no other speechmark
+				if (nSpacePos == std::string::npos) nSpacePos = sCommandArgsBuffer.find(" ", nDashPos);
+
+				// Copy from after the dashes to the next space/speechmark
+				sStringCommandArgs[i] = sCommandArgsBuffer.substr((nDashPos + 3), nSpacePos - (nDashPos + 3));
+			}
+			if (sCommandArgsBuffer.find("--", nDashPosMain + 1) != std::string::npos) {
+				// Get next occurence of " --"
+				nDashPos = sCommandArgsBuffer.find("--", nDashPosMain + 1);
+				// Get occurence of ' ' after nDashPos new location
+				nSpacePos = sCommandArgsBuffer.find(" ", nDashPos + 2);
+
+				// Check for confliction with --"
+				std::string sTest = sCommandArgsBuffer.substr((nDashPos + 2), nSpacePos - (nDashPos + 2));
+				for (int j = 0; j < sTest.length(); j++) {
+					if (sTest[j] == '\"') break; else sStringCommandArgs[i] = sCommandArgsBuffer.substr((nDashPos + 2), nSpacePos - (nDashPos + 2));
+				}
+			}
+			else break;
 		}
 
 		// Finally, call commands function
-		Commands(sCommand, sCommandInputArgs, sStringCommandInputArgs, sCommandArgsBuffer);
+		Commands(sCommand, sCommandInputArgs, sCommandArgsBuffer);
 
 		// Reset all command processing variables to defaults
 		// sCommandInputArgs and sStringCommandInputArgs
 		for (int i = 0; i < 128; i++) {
 			sCommandInputArgs[i] = ' ';
-			sStringCommandInputArgs[i] = " ";
+			sStringCommandArgs[i] = " ";
 		}
 		sCommand = "";
 		sCommandArgsBuffer = "";

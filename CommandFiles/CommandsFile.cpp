@@ -16,11 +16,13 @@ void SetCursorAttributes();
 
 // External variable definitions
 extern std::string sCommandInputRAW;
+extern std::string sStringCommandArgs[128]; // Made global because you can't pass an std::string array into a function, therefore Commands() wouldn't work properly
+									        // on multi-argument commands.
 extern RGBColourPresetSystem RGBPreset[3];
 extern std::string sColourGlobal;
 extern std::string sColourGlobalBack;
 
-void Commands(const std::string, char*, std::string*, const std::string);
+void Commands(const std::string, char*, const std::string);
 void help();
 
 
@@ -592,14 +594,16 @@ void help() {
 	sneHelp.nSizeOfScreens = 3;
 	std::string sScreens[] =
 	{
-		"___LIST OF COMMANDS___\n\n[1] Help\n[2] Exit\n[3] Tutorial\n[4] DevTools\n[5] CPUStress\n[6] Colour\n[7] Settings\n[8] Title\n[9] Date\n[10] ColourNumbers\n[11] MediaPlayer\n[12] TTS\n[13] Stopwatch\n\nMore will be added soon!\n",
+		"___LIST OF COMMANDS___\n\n[1] Help\n[2] Exit\n[3] Tutorial\n[4] DevTools\n[5] CPUStress\n[6] Colour\n[7] Settings\n[8] Title\n[9] Date\n[10] ColourNumbers\n[11] MediaPlayer\n[12] AudioPlayer\n[13] TTS\n[14] Stopwatch\n[15] Read\n[16] Timer\n[17] Beep\n[18] Copy\n[19] MessageBox\n[20] TextInfo\n\nMore will be added soon!\n",
 
 		"___FREQUENTLY ASKED QUESTIONS___\n\n"
-		"1) I can't see the terminal text. How can I zoom in?\n  1a) You can zoom in, of course. Press and hold the Ctrl button and scroll with the mouse to your desired text size.\n",
+		"1) I can't see the terminal text. How can I zoom in?\n  1a) You can zoom in, of course. Press and hold the Ctrl button and scroll with the mouse to your desired text size.\n"
+		"\n\n2) The error messages shown aren't detailed enough. How do I get better-quality error messages?\n  2a) To get better quality error messages, just enable the Verbosity Messages setting in the Settings command.\n",
 
 		"___ABOUT THIS PROGRAM___\n\nThis is a TerminalAppGen3 Alpha Build.\n" +
-		wordWrap("This is an early alpha build of TerminalAppGen3, with an entirely new engine and components.") +
-		"\n(c) Ryan Zorkot 2023. Protected by the MIT License.\n"
+		wordWrap("This is an early alpha build of TerminalAppGen3, with an entirely new engine and components.\nThis program is made in C++, with a few very small parts of C.") +
+		wordWrap("\n\nThis program uses the DirectShow API in the MediaPlayer command, which is licensed by Microsoft Corporation. (c) Microsoft Corporation.\n\n") +
+		"\n(c) Ryan Zorkot 2023. TerminalAppGen3 is governed by the MIT License.\n\n"
 	};
 
 	sneHelp.sScreens = sScreens;
@@ -693,8 +697,7 @@ void DevTools(short int nToolNum) {
 	else if (nToolNum == 3) {
 		// Execute the ColourNumbers command from the Command function
 		char cTemp[3] = { ' ', ' ', ' ' };
-		std::string sTemp = "";
-		Commands("colournumbers", cTemp, &sTemp, "");
+		Commands("colournumbers", cTemp, "");
 
 		return;
 	}
@@ -873,10 +876,11 @@ void DevTools(short int nToolNum) {
 		std::cout << '\n';
 		colourSubheading();
 		slowcharCentredFn(true, "This is a CPU-intensive, nanosecond-accurate stopwatch that uses CPU ticks for the time.");
+		std::cout << NOULINE_STR;
 		colour(sColourGlobal, sColourGlobalBack);
 
 		// Prompt to start
-		std::cout << NOULINE_STR << "\n\n";
+		std::cout << "\n\n";
 		colour(MAG, LYLW);
 		std::cout << wordWrap("You can press any key in the middle of the stopwatch run to stop the time.");
 		colour(sColourGlobal, sColourGlobalBack);
@@ -1036,11 +1040,11 @@ void DevTools(short int nToolNum) {
 
 
 // Commands function - all command interfaces/start menus will go here
-void Commands(const std::string sCommand, char* cCommandArgs, std::string* sStringCommandArgs, const std::string sCommandArgsBuffer = "") {
+void Commands(const std::string sCommand, char* cCommandArgs, const std::string sCommandArgsBuffer = "") {
 
 	// Help
 	if (sCommand == "help") {
-
+		
 		// Arguments Interface
 		for (int i = 0; i < 128; i++) {
 			// help message
@@ -2270,7 +2274,7 @@ void Commands(const std::string sCommand, char* cCommandArgs, std::string* sStri
 				std::cout << '\n';
 				std::cout << wordWrap(" -h\t\tDisplays this help message.") << '\n'
 					<< wordWrap(" --<FILE>\tOpens a file for playback/viewing. Put the exact filepath in place of <FILE>.\n\nExample: mediaplayer --\"C:\\Media\\media test.mp3\"\n\n")
-					<< wordWrap("Note: You need to use quotes like shown in the example to use a filename with ANY spaces.\n\n");
+					<< wordWrap("NOTE: You need to use quotes like shown in the example to use a filename with ANY spaces.\n\nNOTE: Type in \"*open\" without quotes in place of the file argument to use the Windows File Dialogue to open a file.\n\n");
 
 				return;
 			}
@@ -2284,20 +2288,29 @@ void Commands(const std::string sCommand, char* cCommandArgs, std::string* sStri
 
 				// Check if the start of the first argument has a speechmark; 
 				// if there is one, use filepath from the start to the ending speechmark (if there is one)
-				if (sStringCommandArgs[0][0] == '\"') {
+				if (sStringCommandArgs[0] == "*open") {
+					std::cout << "Opening with the Windows File Dialogue...\n\n";
+					FileOpenGUIEngine MediaPlayer;
+					MediaPlayer.FileOpenDialogue("Open a Media File to Play");
+					sFilePath = MediaPlayer.GetFileName();
+					// Cancelled
+					if (sFilePath == "") {
+						Exiting();
+						return;
+					}
+				}
+				else if (sStringCommandArgs[0][0] == '\"') {
 					int nFirstMarkPos = sFilePath.find("--\"", 0) + 3;
 					int nFinalMarkPos = sFilePath.find('\"', nFirstMarkPos) - 3;
 					sFilePath = sFilePath.substr(nFirstMarkPos, nFinalMarkPos); 
-					VerbosityDisplay("Executing file " + sFilePath + "...\n");
 				}
 				else sFilePath = sStringCommandArgs[0];
 
-				CA2W ca2w(sFilePath.c_str());
+				VerbosityDisplay("Executing file " + sFilePath + "...\n");
+
 				MultimediaEngine meArgInterface;
 
-				std::wstring wsPath;
-				wsPath = ca2w;
-				meArgInterface.MultimediaPlayer(wsPath);
+				meArgInterface.DShowMultimediaPlayer(s2ws(sFilePath));
 
 				return;
 			}
@@ -2310,7 +2323,7 @@ void Commands(const std::string sCommand, char* cCommandArgs, std::string* sStri
 		colourSubheading();
 		std::cout << wordWrap("The following file formats are supported:") << NOULINE_STR;
 		colour(LCYN, sColourGlobalBack);
-		std::cout << wordWrap("\nWMA, WMV, AIFF, AU, AVI, MIDI, SND, WAV, MP3(Only MPEG Audio Layer - 3 codec), JPG, JPEG, BMP\n\n");
+		std::cout << wordWrap("\nWMA, WMV, AIFF, AU, AVI, MIDI, SND, WAV, MP3(Only MPEG Audio Layer - 3 codec), JPG, JPEG, BMP\n\nYou can type in \"*open\" without quotes to use the Windows File Dialogue to open a file.\n");
 		colour(sColourGlobal, sColourGlobalBack);
 
 		// Prompt
@@ -2324,10 +2337,123 @@ void Commands(const std::string sCommand, char* cCommandArgs, std::string* sStri
 			Exiting();
 			return;
 		}
+		else if (wsFilePath == L"*open") {
+			std::cout << "Opening with the Windows File Dialogue...\n\n";
+			FileOpenGUIEngine MediaPlayer;
+			MediaPlayer.FileOpenDialogue("Open a Media File to Play");
+			wsFilePath = s2ws(MediaPlayer.GetFileName());
+			// Cancelled
+			if (wsFilePath == L"") {
+				Exiting();
+				return;
+			}
+		}
 
 		// Execute multimedia player with the inputted file path
 		MultimediaEngine meMediaPlayer;
-		meMediaPlayer.MultimediaPlayer(wsFilePath);
+		meMediaPlayer.DShowMultimediaPlayer(wsFilePath);
+
+		return;
+
+	}
+
+	// AudioPlayer
+	else if (sCommand == "audioplayer") {
+		std::cout << '\n';
+		CentreColouredText("___AUDIO PLAYER___", 1);
+		std::cout << '\n';
+
+		// Arguments Interface
+		for (int i = 0; i < 128; i++) {
+			if (cCommandArgs[i] == 'h') {
+
+				std::cout << '\n';
+				colourSubheading();
+				std::cout << "What this command does:" << NOULINE_STR;
+				colour(sColourGlobal, sColourGlobalBack);
+				std::cout << wordWrap("\n- Plays a wide range of popular audio formats, such as FLAC and MP3, in an easy-to-use interface.\n- This is newer than the MediaPlayer, which uses an older DirectShow API.\n- Uses the BASS Audio API, so requires DLLs to be in the same directory as TerminalAppGen3.\n- Audio formats supported: MP3, MP2, MP1, OGG, WAV, AIFF, FLAC, XM, IT, S3M, MOD, MTM, UMX, WMA, M4A, OPUS, AAC\n\n");
+
+				colourSubheading();
+				std::cout << "Possible arguments for this command:" << NOULINE_STR;
+				colour(sColourGlobal, sColourGlobalBack);
+				std::cout << wordWrap("\n -h\t\tDisplays this help message.\n --<file>\tSpecify the file to use. Put the filepath in place of <file>.\n\nExample: audioplayer --\"C:\\Users\\Public\\Music\\Kalimba.mp3\"\n\nNOTE: Use quotes for ANY filename with spaces inside of it, like the example.\nNOTE: Type in \"*open\" without quotes to use the Windows File Dialogue to open a file.\n\n");
+
+				return;
+			}
+			else if (sStringCommandArgs[0] != " ") {
+				if (sStringCommandArgs[0] == "*open") {
+					std::cout << "Opening with the Windows File Dialogue...\n\n";
+					// Open with the FileOpen GUI Engine
+					FileOpenGUIEngine AudioPlayer;
+					AudioPlayer.FileOpenDialogue("Open an Audio File to Play");
+					// Cancelled
+					if (AudioPlayer.GetFileName() == "") {
+						Exiting();
+						return;
+					}
+					
+					MultimediaEngine meArgInterface;
+					meArgInterface.BASSAudioPlayer(AudioPlayer.GetFileName());
+
+					return;
+				}
+
+				std::string sFilePath = sCommandArgsBuffer;
+
+				std::cout << '\n';
+
+				// Check if the start of the first argument has a speechmark; 
+				// if there is one, use filepath from the start to the ending speechmark (if there is one)
+				if (sStringCommandArgs[0][0] == '\"') {
+					int nFirstMarkPos = sFilePath.find("--\"", 0) + 3;
+					int nFinalMarkPos = sFilePath.find('\"', nFirstMarkPos) - 3;
+					sFilePath = sFilePath.substr(nFirstMarkPos, nFinalMarkPos);
+				}
+				else sFilePath = sStringCommandArgs[0];
+
+				VerbosityDisplay("Executing file " + sFilePath + "...\n");
+
+				MultimediaEngine meArgInterface;
+
+				meArgInterface.BASSAudioPlayer(sFilePath);
+
+				return;
+			}
+		}
+
+		// Information
+		std::cout << "\n";
+		colourSubheading();
+		std::cout << wordWrap("The following file formats are supported:") << NOULINE_STR;
+		colour(LCYN, sColourGlobalBack);
+		std::cout << wordWrap("\nMP3, MP2, MP1, OGG, WAV, AIFF, FLAC, XM, IT, S3M, MOD, MTM, UMX, WMA, M4A, OPUS, AAC\n\nType \"*open\" without quotes to use the Windows File Dialogue to open an audio file.\n");
+		colour(sColourGlobal, sColourGlobalBack);
+
+		// Prompt
+		std::string sFilePath = str("Enter your desired audio file path (0 to exit): > ");
+		std::cout << '\n';
+
+		// Exit on 0
+		if (sFilePath == "0") {
+			Exiting();
+			return;
+		}
+		// Open the file dialogue on *open
+		else if (sFilePath == "*open") {
+			// Open with the FileOpen GUI Engine
+			std::cout << "Opening with the Windows File Dialogue...\n\n";
+			FileOpenGUIEngine AudioPlayer;
+			AudioPlayer.FileOpenDialogue("Open an Audio File to Play");
+			sFilePath = AudioPlayer.GetFileName();
+			// Cancelled
+			if (sFilePath == "") {
+				Exiting();
+				return;
+			}
+		}
+
+		MultimediaEngine meAudioPlayer;
+		meAudioPlayer.BASSAudioPlayer(sFilePath);
 
 		return;
 
@@ -2362,7 +2488,7 @@ void Commands(const std::string sCommand, char* cCommandArgs, std::string* sStri
 
 				// Check if the start of the first argument has a speechmark; 
 				// if there is one, use text from the start to the ending speechmark (if there is one)
-				if (sStringCommandArgs[0][0] == '\"') {
+				if ((sStringCommandArgs[0])[0] == '\"') {
 					int nFirstMarkPos = sText.find("--\"", 0) + 3;
 					int nFinalMarkPos = sText.find('\"', nFirstMarkPos) - 3;
 					sText = sText.substr(nFirstMarkPos, nFinalMarkPos);
@@ -2370,13 +2496,9 @@ void Commands(const std::string sCommand, char* cCommandArgs, std::string* sStri
 				}
 				else sText = sStringCommandArgs[0];
 
-				CA2W ca2w(sText.c_str());
-				std::wstring wsFinalText;
-				wsFinalText = ca2w;
-
 				// Execute text-to-speech
 				MultimediaEngine meTTS;
-				meTTS.TTSOutput(wsFinalText);
+				meTTS.TTSOutput(s2ws(sText));
 
 				return;
 			}
@@ -2397,16 +2519,10 @@ void Commands(const std::string sCommand, char* cCommandArgs, std::string* sStri
 			return;
 		}
 
-		CA2W ca2w(sText.c_str());
-
-		// Pass to wstring
-		std::wstring wsText;
-		wsText = ca2w;
-
 		// Output using MultimediaEngine::TTS()
 		MultimediaEngine meTTS;
 		VerbosityDisplay("Outputting \"" + sText + "\" as TTS...\n");
-		meTTS.TTSOutput(wsText);
+		meTTS.TTSOutput(s2ws(sText));
 
 		return;
 	}
@@ -2488,6 +2604,737 @@ void Commands(const std::string sCommand, char* cCommandArgs, std::string* sStri
 		std::cout << " seconds.\n\n";
 
 		clearkeebbuf();
+		return;
+	}
+
+	// Read
+	else if (sCommand == "read") {
+
+		CentreColouredText(" ___READ___ ", 1);
+		std::cout << '\n';
+
+		// Arguments Interface
+		for (int i = 0; i < 128; i++) {
+			if (cCommandArgs[i] == 'h') {
+				colourSubheading();
+				std::cout << "What this command does:" << NOULINE_STR;
+				colour(sColourGlobal, sColourGlobalBack);
+				std::cout << '\n' << wordWrap("- Reads the contents and characters of a file and outputs them to the screen.\n\n");
+
+				colourSubheading();
+				std::cout << "Possible arguments for this command:" << NOULINE_STR;
+				colour(sColourGlobal, sColourGlobalBack);
+				std::cout << '\n' << wordWrap(" -h\t\tDisplays this help message.\n --<file>\tThe file that will be used to read from. Put file directory in place of <file>.\n\nNOTE: You can use \"*open\" without quotes as the filename argument to use the Windows File Dialogue to get a file.\n\n")
+					<< wordWrap("Example: read --\"C:\\Users\\Public\\file.txt\"\n\n");
+
+				return;
+			}
+			else if (sStringCommandArgs[0] != " ") {
+
+				// Firstly, test if file is actually real
+				std::ifstream fileTestIn;
+
+				std::string sText = sCommandArgsBuffer;
+				// Check if the start of the first argument has a speechmark and if File Dialogue was requested; 
+				// if there is one, use text from the start to the ending speechmark (if there is one)
+				if (sStringCommandArgs[0] == "*open") {
+					// Open with the FileOpen GUI Engine
+					std::cout << "Opening with the Windows File Dialogue...\n\n";
+					FileOpenGUIEngine ReadCommand;
+					ReadCommand.FileOpenDialogue("Open a File to Read");
+					sText = ReadCommand.GetFileName();
+					// Cancelled
+					if (sText == "") {
+						Exiting();
+						return;
+					}
+				}
+				else if ((sStringCommandArgs[0])[0] == '\"') {
+					int nFirstMarkPos = sText.find("--\"", 0) + 3;
+					int nFinalMarkPos = sText.find('\"', nFirstMarkPos) - 3;
+					sText = sText.substr(nFirstMarkPos, nFinalMarkPos);
+				}
+				else sText = sStringCommandArgs[0];
+
+				fileTestIn.open(sText);
+				if (fileTestIn.fail()) {
+					colour(RED, sColourGlobalBack);
+					std::cerr << "\nError - The directory or file doesn't exist. Please try again with a directory/file that exists.\n";
+					colour(sColourGlobal, sColourGlobalBack);
+					fileTestIn.close();
+					Exiting();
+					return;
+				}
+				fileTestIn.close();
+
+				// Open a new stream for reading
+				std::ifstream fileIn(sText, std::ios::binary);
+				std::string* sFileContents = new std::string; // In case of big file
+				std::string* sBuffer = new std::string;
+
+				// Copy line by line using std::getline() using buffer
+				while (!fileIn.eof()) {
+					std::getline(fileIn, *sBuffer);
+					*sFileContents += '\n';
+					*sFileContents += *sBuffer;
+					*sBuffer = "";
+				}
+
+				// Output file contents
+				if (bAnsiVTSequences) {
+					colourHighlight();
+					std::cout << ULINE_STR << "File contents are below:" << NOULINE_STR;
+					colour(sColourGlobal, sColourGlobalBack);
+					std::cout << "\n\n" << *sFileContents << "\n\n";
+					colour(LGRN, sColourGlobalBack);
+					std::cout << ULINE_STR << "File Finished." << NOULINE_STR << '\n';
+					colour(sColourGlobal, sColourGlobalBack);
+				}
+				else std::cout << "File contents are below:\n\n" << *sFileContents << "\n\nFile Finished.\n";
+
+				delete sFileContents;
+				return;
+			}
+		}
+
+		std::cout << '\n';
+		CentreColouredText("This command outputs all contents of a file.", 2);
+		std::cout << "\n\n";
+		std::string sInput = str("Please input file directory (0 to exit, \"*open\" without quotes to use the Windows File Dialogue): > ");
+		if (sInput == "0") {
+			Exiting();
+			return;
+		}
+		// Open the file dialogue on *open
+		else if (sInput == "*open") {
+			// Open with the FileOpen GUI Engine
+			std::cout << "Opening with the Windows File Dialogue...\n\n";
+			FileOpenGUIEngine ReadCommand;
+			ReadCommand.FileOpenDialogue("Open a File to Read");
+			sInput = ReadCommand.GetFileName();
+			// Cancelled
+			if (sInput == "") {
+				Exiting();
+				return;
+			}
+		}
+		else std::cout << '\n';
+
+		// Firstly, test if file is actually real
+		std::ifstream fileTestIn;
+
+		// Check if the start of the first argument has a speechmark; 
+		// if there is one, use text from the start to the ending speechmark (if there is one)
+		if (sInput[0] == '\"') {
+			int nFirstMarkPos = sInput.find("\"", 0) + 1;
+			int nFinalMarkPos = sInput.find('\"', nFirstMarkPos) - 1;
+			sInput = sInput.substr(nFirstMarkPos, nFinalMarkPos);
+		}
+
+		fileTestIn.open(sInput);
+		if (fileTestIn.fail()) {
+			colour(RED, sColourGlobalBack);
+			std::cerr << "Error - The directory or file doesn't exist. Please try again with a directory/file that exists.\n";
+			colour(sColourGlobal, sColourGlobalBack);
+			fileTestIn.close();
+			Exiting();
+			return;
+		}
+		fileTestIn.close();
+
+		// Open a new stream for reading
+		std::ifstream fileIn(sInput, std::ios::binary);
+		std::string* sFileContents = new std::string;
+		std::string* sBuffer = new std::string;
+		
+		// Copy line by line using std::getline() using buffer
+		while (!fileIn.eof()) {
+			std::getline(fileIn, *sBuffer);
+			*sFileContents += '\n';
+			*sFileContents += *sBuffer;
+			*sBuffer = "";
+		}
+
+		// Output file contents
+		if (bAnsiVTSequences) {
+			colourHighlight();
+			std::cout << ULINE_STR << "File contents are below:" << NOULINE_STR;
+			colour(sColourGlobal, sColourGlobalBack);
+			std::cout << "\n\n" << *sFileContents << "\n\n";
+			colour(LGRN, sColourGlobalBack);
+			std::cout << ULINE_STR << "File Finished." << NOULINE_STR << '\n';
+			colour(sColourGlobal, sColourGlobalBack);
+		}
+		else std::cout << "File contents are below:\n\n" << *sFileContents << "\n\nFile Finished.\n";
+
+		fileIn.close();
+		delete sFileContents;
+		return;
+	}
+
+	// Timer
+	else if (sCommand == "timer") {
+
+		long double dInput = 0;
+
+
+		CentreColouredText(" ___TIMER___ ", 1);
+		std::cout << '\n';
+
+		// Arguments Interface
+		for (int i = 0; i < 128; i++) {
+			if (cCommandArgs[i] == 'h') {
+				colourSubheading();
+				std::cout << "What this command does:" << NOULINE_STR;
+				colour(sColourGlobal, sColourGlobalBack);
+				std::cout << wordWrap("\n- Provides access to a highly accurate countdown timer that takes time in seconds.\n- You can press any key to exit the timer while in operation.\n\n");
+				colourSubheading();
+				std::cout << "Possible arguments for this command:" << NOULINE_STR;
+				colour(sColourGlobal, sColourGlobalBack);
+				std::cout << wordWrap("\n -h\t\tDisplays this help message.\n --<time>\tAllows to pass the time in seconds as an argument. Put the number of seconds in place of <time>.\n\nExample: timer --45\n\n");
+
+				return;
+			}
+			else if (sStringCommandArgs[0] != " ") {
+				// Firstly, check if argument is a real and usable number
+				if (isNumber(sStringCommandArgs[0]) == false) {
+					colour(RED, sColourGlobalBack);
+					std::cout << "Sorry, but your number argument is either too big or not a number.\nPlease try again with a number between 0 and 2 billion.\n";
+					colour(sColourGlobal, sColourGlobalBack);
+					return;
+				}
+
+				// Convert string to integral value
+				dInput = std::stod(sStringCommandArgs[0]);
+				break;
+			}
+		}
+
+		// Only display prompt if no input was provided
+		if (dInput == 0) {
+			std::cout << '\n';
+			CentreColouredText("This is a highly accurate countdown timer that takes time in seconds.", 2);
+			std::cout << "\n\n";
+			dInput = num("Please input the number of seconds for the timer (0 to exit): > ");
+			// Exit on 0 input
+			if (dInput <= 0.0) {
+				Exiting();
+				return;
+			}
+		}
+
+		// Start timer with prompts
+		colour(LBLU, sColourGlobalBack);
+		std::cout << wordWrap("\nPress any key to exit the timer.\n\n");
+		colour(sColourGlobal, sColourGlobalBack);
+
+		std::chrono::duration<long double> elapsedTime{};
+		auto start = std::chrono::steady_clock::now();
+		auto time = std::chrono::steady_clock::now();
+
+		for (; elapsedTime.count() < dInput; elapsedTime = time - start) {
+			std::cout << "Timer: ";
+			colour(LCYN, sColourGlobalBack);
+			std::cout << dInput - elapsedTime.count();
+			colour(sColourGlobal, sColourGlobalBack);
+			std::cout << " sec (out of ";
+			colour(LCYN, sColourGlobalBack);
+			std::cout << dInput;
+			colour(sColourGlobal, sColourGlobalBack);
+			std::cout << " sec)                      \r";
+			// Check for keypress
+			if (_kbhit()) {
+				std::cout << "\n";
+				Exiting();
+				return;
+			}
+			// Check for pause press
+			time = std::chrono::steady_clock::now();
+			// Optimisation for cpu time/usage
+			sleep(10);
+		}
+
+		std::cout << '\n';
+		colour(LGRN, sColourGlobalBack);
+		std::cout << CentreText("Timer finished!") << '\n';
+		MessageBeep(MB_OK);
+		colour(sColourGlobal, sColourGlobalBack);
+
+		return;
+
+	}
+
+	// Beep
+	else if (sCommand == "beep") {
+
+		long double dFrequency = 0;
+		long double dDuration = 0;
+
+		CentreColouredText(" ___BEEP___ ", 1);
+		std::cout << '\n';
+
+		// Arguments Interface
+		for (int i = 0; i < 128; i++) {
+			if (cCommandArgs[i] == 'h') {
+				colourSubheading();
+				std::cout << "What this command does:" << NOULINE_STR;
+				colour(sColourGlobal, sColourGlobalBack);
+				std::cout << wordWrap("\n- Allows for outputting a constant beep sound at a variable frequency and duration.\n- The frequency is measured in Hertz, and the duration is measured in SECONDS.\n\n");
+
+				colourSubheading();
+				std::cout << "Possible arguments for this command:" << NOULINE_STR;
+				colour(sColourGlobal, sColourGlobalBack);
+				std::cout << wordWrap("\n -h\t\tDisplays this help message.\n --<freq>\t\tSpecify the frequency as an argument. Input your frequency number in place of <freq>.\n --<time>\t\tSpecify the time as an argument. Input your time number in place of <time>.\n\nExample: beep --500 --1\n\n");
+
+				return;
+			} 
+			if (sStringCommandArgs[0] != " ") {
+				// Firstly, check if argument is a real and usable number
+				if (isNumber(sStringCommandArgs[0]) == false) {
+					colour(RED, sColourGlobalBack);
+					std::cout << "Sorry, but your frequency argument is either too big or not a number.\nPlease try again with a number between 0 and 2 billion.\n";
+					colour(sColourGlobal, sColourGlobalBack);
+					return;
+				}
+
+				// Use the specified number in the BeepSound call.
+				dFrequency = std::stod(sStringCommandArgs[0]);
+
+				if (dFrequency < 0) {
+					colour(RED, sColourGlobalBack);
+					std::cout << "Sorry, but your frequency argument is a negative number.\nPlease try again with a number between 0 and 2 billion.\n";
+					colour(sColourGlobal, sColourGlobalBack);
+					return;
+				}
+
+				dDuration = 1; // just in case no time argument was passed, use the default 1 second beep
+			}
+			if (sStringCommandArgs[1] != " ") {
+				// Firstly, check if argument is a real and usable number
+				if (isNumber(sStringCommandArgs[1]) == false) {
+					colour(RED, sColourGlobalBack);
+					std::cout << "Sorry, but your time argument is either too big or not a number.\nPlease try again with a number between 0 and 2 billion.\n";
+					colour(sColourGlobal, sColourGlobalBack);
+					return;
+				}
+
+				// Use the specified number in the BeepSound call.
+				dDuration = std::stod(sStringCommandArgs[1]);
+
+				// Negative numbers are not allowed.
+				if (dDuration < 0) {
+					colour(RED, sColourGlobalBack);
+					std::cout << "Sorry, but your time argument is a negative number.\nPlease try again with a number between 0 and 2 billion.\n";
+					colour(sColourGlobal, sColourGlobalBack);
+					return;
+				}
+			}
+		}
+
+		// Only display prompt when command ran without arguments
+		if (dFrequency <= 0 && dDuration <= 0) {
+			std::cout << '\n';
+			CentreColouredText("This allows for outputting a sound at a specified frequency for a specified amount of time.", 2);
+			std::cout << "\n\n";
+			dFrequency = num("Please input frequency in Hertz (0 to exit): > ");
+			if (dFrequency <= 0) {
+				Exiting();
+				return;
+			}
+			dDuration = num("Please input duration in seconds (0 to exit): > ");
+			if (dDuration <= 0) {
+				Exiting();
+				return;
+			}
+		}
+		
+
+		colour(GRN, sColourGlobalBack);
+		std::cout << '\n' << CentreText("Beep is outputting...") << "\n\n";
+		colour(sColourGlobal, sColourGlobalBack);
+
+		// Run the MultimediaEngine::BeepSound() function to output beep.
+		MultimediaEngine meBeep;
+		meBeep.BeepSound(dFrequency, dDuration);
+
+		colour(LGRN, sColourGlobalBack);
+		std::cout << CentreText("Beep output operation complete.") << '\n';
+		colour(sColourGlobal, sColourGlobalBack);
+
+		return;
+	}
+
+	// MessageBox
+	else if (sCommand == "messagebox") {
+		std::string sCaption = "";
+		std::string sText = "";
+		int nButton = 0;
+		int nIcon = 0;
+
+		std::cout << '\n';
+		CentreColouredText(" ___MESSAGEBOX___ ", 1);
+		std::cout << '\n';
+
+		// Arguments Interface
+		for (int i = 0; i < 128; i++) {
+			if (cCommandArgs[i] == 'h') {
+				colourSubheading();
+				std::cout << "What this command does:" << NOULINE_STR;
+				colour(sColourGlobal, sColourGlobalBack);
+				std::cout << wordWrap("\n- Allows for creating a custom message box.\n- Customisations include text, caption, icon and buttons.\n\n");
+
+				colourSubheading();
+				std::cout << "Possible arguments for this command:" << NOULINE_STR;
+				colour(sColourGlobal, sColourGlobalBack);
+				std::cout << wordWrap("\n -h\t\tDisplays this help message.\n -t --<text>\tText for the message box. Set the text in place of <text>.")
+					<< wordWrap("\n -c --<caption>\tCaption for the message box. Set the caption in place of <caption>.\n -i --<icon>\tIcon for the message box. Set either: info, warning, error, or question, in place of <icon>.")
+					<< wordWrap("\n -b --<button>\tButtons for the message box. Set either: ok, okcancel, abortretryignore, yesnocancel, yesno, retrycancel, or canceltrycontinue, in place of <button>.\n\nExample: messagebox -t --\"Test Text\" -c --\"Test Caption\" -b --ok\n\n")
+					<< wordWrap("NOTE: Use speechmarks like the example when using text that contains spaces.\n\n");
+
+				return;
+			}
+			else if (cCommandArgs[i] == 't') {
+				if (sStringCommandArgs[i] != " ") {
+					sText = sStringCommandArgs[i];
+				}
+				else {
+					colour(RED, sColourGlobalBack);
+					std::cerr << "ERROR - No form of text argument found.\nPlease make sure that's there, and try again.\n";
+					colour(sColourGlobal, sColourGlobalBack);
+
+					return;
+				}
+
+			}
+			else if (cCommandArgs[i] == 'c') {
+				int nSpecifierPos = sCommandArgsBuffer.find("-c ", 0);
+				int nArgPosBegin, nArgPosEnd;
+
+				if (sStringCommandArgs[i] != " ") {
+					sCaption = sStringCommandArgs[i];
+				}
+				else {
+					colour(RED, sColourGlobalBack);
+					std::cerr << "ERROR - No form of caption text argument found.\nPlease make sure that's there, and try again.\n";
+					colour(sColourGlobal, sColourGlobalBack);
+
+					return;
+				}
+			}
+			else if (cCommandArgs[i] == 'i') {
+				// Uses sStringCommandArgs because the only arguments in this function are string-based
+				if (sStringCommandArgs[i] != " ") {
+					nIcon = MessageBoxIconSwitch(sStringCommandArgs[i]);
+					if (nIcon == 1) return;
+				}
+				else {
+					colour(RED, sColourGlobalBack);
+					std::cerr << "ERROR - No form of icon argument found.\nPlease make sure that's there, and try again.\n";
+					colour(sColourGlobal, sColourGlobalBack);
+
+					return;
+				}
+			}
+			else if (cCommandArgs[i] == 'b') {
+				if (sStringCommandArgs[i] != " ") {
+					nButton = MessageBoxButtonSwitch(sStringCommandArgs[i]);
+				}
+				else {
+					colour(RED, sColourGlobalBack);
+					std::cerr << "ERROR - No form of button argument found.\nPlease make sure that's there, and try again.\n";
+					colour(sColourGlobal, sColourGlobalBack);
+
+					return;
+				}
+			}
+		}
+
+		if (sCaption == "" && sText == "" && nButton == 0 && nIcon == 0) {
+			std::cout << '\n';
+			CentreColouredText("This allows for creating a message box with custom icons, buttons, text and caption text.", 2);
+			std::cout << "\n\n";
+
+			// Prompts
+			// Icon Selection
+			OptionSelectEngine oseMsgBox;
+			oseMsgBox.nSizeOfOptions = 4;
+			std::string sOptionsIcon[] = {
+				"Error",
+				"Question Mark",
+				"Warning",
+				"Information 'I'"
+			};
+			oseMsgBox.sOptions = sOptionsIcon;
+			switch (oseMsgBox.OptionSelect("Please select what icon you want for the message box:", " ICON SELECTION ")) {
+			case -1:
+				Exiting();
+				return;
+			case 1:
+				nIcon = 16;
+				break;
+			case 2:
+				nIcon = 32;
+				break;
+			case 3:
+				nIcon = 48;
+				break;
+			case 4:
+				nIcon = 64;
+				break;
+			default:
+				colour(RED, sColourGlobalBack);
+				std::cerr << "An unknown error occured while processing your icon argument.\nPlease try again later.\n";
+				return;
+			}
+
+			// Button Selection
+			oseMsgBox.nSizeOfOptions = 7;
+			std::string sOptionsButton[] = {
+				"OK",
+				"OK + Cancel",
+				"Abort + Retry + Ignore",
+				"Yes + No + Cancel",
+				"Yes + No",
+				"Retry + Cancel",
+				"Cancel + Try + Continue"
+			};
+			oseMsgBox.sOptions = sOptionsButton;
+			nButton = oseMsgBox.OptionSelect("Please select the button layout for the message box:", " BUTTON SELECTION ") - 1;
+			// Because -1 - 1 = -2, so exit
+			if (nButton == -2) { 
+				Exiting();
+				return;
+			}
+
+			// MessageBox Text
+			sText = str("Please input the text that you want in the message box (0 to exit): > ");
+			std::cout << '\n';
+			if (sText == "0") {
+				Exiting();
+				return;
+			}
+
+			// MessageBox Caption Text
+			sCaption = str("Please input the caption text that you want in the message box (0 to exit): > ");
+			std::cout << '\n';
+			if (sCaption == "0") {
+				Exiting();
+				return;
+			}
+		}
+
+		// Display message box
+		colour(YLW, sColourGlobalBack);
+		std::cout << "\nDisplaying messagebox...\n";
+		colour(sColourGlobal, sColourGlobalBack);
+
+		if (MessageBoxA(NULL, sText.c_str(), sCaption.c_str(), nButton | nIcon) == false) {
+			// An error occured
+			colour(RED, sColourGlobalBack);
+			std::cerr << wordWrap("An error occured while displaying the message box.\nPlease try again later.\n");
+			colour(sColourGlobal, sColourGlobalBack);
+		}
+		else {
+			// Success
+			colour(LGRN, sColourGlobalBack);
+			std::cout << CentreText("Messagebox successfully displayed!") << '\n';
+			colour(sColourGlobal, sColourGlobalBack);
+		}
+
+		return;
+	}
+
+	// Copy
+	else if (sCommand == "copy") {
+		CentreColouredText(" ___COPY___ ", 1);
+		std::cout << '\n';
+
+		// Arguments Interface
+		for (int i = 0; i < 128; i++) {
+			if (cCommandArgs[i] == 'h') {
+				colourSubheading();
+				std::cout << "What this command does:" << NOULINE_STR;
+				colour(sColourGlobal, sColourGlobalBack);
+				std::cout << wordWrap("\n- Copies an existing file to a new file.\n- This uses a directory of the source file, and the directory of the new file (NOT folder).\n");
+
+				colourSubheading();
+				std::cout << "Possible arguments for this command:" << NOULINE_STR;
+				colour(sColourGlobal, sColourGlobalBack);
+				std::cout << wordWrap("\n -h\t\tDisplays this help message.\n --<source>\tThe original file to be copied to another file. Put the file directory in place of <source>.\n --<dest>\tThe file directory of the new file. Put the file directory in place of <dest>.\n\n")
+					<< wordWrap("Example: copy --\"C:\\test\\a file.txt\" --C:\\Users\\newfile.txt\n\n")
+					<< wordWrap("NOTE: For any directory with spaces, use quotes like in the example.\nNOTE: You must have both the source and the destination directories when using them as arguments.\n\n");
+
+				return;
+
+			}
+			else if (sStringCommandArgs[0] != " ") {
+				if (sStringCommandArgs[1] != " ") {
+					std::string sOriginalFilePath = sStringCommandArgs[0];
+					std::string sDestinationFilePath = sStringCommandArgs[1];
+
+					// Copy file
+					VerbosityDisplay("Copying file " + sOriginalFilePath + " to " + sDestinationFilePath + "...");
+					std::cout << "Copying file...\n";
+
+					if (CopyFileA(sOriginalFilePath.c_str(), sDestinationFilePath.c_str(), true) == false) {
+						// Output success message
+						colour(RED, sColourGlobalBack);
+						std::cerr << wordWrap("An error occured while copying the file.\nPossibly either the original file is nonexistent or the file already exists in the destination location.\n");
+						colour(sColourGlobal, sColourGlobalBack);
+					}
+					else {
+						// Failed
+						colour(LGRN, sColourGlobalBack);
+						std::cout << CentreText("File successfully copied!") << '\n';
+						colour(sColourGlobal, sColourGlobalBack);
+					}
+					std::cout << '\n';
+				}
+				else {
+					// Error message
+					colour(RED, sColourGlobalBack);
+					std::cerr << wordWrap("Error - You need to have both the file location AND destination file directories included in your arguments.\nSee \"copy -h\" for more info.\n");
+					colour(sColourGlobal, sColourGlobalBack);
+				}
+
+				return;
+			}
+		}
+
+		CentreColouredText("This command copies a file from one location to another.", 2);
+		std::cout << "\n\n";
+
+		// Prompts
+		std::string sOrigPath = str("Please input directory of original file (0 to exit): > ");
+		if (sOrigPath == "0") {
+			Exiting();
+			return;
+		}
+		std::string sDestPath = str("Please input directory of new destination file (0 to exit): > ");
+		if (sDestPath == "0") {
+			Exiting();
+			return;
+		}
+
+		// Check for any speechmarks that might accidentally get passed to copy operation
+		if (sOrigPath[0] == '\"') {
+			int nFirstMarkPos = sOrigPath.find("\"", 0) + 1;
+			int nFinalMarkPos = sOrigPath.find('\"', nFirstMarkPos) - 1;
+			sOrigPath = sOrigPath.substr(nFirstMarkPos, nFinalMarkPos);
+		}
+		if (sDestPath[0] == '\"') {
+			int nFirstMarkPos = sDestPath.find("\"", 0) + 1;
+			int nFinalMarkPos = sDestPath.find('\"', nFirstMarkPos) - 1;
+			sDestPath = sDestPath.substr(nFirstMarkPos, nFinalMarkPos);
+		}
+
+		// Copy file
+		VerbosityDisplay("Copying file " + sOrigPath + " to " + sDestPath + "...");
+		std::cout << "Copying file...\n";
+		if (CopyFileA(sOrigPath.c_str(), sDestPath.c_str(), true) == false) {
+			colour(RED, sColourGlobalBack);
+			std::cerr << wordWrap("An error occured while copying the file.\nPossibly either the original file is nonexistent or the file already exists in the destination location.\n");
+			colour(sColourGlobal, sColourGlobalBack);
+		}
+		else {
+			colour(LGRN, sColourGlobalBack);
+			std::cout << CentreText("File successfully copied!") << '\n';
+			colour(sColourGlobal, sColourGlobalBack);
+		}
+
+		return;
+	}
+
+	// TextInfo
+	else if (sCommand == "textinfo") {
+		std::string sText = "";
+
+		std::cout << '\n';
+		CentreColouredText(" ___TEXTINFO___ ", 1);
+		std::cout << '\n';
+
+		// Arguments Interface
+		for (int i = 0; i < 128; i++) {
+			if (cCommandArgs[i] == 'h') {
+				colourSubheading();
+				std::cout << "What this command does:" << NOULINE_STR;
+				colour(sColourGlobal, sColourGlobalBack);
+				std::cout << wordWrap("\n- Displays information about a string of text.\n- This can include words, sentences, letters, characters, etc.\n\n");
+
+				colourSubheading();
+				std::cout << "Possible arguments for this command:" << NOULINE_STR;
+				colour(sColourGlobal, sColourGlobalBack);
+				std::cout << wordWrap("\n -h\t\tDisplays this help message.\n --<text>\tThe text to be used for the command. Put the text in place of <text>.\n\n")
+					<< wordWrap("Example: textinfo --\"The quick brown fox jumps over the lazy dog.\"\n\nNOTE: Use quotes for text with any spaces in it like the example, or the text may not be read properly.\n\n");
+
+				return;
+			}
+			else if (sStringCommandArgs[0] != " ") {
+				// Assign sText to sStringCommandArgs[0] to be used after the argument checking
+				sText = sStringCommandArgs[0];
+			}
+		}
+
+		// if not assigned by argument
+		if (sText == "") {
+
+			CentreColouredText("This allows for displaying information about a string of text.", 2);
+			std::cout << "\n\n";
+			sText = str("Please input the text string for the info (0 to exit): > ");
+			if (sText == "0") {
+				// Exit
+				Exiting();
+				return;
+			}
+		}
+		colour(YLW, sColourGlobalBack);
+		std::cout << "\nReading text and finalising data...\n\n";
+		colour(sColourGlobal, sColourGlobalBack);
+
+		//
+		// Check string for spaces, '.', and so on
+		//
+
+		int nNumOfWords = 0, nNumOfSentences = 0, nNumOfLetters = 0;
+		// Add a space so the last word gets counted
+		sText += ' ';
+
+		// Count spaces, words, sentences
+		for (int i = 0; i < sText.length(); i++) {
+			// Spaces/Words
+			if (sText[i] == ' ') {
+				if (i - 1 > 0) {
+					if (sText[i - 1] != ' ') nNumOfWords++;
+				}
+			}
+			// Sentences
+			else if (sText[i] == '.' || sText[i] == '?' || sText[i] == '!') nNumOfSentences++;
+			// Letters
+			else if (std::isalpha(sText[i])) nNumOfLetters++;
+		}
+		if (nNumOfSentences == 0) nNumOfSentences++; // because technically, it's one sentence
+
+		// Display results
+		colourSubheading();
+		std::cout << "Results:" << NOULINE_STR;
+		colour(sColourGlobal, sColourGlobalBack);
+		std::cout << wordWrap("\n\nNumber of characters: ");
+		colour(LCYN, sColourGlobalBack);
+		std::cout << sText.length() - 1 << '\n';
+		colour(sColourGlobal, sColourGlobalBack);
+		std::cout << wordWrap("Number of letters: ");
+		colour(LCYN, sColourGlobalBack);
+		std::cout << nNumOfLetters << '\n';
+		colour(sColourGlobal, sColourGlobalBack);
+		std::cout << wordWrap("Number of words: ");
+		colour(LCYN, sColourGlobalBack);
+		std::cout << nNumOfWords << '\n';
+		colour(sColourGlobal, sColourGlobalBack);
+		std::cout << wordWrap("Number of sentences: ");
+		colour(LCYN, sColourGlobalBack);
+		std::cout << nNumOfSentences << "\n\n";
+		colour(sColourGlobal, sColourGlobalBack);
+
 		return;
 	}
 

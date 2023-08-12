@@ -41,11 +41,11 @@
 
 #define RESETALL 0
 
-// Text formatting definitions (reset) - as a string (easier for output)
-#define NOULINE_STR "\x1b[24m"
-#define NOBOLD_STR "\x1b[22m"
-#define NOBLINK_STR "\x1b[25m"
-#define NOSTRIKE_STR "\x1b[29m"
+// Text formatting strings (reset) - as a string (easier for output)
+std::string NOULINE_STR = "\x1b[24m";
+std::string NOBOLD_STR = "\x1b[22m";
+std::string NOBLINK_STR = "\x1b[25m";
+std::string NOSTRIKE_STR = "\x1b[29m";
 
 #define RESETALL_STR "\x1b[0m"
 
