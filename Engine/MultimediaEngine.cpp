@@ -24,7 +24,8 @@ protected:
 	// Arguments: pGraph for the graph to remove filters from.
 	// Returns true for success, false for fail.
 	//
-	bool RemoveFilters(IGraphBuilder* pGraph) {
+	bool RemoveFilters(IGraphBuilder* pGraph) 
+	{
 		// Enumerate the filters in the graph.
 		IEnumFilters* pEnum = NULL;
 		HRESULT hr = pGraph->EnumFilters(&pEnum);
@@ -600,21 +601,21 @@ public:
 	// Arguments: wsInputFilePath - The file path for the WAV file.
 	// Return values: TRUE or 1 for success, FALSE or 0 for fail.
 	//
-	bool MMAPIAudioPlayer(std::wstring wsInputFilePath) {
+	bool MMAPIAudioPlayer(std::string sInputFilePath) {
 
-		std::wstring wsFilePath;
+		std::string sFilePath;
 
 		// Check for speechmarks in case of copy from file explorer
-		if (wsInputFilePath[0] == '"' && wsInputFilePath[wsInputFilePath.length() - 1] == '"') {
-			wsFilePath = wsInputFilePath.substr(1, (wsInputFilePath.length() - 2));
+		if (sInputFilePath[0] == '"' && sInputFilePath[sInputFilePath.length() - 1] == '"') {
+			sFilePath = sInputFilePath.substr(1, (sInputFilePath.length() - 2));
 		}
-		else wsFilePath = wsInputFilePath;
+		else sFilePath = sInputFilePath;
 
-		if (PlaySoundW(wsFilePath.c_str(), NULL, SND_FILENAME | SND_ASYNC)) {
+		if (PlaySoundA(sFilePath.c_str(), NULL, SND_FILENAME | SND_ASYNC)) {
 			return true;
 		}
 		else {
-			VerbosityDisplay("MMAPIAudioPlayer error: file not found.");
+			VerbosityDisplay("MMAPIAudioPlayer error: file not found.\n");
 			return false;
 		}
 
@@ -657,10 +658,11 @@ public:
 	// BeepSound - Produces access to produce a low-latency, audible and constant beep sound.
 	// Arguments: dFrequency - Set the frequency of the beep sound. This is measured in Hertz.
 	//            dDuration - Set the duration of the sound. This is measured in SECONDS.
+	//            bExitOnKeyPress - Exit on keypress while sound is being outputted.
 	// Return values: No return values.
 	// Notes: Providing no arguments will give a 500hz beep sound for 1 second.
 	//
-	void BeepSound(long double dFrequency = 500, long double dDuration = 1) {
+	void BeepSound(long double dFrequency = 500, long double dDuration = 1, bool bExitOnKeyPress = false) {
 		HWAVEOUT hWaveOut;
 		WAVEFORMATEX wfx;
 		wfx.wFormatTag = WAVE_FORMAT_PCM;
@@ -691,7 +693,7 @@ public:
 		waveOutWrite(hWaveOut, &whdr, sizeof(whdr));
 		while ((whdr.dwFlags & WHDR_DONE) == 0) {
 			std::this_thread::sleep_for(std::chrono::nanoseconds(1));
-			if (_kbhit()) {
+			if (_kbhit() && bExitOnKeyPress == true) {
 				waveOutReset(hWaveOut);
 				// Clean keyboard buffer to clear the key that was inputted
 				clearkeebbuf();

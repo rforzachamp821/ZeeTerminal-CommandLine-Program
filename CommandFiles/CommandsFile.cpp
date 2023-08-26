@@ -487,7 +487,9 @@ void RGBColourPresets() {
 
 		int nOption = oseRGBPresets.OptionSelect("Please select what you want to do with Custom RGB Presets:", " ___CUSTOM RGB PRESETS___ ");
 
-		if (nOption == 1) {
+		// Load presets
+		if (nOption == 1) 
+		{
 			std::string sOptions[] = {
 				"Preset Slot 1 (" + RGBPreset[0].sPresetName + ")",
 				"Preset Slot 2 (" + RGBPreset[1].sPresetName + ")",
@@ -502,9 +504,13 @@ void RGBColourPresets() {
 				continue;
 			}
 
-			// Load colours and variables from objects based on nOption
+			// Load colours and variables from objects based on nOption - 1 (OptionSelect returns based on 1, not 0)
 			sColourGlobal = RGBPreset[nOption - 1].sColourPresetForeground;
 			sColourGlobalBack = RGBPreset[nOption - 1].sColourPresetBackground;
+			// Set colours
+			colour(sColourGlobal, sColourGlobalBack);
+			// Clear screen to set new colours to whole screen
+			cls();
 			// Warn user that default colours will be set if the preset hasn't been initialised by user
 			if (RGBPreset[nOption - 1].bSetByUser == false) {
 				colour(YLW, sColourGlobalBack);
@@ -514,11 +520,14 @@ void RGBColourPresets() {
 			std::cout << CentreText("RGB Preset successfully loaded!") << std::endl;
 			colour(sColourGlobal, sColourGlobalBack);
 		}
-		else if (nOption == 2) {
+
+		// Save presets
+		else if (nOption == 2) 
+		{
 			std::string sOptions[] = {
-				"Preset Slot 1",
-				"Preset Slot 2",
-				"Preset Slot 3"
+				"Preset Slot 1 (" + RGBPreset[0].sPresetName + ')',
+				"Preset Slot 2 (" + RGBPreset[1].sPresetName + ')',
+				"Preset Slot 3 (" + RGBPreset[2].sPresetName + ')'
 			};
 			oseRGBPresets.sOptions = sOptions;
 
@@ -534,7 +543,7 @@ void RGBColourPresets() {
 			// Display overwrite message if preset was set by user already
 			if (RGBPreset[nOption - 1].bSetByUser == true) {
 				colour(YLW, sColourGlobalBack);
-				std::cout << wordWrap("This RGB preset (" + RGBPreset[nOption - 1].sPresetName + ") already is user-defined and has user-set values.") << std::endl;
+				std::cout << wordWrap("This RGB preset (" + RGBPreset[nOption - 1].sPresetName + ") is already user-defined and has user-set values.") << std::endl;
 
 				if (!YesNo(wordWrap("Are you sure you want to overwrite these values? [y/n] > "))) {
 					colour(LGRN, sColourGlobalBack);
@@ -556,7 +565,10 @@ void RGBColourPresets() {
 			colour(sColourGlobal, sColourGlobalBack);
 
 		}
-		else if (nOption == 3) {
+
+		// Reset presets
+		else if (nOption == 3) 
+		{
 			colour(YLW, sColourGlobalBack);
 			std::cout << wordWrap("WARNING: ALL PRESETS MADE BY THE USER WILL BE DESTROYED AND INITIALISED TO DEFAULT VAULES.") << std::endl;
 			if (YesNo("Would you like to proceed? [y/n] > ")) {
@@ -578,7 +590,10 @@ void RGBColourPresets() {
 				colour(sColourGlobal, sColourGlobalBack);
 			}
 		}
-		else if (nOption == -1) {
+
+		// Exit
+		else if (nOption == -1) 
+		{
 			Exiting();
 			return;
 		}
@@ -3349,5 +3364,6 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 		colour(sColourGlobal, sColourGlobalBack);
 		return;
 	}
+
 	return;
 }

@@ -42,7 +42,6 @@ public:
 		char nKey = 0;
 		int nWindowHeight = 0;
 		int nIndexHeight = 0;
-		int nEndingCursorHeight = 0;
 		std::string sHighlightBuffer = "";
 		CONSOLE_SCREEN_BUFFER_INFO csbiOptionSelect;
 		HANDLE hOptionSelect = GetStdHandle(STD_OUTPUT_HANDLE);
@@ -51,13 +50,11 @@ public:
 		for (int i = 0; i < nSizeOfOptions; i++) {
 			if (sOptions[i] != "") nNumberOfOptions++;
 		}
-		 
+
 		// Output a newline to prevent errors with overwriting cells of text
 		std::cout << '\n';
-
 		// Display centred title
 		CentreColouredText(sTitle, 1);
-
 		// Display prompt message for selection options
 		std::cout << "\n" << sPrompt << "\n\n";
 
@@ -67,8 +64,6 @@ public:
 
 
 		// 13 is ascii for ENTER key
-		bool bReiterated = false;
-		int nIndexIncrease = 3; // 0 for decrease, 1 for increase, 2 for starting position, 3 for ending position
 		while (nKey != 13) {
 
 			// Get terminal height
@@ -80,7 +75,7 @@ public:
 				  THIS MAY ONLY BE TEMPORARY.
 			*///////////////////////////////////////////////////////////
 			if (bConsoleBugGCSBI == true) {
-				if (csbiOptionSelect.dwCursorPosition.Y == nWindowHeight && bReiterated == true) {
+				if (csbiOptionSelect.dwCursorPosition.Y == nWindowHeight) {
 					cls();
 					// Display centred title
 					CentreColouredText(sTitle, 1);
@@ -89,130 +84,51 @@ public:
 
 					GetConsoleScreenBufferInfo(hOptionSelect, &csbiOptionSelect);
 					nStartingRow = csbiOptionSelect.dwCursorPosition.Y;
-
-					// Set bReiterated to false to tell the next while loop to redraw options
-					bReiterated = false;
 				}
 			}
 
 			// 80 is ascii for down arrow
-			if (nKey == 80 || nKey == 115) {
-				nIndex++;
-				nIndexIncrease = 1;
-			}
+			if (nKey == 80 || nKey == 115) nIndex++;
 			// 72 is ascii for up arrow
-			else if (nKey == 72 || nKey == 119) {
-				nIndex--;
-				nIndexIncrease = 0;
-			}
+			else if (nKey == 72 || nKey == 119) nIndex--;
 
 			// if statements to prevent overspill of nIndex
-			if (nIndex > nNumberOfOptions) {
-				nIndex = 1;
-				nIndexIncrease = 2;
-			}
-			else if (nIndex < 1) {
-				nIndex = nNumberOfOptions;
-				nIndexIncrease = 3;
-			}
+			if (nIndex > nNumberOfOptions) nIndex = 1;
+			else if (nIndex < 1) nIndex = nNumberOfOptions;
 
 			// 1. Using nIndex, create buffer with >> first, then sOptions[nIndex - 1], then <<
 			sHighlightBuffer = ">> " + sOptions[nIndex - 1] + " <<";
-
 			// 2. Get length of sBuffer. Put into nHighlightBuffer
 			int nHighlightBuffer = sHighlightBuffer.length();
-
-			// Only redraw options on first load - CPU optimisation, reduces flickering
-			if (bReiterated == false) 
-			{			
-				// 3. for loop
-				for (int i = 0; i < nNumberOfOptions; i++) {
-					// Set cursor position
-					SetCursorPosition(0, (nStartingRow + i + 1));
-
-					// 4. Measure size of sOptions[i] and make equal number of spaces, then go to the beginning of the line
-					std::cout << std::setw(sOptions[i].length() + 6) << std::cout.fill(' ') << '\r'; // + 6 because ">> " and " <<" combined are 6 chars
-
-					// 5. Output option
-					if (i == (nIndex - 1)) {
-						colourHighlight();
-						std::cout << sHighlightBuffer;
-
-						// Put index height into nIndexHeight for ESC keypress and nIndex-only redraw
-						GetConsoleScreenBufferInfo(hOptionSelect, &csbiOptionSelect);
-						nIndexHeight = csbiOptionSelect.dwCursorPosition.Y;
-					}
-					else std::cout << sOptions[i];
-
-					// Reset to default colour
-					colour(sColourGlobal, sColourGlobalBack);
-					std::cout << "\n";
-				}
-
-				if (bDisplayDirections) {
-					// Add newlines for DirectionsDisplay
-					std::cout << "\n\n";
-
-					// Add directions on how to use using DirectionsDisplay()
-					DirectionsDisplay("Press the 'W' key or up arrow key to move up.\nPress the 'S' key or down arrow key to move down.\nPress ENTER to continue with selection, or ESC to exit.");
-				}
-
-			}
-			else // Only draw the new index option after first draw - CPU optimisation, reduces flickering
-			{
-				// 1. Go to index highlight height
-				SetCursorPosition(0, nIndexHeight);
-
-				// 2. Output spaces depending on previous nIndex option
-				if (nIndexIncrease == 1)
-					std::cout << std::setw(sOptions[nIndex - 2].length() + 6) << std::cout.fill(' ') << '\r' << sOptions[nIndex - 2];
-				else if (nIndexIncrease == 0) {
-					std::cout << std::setw(sOptions[nIndex].length() + 6) << std::cout.fill(' ') << '\r' << sOptions[nIndex];
-				}
-				else if (nIndexIncrease == 2) {
-					std::cout << std::setw(sOptions[nNumberOfOptions - 1].length() + 6) << std::cout.fill(' ') << '\r' << sOptions[nNumberOfOptions - 1];
-				}
-				else if (nIndexIncrease == 3) {
-					std::cout << std::setw(sOptions[0].length() + 6) << std::cout.fill(' ') << '\r' << sOptions[0];
-				}
-					
-				// 3. Go to nIndex + nStartingRow
-				SetCursorPosition(0, nIndex + nStartingRow);
-
-				// 4. Output new sHighlightBuffer
-				colourHighlight();
-				std::cout << sHighlightBuffer;
-				colour(sColourGlobal, sColourGlobalBack);
-
-				// 5. Put index height into nIndexHeight for ESC keypress and next nIndex-only redraw
-				GetConsoleScreenBufferInfo(hOptionSelect, &csbiOptionSelect);
-				nIndexHeight = csbiOptionSelect.dwCursorPosition.Y;
-
-				// 6. Put cursor on the ending cursor height to make it work like normal whole-screen redraw
-				SetCursorPosition(0, nEndingCursorHeight);
-			}
-
-
-			// While loop to skip next code on wrong input, CPU optimisation
-			while (true) {
-				// Set nEndingCursorHeight to cursor height at this point
-				GetConsoleScreenBufferInfo(hOptionSelect, &csbiOptionSelect);
-				nEndingCursorHeight = csbiOptionSelect.dwCursorPosition.Y;
-
-				// Exit if ESC was pressed (from previous non-reiteration)
-				if (nKey == 27) {
-					// Darken the index highlight to indicate that this OptionSelect session isn't being used anymore
-					GetConsoleScreenBufferInfo(hOptionSelect, &csbiOptionSelect);
-					SetCursorPosition(0, nIndexHeight);
-					colour(LWHT, GRAY);
+			// 3. for loop
+			for (int i = 0; i < nNumberOfOptions; i++) {
+				// Set cursor position
+				SetCursorPosition(0, (nStartingRow + i + 1));
+				// 4. Measure size of sOptions[i] and make equal number of spaces, then go to the beginning of the line
+				std::cout << std::setw(sOptions[i].length() + 6) << std::cout.fill(' ') << '\r'; // + 6 because ">> " and " <<" combined are 6 chars
+				// 5. Output option
+				if (i == (nIndex - 1)) {
+					colourHighlight();
 					std::cout << sHighlightBuffer;
-					SetCursorPosition(csbiOptionSelect.dwCursorPosition.X, csbiOptionSelect.dwCursorPosition.Y);
 
-					// Set colour back to default and exit
-					colour(sColourGlobal, sColourGlobalBack);
-					return -1;
+					// Put index height into nIndexHeight for ESC keypress
+					GetConsoleScreenBufferInfo(hOptionSelect, &csbiOptionSelect);
+					nIndexHeight = csbiOptionSelect.dwCursorPosition.Y;
 				}
+				else std::cout << sOptions[i];
+				// Reset to default colour
+				colour(sColourGlobal, sColourGlobalBack);
+				std::cout << "\n";
+			}
+			if (bDisplayDirections) {
+				// Add newlines for DirectionsDisplay
+				std::cout << "\n\n";
+				// Add directions on how to use using DirectionsDisplay()
+				DirectionsDisplay("Press the 'W' key or up arrow key to move up.\nPress the 'S' key or down arrow key to move down.\nPress ENTER to continue with selection, or ESC to exit.");
+			}
 
+			// while loop to skip next code on wrong input, CPU optimisation
+			while (true) {
 				// Get input
 				nKey = _getch();
 				if (nKey == 80 || nKey == 72 || nKey == 119 || nKey == 115 || nKey == 13) {
@@ -220,10 +136,6 @@ public:
 				}
 				// exit with code -1 if ESC is pressed
 				else if (nKey == 27) {
-
-					// Break if ESC pressed immediately, without any reiterations
-					if (bReiterated == false) break;
-
 					// Darken the index highlight to indicate that this OptionSelect session isn't being used anymore
 					GetConsoleScreenBufferInfo(hOptionSelect, &csbiOptionSelect);
 					SetCursorPosition(0, nIndexHeight);
@@ -238,7 +150,6 @@ public:
 				else continue;
 			}
 
-			bReiterated = true;
 		}
 
 		// Darken the index highlight to indicate that this OptionSelect session isn't being used anymore
@@ -250,8 +161,6 @@ public:
 
 		// Set colour back to default and exit
 		colour(sColourGlobal, sColourGlobalBack);
-
 		return nIndex;
 	}
-
 };

@@ -775,16 +775,88 @@ int main(int argc, char* argv[])
 		// Copy the rest of the stringstream contents into sCommandArgsBuffer
 		std::getline(sCommandInputIn, sCommandArgsBuffer, '\n');
 
-		/* The following will be based on editing sCommandArgsBuffer for the actual arguments. */
+		// Copy new sCommandArgsBuffer string to another string, as it will be modified
+		const std::string sCommandArgsBufferRAW = sCommandArgsBuffer + " ";
+
+		/* The following will be based on parsing sCommandArgsBuffer for the actual arguments. */
+		// Copy the string arguments into sStringCommandArgs with correct formatting
+		sCommandArgsBuffer += " ";
+		for (int nDashPos = 0, nSpacePos = 0, i = 0; i < 128; i++, nDashPos = 0, nSpacePos = 0)
+		{ 
+			// Firstly, check which type of string syntax is first (lower is closer to beginning)
+			//
+			if (sCommandArgsBuffer.find("--\"", 0) > sCommandArgsBuffer.find("--", 0)) 
+			{
+				// Anything with -- at the beginning
+				if (sCommandArgsBuffer.find("--", 0) != std::string::npos) 
+				{
+					// Get next occurence of " --"
+					nDashPos = sCommandArgsBuffer.find("--", 0);
+					// Get occurence of ' ' after nDashPos new location
+					nSpacePos = sCommandArgsBuffer.find(" ", nDashPos + 2);
+
+					/* Check for confliction with --" */
+					//
+					std::string sTest = sCommandArgsBuffer.substr((nDashPos + 2), nSpacePos - (nDashPos + 2));
+
+					// For loop uses struct so declaration of multiple variables in for loop is possible
+					//
+					for (struct { int j = 0; bool bAlreadyErased = false; } loop; loop.j < sTest.length(); loop.j++) 
+					{
+						if (sTest[loop.j] == '\"') {
+							break;
+						}
+						else {
+
+							// Only read and erase string if first time passing by the line of code
+							if (loop.bAlreadyErased == false) {
+								// Copy from after the dashes to the next space
+								sStringCommandArgs[i] = sCommandArgsBuffer.substr((nDashPos + 2), nSpacePos - (nDashPos + 2));
+
+								// Erase the found string from the argument buffer to remove it from plain sight from parser
+								sCommandArgsBuffer.erase(nDashPos, nSpacePos - (nDashPos));
+
+								loop.bAlreadyErased = true;
+							}
+						}
+					}
+				}
+
+			}
+			else 
+			{
+				// Anything with --" at the beginning
+				if (sCommandArgsBuffer.find("--\"", 0) != std::string::npos) 
+				{
+					nDashPos = sCommandArgsBuffer.find("--\"", 0);
+					// Get next occurence of '"'
+					nSpacePos = sCommandArgsBuffer.find("\"", nDashPos + 3);
+					// Use space as fallback if there is no other speechmark
+					if (nSpacePos == std::string::npos) nSpacePos = sCommandArgsBuffer.find(" ", nDashPos);
+
+					// Copy from after the dashes to the next space/speechmark
+					sStringCommandArgs[i] = sCommandArgsBuffer.substr((nDashPos + 3), nSpacePos - (nDashPos + 3));
+
+					// Erase the found string from the argument buffer to remove it from plain sight from parser
+					sCommandArgsBuffer.erase(nDashPos, nSpacePos - nDashPos);
+
+				}
+
+			}
+
+		}
+
 		// Copy the letter after a dash into sCommandInputArgs
 		for (int i = 0, j = 0; i < sCommandArgsBuffer.length(); i++) {
 			if (i > 0) {
+				// Character after must not be a space to prevent conflict with string parser 
 				if (sCommandArgsBuffer[i - 1] != '-' && sCommandArgsBuffer[i + 1] != '-' && sCommandArgsBuffer[i] == '-') {
 					sCommandInputArgs[j] = sCommandArgsBuffer[i + 1];
 					j++;
 				}
 			}
 			else {
+				// This time, just remove the check for sCommandArgsBuffer[i - 1] to prevent OOR exception
 				if (sCommandArgsBuffer[i + 1] != '-' && sCommandArgsBuffer[i] == '-') {
 					sCommandInputArgs[j] = sCommandArgsBuffer[i + 1];
 					j++;
@@ -793,38 +865,8 @@ int main(int argc, char* argv[])
 
 		}
 
-		// Copy the string arguments into sStringCommandArgs with correct formatting
-		sCommandArgsBuffer += " ";
-		for (int nDashPos = -1, nSpacePos = 0, i = 0, nDashPosMain = -1; i < 128; i++) { // -1 to cancel out first call of first line
-			nDashPosMain = nDashPos;
-
-			if (sCommandArgsBuffer.find("--\"", nDashPosMain + 1) != std::string::npos) {
-				nDashPos = sCommandArgsBuffer.find("--\"", nDashPosMain + 1);
-				// Get next occurence of '"'
-				nSpacePos = sCommandArgsBuffer.find("\"", nDashPos + 3);
-				// Use space as fallback if there is no other speechmark
-				if (nSpacePos == std::string::npos) nSpacePos = sCommandArgsBuffer.find(" ", nDashPos);
-
-				// Copy from after the dashes to the next space/speechmark
-				sStringCommandArgs[i] = sCommandArgsBuffer.substr((nDashPos + 3), nSpacePos - (nDashPos + 3));
-			}
-			if (sCommandArgsBuffer.find("--", nDashPosMain + 1) != std::string::npos) {
-				// Get next occurence of " --"
-				nDashPos = sCommandArgsBuffer.find("--", nDashPosMain + 1);
-				// Get occurence of ' ' after nDashPos new location
-				nSpacePos = sCommandArgsBuffer.find(" ", nDashPos + 2);
-
-				// Check for confliction with --"
-				std::string sTest = sCommandArgsBuffer.substr((nDashPos + 2), nSpacePos - (nDashPos + 2));
-				for (int j = 0; j < sTest.length(); j++) {
-					if (sTest[j] == '\"') break; else sStringCommandArgs[i] = sCommandArgsBuffer.substr((nDashPos + 2), nSpacePos - (nDashPos + 2));
-				}
-			}
-			else break;
-		}
-
 		// Finally, call commands function
-		Commands(sCommand, sCommandInputArgs, sCommandArgsBuffer);
+		Commands(sCommand, sCommandInputArgs, sCommandArgsBufferRAW);
 
 		// Reset all command processing variables to defaults
 		// sCommandInputArgs and sStringCommandInputArgs
