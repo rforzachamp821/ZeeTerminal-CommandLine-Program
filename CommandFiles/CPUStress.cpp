@@ -132,11 +132,13 @@ void CpuBenchmark(short int nSingleOrMulti, long long int nArgNum = -1) {
 			colour(sColourGlobal, sColourGlobalBack);
 		}
 	}
+
 	// Multi Core
 	else if (nSingleOrMulti == 2) {
 
 		// Make std::vector array for threads in next step
 		std::vector<std::thread> vThreads(nLogicalCoreCount);
+		unsigned long long int nPreviousReiterationNum = 0;
 
 		// Start timer and call the cpu benchmark worker nLogicalCoreCount times
 		std::cout << "Starting multi-core benchmark with " << nReiterationCount << " reiterations, " << nLogicalCoreCount << " logical cores.\n";
@@ -149,6 +151,7 @@ void CpuBenchmark(short int nSingleOrMulti, long long int nArgNum = -1) {
 		}
 
 		while (true) {
+
 			if (_kbhit()) {
 				bCpuStressKeyboardTermination = true;
 				break;
@@ -156,8 +159,14 @@ void CpuBenchmark(short int nSingleOrMulti, long long int nArgNum = -1) {
 			else if (nCurrentReiterationNum >= nReiterationCount) {
 				break;
 			}
-			// Output progress
-			std::cout << "Progress: " << (nCurrentReiterationNum * 100) / nReiterationCount << "%    \r";
+
+
+			if (nPreviousReiterationNum < nCurrentReiterationNum) { // <-- Speed is required to make the percentage output operation accurate,
+				nPreviousReiterationNum = nCurrentReiterationNum;   // <-- so these two lines were put right next to each other to make that possible.
+				// Output progress
+				std::cout << "Progress: " << (nPreviousReiterationNum * 100) / nReiterationCount << "%    \r";
+			}
+
 		}
 
 		StopCpuStress = true;

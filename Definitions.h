@@ -1,24 +1,24 @@
 #pragma once
 
 // Normal colour definitions
-#define BLK "0;0;0"
-#define RED "255;0;0"
-#define GRN "22;198;12"
-#define YLW "231;186;0"
-#define BLU "0;0;255"
-#define MAG "136;23;152"
-#define CYN "58;150;221"
-#define WHT "242;242;242"
+std::string BLK = "0;0;0";
+std::string RED = "255;0;0";
+std::string GRN = "22;198;12";
+std::string YLW = "231;186;0";
+std::string BLU = "0;0;255";
+std::string MAG = "136;23;152";
+std::string CYN = "58;150;221";
+std::string WHT = "242;242;242";
 
 // Bright colour definitions
-#define GRAY "118;118;118"
-#define LRED "231;72;86"
-#define LGRN "0;255;0"
-#define LYLW "255;255;0"
-#define LBLU "59;120;255"
-#define LMAG "180;0;158"
-#define LCYN "97;214;214"
-#define LWHT "255;255;255"
+std::string GRAY = "118;118;118";
+std::string LRED = "231;72;86";
+std::string LGRN = "0;255;0";
+std::string LYLW = "255;255;0";
+std::string LBLU = "59;120;255";
+std::string LMAG = "180;0;158";
+std::string LCYN = "97;214;214";
+std::string LWHT = "255;255;255";
 
 // Text formatting definitions
 #define ULINE 4

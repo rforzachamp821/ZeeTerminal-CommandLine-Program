@@ -257,6 +257,14 @@ void ColourForeground(int nChoice = 0) {
 		short int nRed = 0, nGreen = 0, nBlue = 0;
 		int nRGBForegroundColour[3] = { 255,255,255 };
 
+		if (bAnsiVTSequences == true) {
+			colour(RED, sColourGlobalBack);
+			std::cerr << "Sorry, you cannot use RGB colours with a non-ANSI compatible terminal. Please try again later.\n";
+			colour(sColourGlobal, sColourGlobalBack);
+
+			return;
+		}
+
 		colour(YLW, sColourGlobalBack);
 		std::cout << '\n' << wordWrap("Warning: Although supported program-wide, RGB is still a new and possibly unstable colour method for TerminalApp Gen 3. Be prepared for bugs and issues.")
 			<< std::endl;
@@ -385,6 +393,14 @@ void ColourBackground(int nChoice = 0) {
 	if (nChoice == 17) {
 		short int nRed = 0, nGreen = 0, nBlue = 0;
 		int nRGBBackgroundColour[3] = { 0,0,0 };
+
+		if (bAnsiVTSequences == true) {
+			colour(RED, sColourGlobalBack);
+			std::cerr << "Sorry, you cannot use RGB colours with a non-ANSI compatible terminal. Please try again later.\n";
+			colour(sColourGlobal, sColourGlobalBack);
+
+			return;
+		}
 
 		colour(YLW, sColourGlobalBack);
 		std::cout << '\n' << wordWrap("Warning: Although supported program-wide, RGB is still a new and possibly unstable colour method for TerminalApp Gen 3. Be prepared for bugs and issues.")
@@ -615,10 +631,11 @@ void help() {
 		"1) I can't see the terminal text. How can I zoom in?\n  1a) You can zoom in, of course. Press and hold the Ctrl button and scroll with the mouse to your desired text size.\n"
 		"\n\n2) The error messages shown aren't detailed enough. How do I get better-quality error messages?\n  2a) To get better quality error messages, just enable the Verbosity Messages setting in the Settings command.\n",
 
-		"___ABOUT THIS PROGRAM___\n\nThis is a TerminalAppGen3 Alpha Build.\n" +
+		"___ABOUT THIS PROGRAM___\n\nThis is the TerminalAppGen3 Program, Build v0.3.2.\n" +
 		wordWrap("This is an early alpha build of TerminalAppGen3, with an entirely new engine and components.\nThis program is made in C++, with a few very small parts of C.") +
 		wordWrap("\n\nThis program uses the DirectShow API in the MediaPlayer command, which is licensed by Microsoft Corporation. (c) Microsoft Corporation.\n\n") +
-		"\n(c) Ryan Zorkot 2023. TerminalAppGen3 is governed by the MIT License.\n\n"
+		wordWrap("This program uses the BASS API in the AudioPlayer command, which is licensed by Un4Seen Developments. (c) Un4seen Developments.\n\n") +
+		"\n(c) Ryan Zorkot, 2023. TerminalAppGen3 uses the MIT License.\n\n"
 	};
 
 	sneHelp.sScreens = sScreens;
@@ -785,7 +802,7 @@ void DevTools(short int nToolNum) {
 		colour(sColourGlobal, sColourGlobalBack);
 		std::cout << NOULINE_STR << "\n\n";
 
-		int nNumOfScreens = num("Please input how many screens you would like to input (0 to exit): > ");
+		long long int nNumOfScreens = num("Please input how many screens you would like to input (0 to exit): > ");
 		if (nNumOfScreens <= 0) {
 			Exiting();
 			return;
@@ -795,7 +812,7 @@ void DevTools(short int nToolNum) {
 		std::vector<std::string> sScreens;
 
 		// Input all screens up to nNumOfScreens
-		for (int i = 0; i < nNumOfScreens; i++) {
+		for (long long int i = 0; i < nNumOfScreens; i++) {
 			sScreens.push_back(str("Please input your desired string for Screen " + std::to_string(i+1) + " (0 to exit) : > "));
 			if (sScreens[i] == "0") {
 				Exiting();
@@ -1442,15 +1459,15 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 				if (bForeExecuted == true) continue;
 
 				// Find the argument from argument buffer find first 2 dashes after it, and find next space
-				int n = sCommandArgsBuffer.find("-f");
-				int nDashPos = sCommandArgsBuffer.find("--", n);
-				int nSpacePos = sCommandArgsBuffer.find(" ", nDashPos);
+				size_t n = sCommandArgsBuffer.find("-f");
+				size_t nDashPos = sCommandArgsBuffer.find("--", n);
+				size_t nSpacePos = sCommandArgsBuffer.find(" ", nDashPos);
 
 				// std::string::npos symbolises an error
 				if (nDashPos != std::string::npos && nSpacePos != std::string::npos) {
 					std::string sForegroundArg = sCommandArgsBuffer.substr(nDashPos + 2, nSpacePos - (nDashPos + 2));
 					if (isNumber(sForegroundArg) == true) {
-						ColourForeground(std::stoi(sForegroundArg));
+						ColourForeground(std::stoll(sForegroundArg));
 					}
 					else {
 						// Can't process a non-number
@@ -1478,15 +1495,15 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 				if (bBackExecuted == true) continue;
 
 				// Find the argument from argument buffer find first 2 dashes after it, and find next space
-				int n = sCommandArgsBuffer.find("-b");
-				int nDashPos = sCommandArgsBuffer.find("--", n);
-				int nSpacePos = sCommandArgsBuffer.find(" ", nDashPos);
+				size_t n = sCommandArgsBuffer.find("-b");
+				size_t nDashPos = sCommandArgsBuffer.find("--", n);
+				size_t nSpacePos = sCommandArgsBuffer.find(" ", nDashPos);
 
 				if (nDashPos != std::string::npos && nSpacePos != std::string::npos) {
 					std::string sBackgroundArg = sCommandArgsBuffer.substr(nDashPos + 2, nSpacePos - (nDashPos + 2));
 					// Check if argument is a number
 					if (isNumber(sBackgroundArg) == true) {
-						ColourBackground(std::stoi(sBackgroundArg));
+						ColourBackground(std::stoll(sBackgroundArg));
 					}
 					else {
 						// Can't process a non-number
@@ -1619,18 +1636,18 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 			}
 			else if (sStringCommandArgs[0] == "highlightfore") {
 				// Get argument position
-				int nArgPos = sCommandArgsBuffer.find("--highlightfore") + 2;
+				size_t nArgPos = sCommandArgsBuffer.find("--highlightfore") + 2;
 				// Get dashes position after argument
-				int nDashPos = sCommandArgsBuffer.find("--", nArgPos) + 2;
+				size_t nDashPos = sCommandArgsBuffer.find("--", nArgPos) + 2;
 				// Get space position to copy as argument to function
-				int nSpacePos = sCommandArgsBuffer.find(" ", nDashPos);
+				size_t nSpacePos = sCommandArgsBuffer.find(" ", nDashPos);
 
 				// if statement to see if dash or space was found
 				if (nDashPos - 2 != std::string::npos && nSpacePos != std::string::npos) 
 				{
 					// Check if argument is a number, post error message if not and call function if yes
 					if (isNumber(sCommandArgsBuffer.substr(nDashPos, nSpacePos - nDashPos))) {
-						HighlightColourSettings(1, std::stoi(sCommandArgsBuffer.substr(nDashPos, nSpacePos - nDashPos)));
+						HighlightColourSettings(1, std::stoll(sCommandArgsBuffer.substr(nDashPos, nSpacePos - nDashPos)));
 					}
 					else {
 						colour(RED, sColourGlobalBack);
@@ -1650,13 +1667,13 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 				return;
 			}
 			else if (sStringCommandArgs[0] == "highlightback") {
-				int nArgPos = sCommandArgsBuffer.find("--highlightback") + 2;
-				int nDashPos = sCommandArgsBuffer.find("--", nArgPos) + 2;
-				int nSpacePos = sCommandArgsBuffer.find(" ", nDashPos);
+				size_t nArgPos = sCommandArgsBuffer.find("--highlightback") + 2;
+				size_t nDashPos = sCommandArgsBuffer.find("--", nArgPos) + 2;
+				size_t nSpacePos = sCommandArgsBuffer.find(" ", nDashPos);
 
 				if (nDashPos - 2 != std::string::npos && nSpacePos != std::string::npos) {
 					if (isNumber(sCommandArgsBuffer.substr(nDashPos, nSpacePos - nDashPos))) {
-						HighlightColourSettings(2, std::stoi(sCommandArgsBuffer.substr(nDashPos, nSpacePos - nDashPos)));
+						HighlightColourSettings(2, std::stoll(sCommandArgsBuffer.substr(nDashPos, nSpacePos - nDashPos)));
 					}
 					else {
 						colour(RED, sColourGlobalBack);
@@ -1677,13 +1694,13 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 				return;
 			}
 			else if (sStringCommandArgs[0] == "titlefore") {
-				int nArgPos = sCommandArgsBuffer.find("--titlefore") + 2;
-				int nDashPos = sCommandArgsBuffer.find("--", nArgPos) + 2;
-				int nSpacePos = sCommandArgsBuffer.find(" ", nDashPos);
+				size_t nArgPos = sCommandArgsBuffer.find("--titlefore") + 2;
+				size_t nDashPos = sCommandArgsBuffer.find("--", nArgPos) + 2;
+				size_t nSpacePos = sCommandArgsBuffer.find(" ", nDashPos);
 
 				if (nDashPos - 2 != std::string::npos && nSpacePos != std::string::npos) {
 					if (isNumber(sCommandArgsBuffer.substr(nDashPos, nSpacePos - nDashPos))) {
-						TitleColourSettings(1, std::stoi(sCommandArgsBuffer.substr(nDashPos, nSpacePos - nDashPos)));
+						TitleColourSettings(1, std::stoll(sCommandArgsBuffer.substr(nDashPos, nSpacePos - nDashPos)));
 					}
 					else {
 						colour(RED, sColourGlobalBack);
@@ -1703,13 +1720,13 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 				return;
 			}
 			else if (sStringCommandArgs[0] == "titleback") {
-				int nArgPos = sCommandArgsBuffer.find("--titleback") + 2;
-				int nDashPos = sCommandArgsBuffer.find("--", nArgPos) + 2;
-				int nSpacePos = sCommandArgsBuffer.find(" ", nDashPos);
+				size_t nArgPos = sCommandArgsBuffer.find("--titleback") + 2;
+				size_t nDashPos = sCommandArgsBuffer.find("--", nArgPos) + 2;
+				size_t nSpacePos = sCommandArgsBuffer.find(" ", nDashPos);
 
 				if (nDashPos-2 != std::string::npos && nSpacePos != std::string::npos) {
 					if (isNumber(sCommandArgsBuffer.substr(nDashPos, nSpacePos - nDashPos))) {
-						TitleColourSettings(2, std::stoi(sCommandArgsBuffer.substr(nDashPos, nSpacePos - nDashPos)));
+						TitleColourSettings(2, std::stoll(sCommandArgsBuffer.substr(nDashPos, nSpacePos - nDashPos)));
 					}
 					else {
 						colour(RED, sColourGlobalBack);
@@ -1729,13 +1746,13 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 				return;
 			}
 			else if (sStringCommandArgs[0] == "subheadingfore") {
-				int nArgPos = sCommandArgsBuffer.find("--subheadingfore") + 2;
-				int nDashPos = sCommandArgsBuffer.find("--", nArgPos) + 2;
-				int nSpacePos = sCommandArgsBuffer.find(" ", nDashPos);
+				size_t nArgPos = sCommandArgsBuffer.find("--subheadingfore") + 2;
+				size_t nDashPos = sCommandArgsBuffer.find("--", nArgPos) + 2;
+				size_t nSpacePos = sCommandArgsBuffer.find(" ", nDashPos);
 
 				if (nDashPos - 2 != std::string::npos && nSpacePos != std::string::npos) {
 					if (isNumber(sCommandArgsBuffer.substr(nDashPos, nSpacePos - nDashPos))) {
-						SubheadingColourSettings(1, std::stoi(sCommandArgsBuffer.substr(nDashPos, nSpacePos - nDashPos)));
+						SubheadingColourSettings(1, std::stoll(sCommandArgsBuffer.substr(nDashPos, nSpacePos - nDashPos)));
 					}
 					else {
 						colour(RED, sColourGlobalBack);
@@ -1755,13 +1772,13 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 				return;
 			}
 			else if (sStringCommandArgs[0] == "subheadingback") {
-				int nArgPos = sCommandArgsBuffer.find("--subheadingback") + 2;
-				int nDashPos = sCommandArgsBuffer.find("--", nArgPos) + 2;
-				int nSpacePos = sCommandArgsBuffer.find(" ", nDashPos);
+				size_t nArgPos = sCommandArgsBuffer.find("--subheadingback") + 2;
+				size_t nDashPos = sCommandArgsBuffer.find("--", nArgPos) + 2;
+				size_t nSpacePos = sCommandArgsBuffer.find(" ", nDashPos);
 
 				if (nDashPos - 2 != std::string::npos && nSpacePos != std::string::npos) {
 					if (isNumber(sCommandArgsBuffer.substr(nDashPos, nSpacePos - nDashPos))) {
-						SubheadingColourSettings(2, std::stoi(sCommandArgsBuffer.substr(nDashPos, nSpacePos - nDashPos)));
+						SubheadingColourSettings(2, std::stoll(sCommandArgsBuffer.substr(nDashPos, nSpacePos - nDashPos)));
 					}
 					else {
 						colour(RED, sColourGlobalBack);
@@ -1782,9 +1799,9 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 				return;
 			}
 			else if (sStringCommandArgs[0] == "verbose") {
-				int nArgPos = sCommandArgsBuffer.find("--verbose") + 2;
-				int nDashPos = sCommandArgsBuffer.find(" -", nArgPos) + 2;
-				int nSpacePos = sCommandArgsBuffer.find(" ", nDashPos);
+				size_t nArgPos = sCommandArgsBuffer.find("--verbose") + 2;
+				size_t nDashPos = sCommandArgsBuffer.find(" -", nArgPos) + 2;
+				size_t nSpacePos = sCommandArgsBuffer.find(" ", nDashPos);
 
 				if (nDashPos - 2 != std::string::npos && nSpacePos != std::string::npos) {
 					if (sCommandArgsBuffer.substr(nDashPos, nSpacePos - nDashPos) == "t") {
@@ -1812,9 +1829,9 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 				return;
 			}
 			else if (sStringCommandArgs[0] == "directions") {
-				int nArgPos = sCommandArgsBuffer.find("--directions") + 2;
-				int nDashPos = sCommandArgsBuffer.find(" -", nArgPos) + 2;
-				int nSpacePos = sCommandArgsBuffer.find(" ", nDashPos);
+				size_t nArgPos = sCommandArgsBuffer.find("--directions") + 2;
+				size_t nDashPos = sCommandArgsBuffer.find(" -", nArgPos) + 2;
+				size_t nSpacePos = sCommandArgsBuffer.find(" ", nDashPos);
 
 				if (nDashPos - 2 != std::string::npos && nSpacePos != std::string::npos) {
 					if (sCommandArgsBuffer.substr(nDashPos, nSpacePos - nDashPos) == "t") {
@@ -1842,9 +1859,9 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 				return;
 			}
 			else if (sStringCommandArgs[0] == "ansi") {
-				int nArgPos = sCommandArgsBuffer.find("--ansi") + 2;
-				int nDashPos = sCommandArgsBuffer.find(" -", nArgPos) + 2;
-				int nSpacePos = sCommandArgsBuffer.find(" ", nDashPos);
+				size_t nArgPos = sCommandArgsBuffer.find("--ansi") + 2;
+				size_t nDashPos = sCommandArgsBuffer.find(" -", nArgPos) + 2;
+				size_t nSpacePos = sCommandArgsBuffer.find(" ", nDashPos);
 
 				if (nDashPos - 2 != std::string::npos && nSpacePos != std::string::npos) {
 					if (sCommandArgsBuffer.substr(nDashPos, nSpacePos - nDashPos) == "t") {
@@ -1872,9 +1889,9 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 				return;
 			}
 			else if (sStringCommandArgs[0] == "wordwrap") {
-				int nArgPos = sCommandArgsBuffer.find("--wordwrap") + 2;
-				int nDashPos = sCommandArgsBuffer.find(" -", nArgPos) + 2;
-				int nSpacePos = sCommandArgsBuffer.find(" ", nDashPos);
+				size_t nArgPos = sCommandArgsBuffer.find("--wordwrap") + 2;
+				size_t nDashPos = sCommandArgsBuffer.find(" -", nArgPos) + 2;
+				size_t nSpacePos = sCommandArgsBuffer.find(" ", nDashPos);
 
 				if (nDashPos - 2 != std::string::npos && nSpacePos != std::string::npos) {
 					if (sCommandArgsBuffer.substr(nDashPos, nSpacePos - nDashPos) == "t") {
@@ -1902,9 +1919,9 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 				return;
 			}
 			else if (sStringCommandArgs[0] == "cursorblink") {
-				int nArgPos = sCommandArgsBuffer.find("--cursorblink") + 2;
-				int nDashPos = sCommandArgsBuffer.find(" -", nArgPos) + 2;
-				int nSpacePos = sCommandArgsBuffer.find(" ", nDashPos);
+				size_t nArgPos = sCommandArgsBuffer.find("--cursorblink") + 2;
+				size_t nDashPos = sCommandArgsBuffer.find(" -", nArgPos) + 2;
+				size_t nSpacePos = sCommandArgsBuffer.find(" ", nDashPos);
 
 				if (nDashPos - 2 != std::string::npos && nSpacePos != std::string::npos) {
 					if (sCommandArgsBuffer.substr(nDashPos, nSpacePos - nDashPos) == "t") {
@@ -1932,9 +1949,9 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 				return;
 			}
 			else if (sStringCommandArgs[0] == "showcursor") {
-				int nArgPos = sCommandArgsBuffer.find("--showcursor") + 2;
-				int nDashPos = sCommandArgsBuffer.find(" -", nArgPos) + 2;
-				int nSpacePos = sCommandArgsBuffer.find(" ", nDashPos);
+				size_t nArgPos = sCommandArgsBuffer.find("--showcursor") + 2;
+				size_t nDashPos = sCommandArgsBuffer.find(" -", nArgPos) + 2;
+				size_t nSpacePos = sCommandArgsBuffer.find(" ", nDashPos);
 
 				if (nDashPos - 2 != std::string::npos && nSpacePos != std::string::npos) {
 					if (sCommandArgsBuffer.substr(nDashPos, nSpacePos - nDashPos) == "t") {
@@ -1962,9 +1979,9 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 				return;
 			}
 			else if (sStringCommandArgs[0] == "cursorstyle") {
-				int nArgPos = sCommandArgsBuffer.find("--cursorstyle") + 2;
-				int nDashPos = sCommandArgsBuffer.find("--", nArgPos) + 2;
-				int nSpacePos = sCommandArgsBuffer.find(" ", nDashPos);
+				size_t nArgPos = sCommandArgsBuffer.find("--cursorstyle") + 2;
+				size_t nDashPos = sCommandArgsBuffer.find("--", nArgPos) + 2;
+				size_t nSpacePos = sCommandArgsBuffer.find(" ", nDashPos);
 
 				if (nDashPos - 2 != std::string::npos && nSpacePos != std::string::npos) {
 					if (sCommandArgsBuffer.substr(nDashPos, nSpacePos - nDashPos) == "block") {
@@ -1995,13 +2012,13 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 				return;
 			}
 			else if (sStringCommandArgs[0] == "slowcharspeed") {
-				int nArgPos = sCommandArgsBuffer.find("--slowcharspeed") + 2;
-				int nDashPos = sCommandArgsBuffer.find("--", nArgPos) + 2;
-				int nSpacePos = sCommandArgsBuffer.find(" ", nDashPos);
+				size_t nArgPos = sCommandArgsBuffer.find("--slowcharspeed") + 2;
+				size_t nDashPos = sCommandArgsBuffer.find("--", nArgPos) + 2;
+				size_t nSpacePos = sCommandArgsBuffer.find(" ", nDashPos);
 
 				if (nDashPos - 2 != std::string::npos && nSpacePos != std::string::npos) {
 					if (isNumber(sCommandArgsBuffer.substr(nDashPos, nSpacePos - nDashPos))) {
-						OtherSettings(1, std::stoi(sCommandArgsBuffer.substr(nDashPos, nSpacePos - nDashPos)), true);
+						OtherSettings(1, std::stoll(sCommandArgsBuffer.substr(nDashPos, nSpacePos - nDashPos)), true);
 					}
 					else {
 						colour(RED, sColourGlobalBack);
@@ -2022,9 +2039,9 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 				return;
 			}
 			else if (sStringCommandArgs[0] == "randcolstartup") {
-				int nArgPos = sCommandArgsBuffer.find("--randcolstartup") + 2;
-				int nDashPos = sCommandArgsBuffer.find(" -", nArgPos) + 2;
-				int nSpacePos = sCommandArgsBuffer.find(" ", nDashPos);
+				size_t nArgPos = sCommandArgsBuffer.find("--randcolstartup") + 2;
+				size_t nDashPos = sCommandArgsBuffer.find(" -", nArgPos) + 2;
+				size_t nSpacePos = sCommandArgsBuffer.find(" ", nDashPos);
 
 				if (nDashPos - 2 != std::string::npos && nSpacePos != std::string::npos) {
 					if (sCommandArgsBuffer.substr(nDashPos, nSpacePos - nDashPos) == "t") {
@@ -2052,9 +2069,9 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 				return;
 			}
 			else if (sStringCommandArgs[0] == "customtheme") {
-				int nArgPos = sCommandArgsBuffer.find("--customtheme") + 2;
-				int nDashPos = sCommandArgsBuffer.find(" -", nArgPos) + 2;
-				int nSpacePos = sCommandArgsBuffer.find(" ", nDashPos);
+				size_t nArgPos = sCommandArgsBuffer.find("--customtheme") + 2;
+				size_t nDashPos = sCommandArgsBuffer.find(" -", nArgPos) + 2;
+				size_t nSpacePos = sCommandArgsBuffer.find(" ", nDashPos);
 
 				if (nDashPos - 2 != std::string::npos && nSpacePos != std::string::npos) {
 					if (sCommandArgsBuffer.substr(nDashPos, nSpacePos - nDashPos) == "t") {
@@ -2139,7 +2156,7 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 				colour(RED, sColourGlobalBack);
 				std::cout << "An error occured. Please try again later.\n";
 				colour(sColourGlobal, sColourGlobalBack);
-				break;
+				return;
 			}
 		}
 
@@ -2289,7 +2306,7 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 				std::cout << '\n';
 				std::cout << wordWrap(" -h\t\tDisplays this help message.") << '\n'
 					<< wordWrap(" --<FILE>\tOpens a file for playback/viewing. Put the exact filepath in place of <FILE>.\n\nExample: mediaplayer --\"C:\\Media\\media test.mp3\"\n\n")
-					<< wordWrap("NOTE: You need to use quotes like shown in the example to use a filename with ANY spaces.\n\nNOTE: Type in \"*open\" without quotes in place of the file argument to use the Windows File Dialogue to open a file.\n\n");
+					<< wordWrap("NOTE: You need to use quotes like shown in the example to use a filename with ANY spaces.\nNOTE: Type in \"*open\" without quotes in place of the file argument to use the Windows File Dialogue to open a file.\n\n");
 
 				return;
 			}
@@ -2315,8 +2332,8 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 					}
 				}
 				else if (sStringCommandArgs[0][0] == '\"') {
-					int nFirstMarkPos = sFilePath.find("--\"", 0) + 3;
-					int nFinalMarkPos = sFilePath.find('\"', nFirstMarkPos) - 3;
+					size_t nFirstMarkPos = sFilePath.find("--\"", 0) + 3;
+					size_t nFinalMarkPos = sFilePath.find('\"', nFirstMarkPos) - 3;
 					sFilePath = sFilePath.substr(nFirstMarkPos, nFinalMarkPos); 
 				}
 				else sFilePath = sStringCommandArgs[0];
@@ -2420,8 +2437,8 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 				// Check if the start of the first argument has a speechmark; 
 				// if there is one, use filepath from the start to the ending speechmark (if there is one)
 				if (sStringCommandArgs[0][0] == '\"') {
-					int nFirstMarkPos = sFilePath.find("--\"", 0) + 3;
-					int nFinalMarkPos = sFilePath.find('\"', nFirstMarkPos) - 3;
+					size_t nFirstMarkPos = sFilePath.find("--\"", 0) + 3;
+					size_t nFinalMarkPos = sFilePath.find('\"', nFirstMarkPos) - 3;
 					sFilePath = sFilePath.substr(nFirstMarkPos, nFinalMarkPos);
 				}
 				else sFilePath = sStringCommandArgs[0];
@@ -2504,16 +2521,25 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 				// Check if the start of the first argument has a speechmark; 
 				// if there is one, use text from the start to the ending speechmark (if there is one)
 				if ((sStringCommandArgs[0])[0] == '\"') {
-					int nFirstMarkPos = sText.find("--\"", 0) + 3;
-					int nFinalMarkPos = sText.find('\"', nFirstMarkPos) - 3;
+					size_t nFirstMarkPos = sText.find("--\"", 0) + 3;
+					size_t nFinalMarkPos = sText.find('\"', nFirstMarkPos) - 3;
 					sText = sText.substr(nFirstMarkPos, nFinalMarkPos);
 					VerbosityDisplay("Outputting \"" + sText + "\" as TTS...\n");
 				}
 				else sText = sStringCommandArgs[0];
 
+				// Output message
+				colour(GRN, sColourGlobalBack);
+				std::cout << CentreText("Outputting TTS Message...") << '\n';
+
 				// Execute text-to-speech
 				MultimediaEngine meTTS;
 				meTTS.TTSOutput(s2ws(sText));
+
+				// Output success message
+				colour(LGRN, sColourGlobalBack);
+				std::cout << CentreText("TTS Message successfully outputted!") << '\n';
+				colour(sColourGlobal, sColourGlobalBack);
 
 				return;
 			}
@@ -2534,10 +2560,19 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 			return;
 		}
 
-		// Output using MultimediaEngine::TTS()
+		// Output using MultimediaEngine::TTS() //
+		// Output message
+		colour(GRN, sColourGlobalBack);
+		std::cout << '\n' << CentreText("Outputting TTS Message...") << '\n';
+
 		MultimediaEngine meTTS;
 		VerbosityDisplay("Outputting \"" + sText + "\" as TTS...\n");
 		meTTS.TTSOutput(s2ws(sText));
+
+		// Output success message
+		colour(LGRN, sColourGlobalBack);
+		std::cout << CentreText("TTS Message successfully outputted!") << '\n';
+		colour(sColourGlobal, sColourGlobalBack);
 
 		return;
 	}
@@ -2665,8 +2700,8 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 					}
 				}
 				else if ((sStringCommandArgs[0])[0] == '\"') {
-					int nFirstMarkPos = sText.find("--\"", 0) + 3;
-					int nFinalMarkPos = sText.find('\"', nFirstMarkPos) - 3;
+					size_t nFirstMarkPos = sText.find("--\"", 0) + 3;
+					size_t nFinalMarkPos = sText.find('\"', nFirstMarkPos) - 3;
 					sText = sText.substr(nFirstMarkPos, nFinalMarkPos);
 				}
 				else sText = sStringCommandArgs[0];
@@ -2741,8 +2776,8 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 		// Check if the start of the first argument has a speechmark; 
 		// if there is one, use text from the start to the ending speechmark (if there is one)
 		if (sInput[0] == '\"') {
-			int nFirstMarkPos = sInput.find("\"", 0) + 1;
-			int nFinalMarkPos = sInput.find('\"', nFirstMarkPos) - 1;
+			size_t nFirstMarkPos = sInput.find("\"", 0) + 1;
+			size_t nFinalMarkPos = sInput.find('\"', nFirstMarkPos) - 1;
 			sInput = sInput.substr(nFirstMarkPos, nFinalMarkPos);
 		}
 
@@ -2820,7 +2855,7 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 				}
 
 				// Convert string to integral value
-				dInput = std::stod(sStringCommandArgs[0]);
+				dInput = std::stold(sStringCommandArgs[0]);
 				break;
 			}
 		}
@@ -2899,7 +2934,7 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 				colourSubheading();
 				std::cout << "Possible arguments for this command:" << NOULINE_STR;
 				colour(sColourGlobal, sColourGlobalBack);
-				std::cout << wordWrap("\n -h\t\tDisplays this help message.\n --<freq>\t\tSpecify the frequency as an argument. Input your frequency number in place of <freq>.\n --<time>\t\tSpecify the time as an argument. Input your time number in place of <time>.\n\nExample: beep --500 --1\n\n");
+				std::cout << wordWrap("\n -h\t\tDisplays this help message.\n --<freq>\tSpecify the frequency as an argument. Input your frequency number in place of <freq>.\n --<time>\tSpecify the time as an argument. Input your time number in place of <time>.\n\nExample: beep --500 --1 (syntax: beep --<freq> --<time>)\n\n");
 
 				return;
 			} 
@@ -3021,9 +3056,8 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 				}
 
 			}
-			else if (cCommandArgs[i] == 'c') {
-				int nSpecifierPos = sCommandArgsBuffer.find("-c ", 0);
-				int nArgPosBegin, nArgPosEnd;
+			else if (cCommandArgs[i] == 'c') { 
+				size_t nSpecifierPos = sCommandArgsBuffer.find("-c ", 0);
 
 				if (sStringCommandArgs[i] != " ") {
 					sCaption = sStringCommandArgs[i];
@@ -3233,13 +3267,13 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 
 		// Check for any speechmarks that might accidentally get passed to copy operation
 		if (sOrigPath[0] == '\"') {
-			int nFirstMarkPos = sOrigPath.find("\"", 0) + 1;
-			int nFinalMarkPos = sOrigPath.find('\"', nFirstMarkPos) - 1;
+			size_t nFirstMarkPos = sOrigPath.find("\"", 0) + 1;
+			size_t nFinalMarkPos = sOrigPath.find('\"', nFirstMarkPos) - 1;
 			sOrigPath = sOrigPath.substr(nFirstMarkPos, nFinalMarkPos);
 		}
 		if (sDestPath[0] == '\"') {
-			int nFirstMarkPos = sDestPath.find("\"", 0) + 1;
-			int nFinalMarkPos = sDestPath.find('\"', nFirstMarkPos) - 1;
+			size_t nFirstMarkPos = sDestPath.find("\"", 0) + 1;
+			size_t nFinalMarkPos = sDestPath.find('\"', nFirstMarkPos) - 1;
 			sDestPath = sDestPath.substr(nFirstMarkPos, nFinalMarkPos);
 		}
 

@@ -59,9 +59,6 @@ std::string sColourTitleBack = LCYN;
 std::string sColourSubheading = LWHT;
 std::string sColourSubheadingBack = MAG;
 
-// WIN32 API stuff
-HANDLE hSetCurPos = GetStdHandle(STD_OUTPUT_HANDLE);
-
 
 
 // Sets cursor attributes automatically when called
@@ -83,6 +80,23 @@ void SetCursorAttributes() {
 			std::cout << "\x1b[?25h";
 		}
 		else std::cout << "\x1b[?25l";
+
+	}
+
+	// Non-ANSI terminals
+	else {
+		// Set cursor visibility using the WIN32 Console API
+		CONSOLE_CURSOR_INFO cciAttribSet;
+		GetConsoleCursorInfo(GetStdHandle(STD_OUTPUT_HANDLE), &cciAttribSet);
+
+		// Set variables
+		if (bShowCursor == true) {
+			cciAttribSet.bVisible = true;
+		}
+		else cciAttribSet.bVisible = false;
+
+		// Set final cursor info
+		SetConsoleCursorInfo(GetStdHandle(STD_OUTPUT_HANDLE), &cciAttribSet);
 	}
 
 	return;
@@ -104,43 +118,66 @@ void colour(std::string sColourForegroundChoice, std::string sColourBackgroundCh
 		// Background
 		std::cout << "\x1b[48;2;" << sColourBackgroundChoice << "m";
 	}
+
+	// Windows Console API - activated when no ANSI support is detected and is a fallback (16-colours)
+	else {
+
+		// Check for bugs
+		// 
+		// Check for bug in foreground input
+		for (int i = 0; i < sColourForegroundChoice.length() - 1; i++) {
+			// Check if it's a number; there may be a bug
+			if (!isdigit(sColourForegroundChoice[i])) {
+				VerbosityDisplay("Platform ERROR - Failed to change foreground colour due to bug detection.\n");
+				return;
+			}
+		}
+
+		// Check for bug in background input
+		for (int i = 0; i < sColourBackgroundChoice.length() - 1; i++) {
+			// Check if it's a number; there may be a bug
+			if (!isdigit(sColourBackgroundChoice[i])) {
+				VerbosityDisplay("Platform ERROR - Failed to change background colour due to bug detection.\n");
+				return;
+			}
+		}
+
+		// Now, modify the background input choice 
+		int nBackgroundColourFinal = std::stoi(sColourBackgroundChoice) * 16; // WINAPI works on a 16 colour system
+		int nForegroundColourFinal = std::stoi(sColourForegroundChoice);
+
+		// Finally, add the colours and set the colour
+		SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), nBackgroundColourFinal + nForegroundColourFinal);
+	}
+	
 	return;
 }
 
 // colourHighlight - Sets the colour from value inside nColourHighlight(Back).
-void colourHighlight() {
-	if (bAnsiVTSequences) {
-		// Foreground
-		std::cout << "\x1b[38;2;" << sColourHighlight << "m";
-		// Background
-		std::cout << "\x1b[48;2;" << sColourHighlightBack << "m";
-	}
+void colourHighlight() 
+{
+	// Use the default colour function; custom solution not needed
+	colour(sColourHighlight, sColourHighlightBack);
 	return;
 }
 
 // Be sure to change back to no underline AND no bold when done
-void colourTitle() {
-	if (bAnsiVTSequences) {
-		// Foreground
-		std::cout << "\x1b[38;2;" << sColourTitle << "m";
-		// Background
-		std::cout << "\x1b[48;2;" << sColourTitleBack << "m";
-		// Add underline as it's a title
-		std::cout << "\x1b[" << ULINE << "m";
-	}
+void colourTitle() 
+{
+	// Use the default colour function; custom solution not needed
+	colour(sColourTitle, sColourTitleBack);
+	if (bAnsiVTSequences) std::cout << "\x1b[" << ULINE << "m";
+
 	return;
 }
 
 // Be sure to change back to no underline when done
-void colourSubheading() {
-	if (bAnsiVTSequences) {
-		// Foreground
-		std::cout << "\x1b[38;2;" << sColourSubheading << "m";
-		// Background
-		std::cout << "\x1b[48;2;" << sColourSubheadingBack << "m";
-		// Add underline as it's a subheading
-		std::cout << "\x1b[" << ULINE << "m";
-	}
+void colourSubheading() 
+{
+	// Use the default colour function; custom solution not needed
+	colour(sColourSubheading, sColourSubheadingBack);
+	if (bAnsiVTSequences) std::cout << "\x1b[" << ULINE << "m";
+
 	return;
 }
 
@@ -178,13 +215,16 @@ bool isNumber(const std::string sNumberTest) {
 	// Not a number as there's nothing in the string
 	if (sNumberTest.length() <= 0) return false;
 
-	for (int i = 0; i < sNumberTest.length(); i++) {
-		if (isdigit(sNumberTest[i]) == false) return false;
+	// Check if all digits are numbers
+	for (size_t i = 0; i < sNumberTest.length(); i++) {
+		// skip character if it's a decimal point
+		if (sNumberTest[i] == '.') continue;
+		else if (isdigit(sNumberTest[i]) == false) return false;
 	}
 
-	// Test if above stoi() range
+	// Test if above stold() range
 	try {
-		int nRangeTest = std::stoi(sNumberTest);
+		long double nRangeTest = std::stold(sNumberTest);
 	}
 	catch (const std::out_of_range& oorIsNumber) {
 		VerbosityDisplay("Exception caught - Number is too high/low (out of range).");
@@ -208,7 +248,7 @@ void SetCursorPosition(int x, int y) {
 	COORD CursorPos{};
 	CursorPos.X = x;
 	CursorPos.Y = y;
-	SetConsoleCursorPosition(hSetCurPos, CursorPos);
+	SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), CursorPos);
 }
 
 // wordWrap - Adds line/word wrapping to a string, based on the console window width.
@@ -217,7 +257,7 @@ void SetCursorPosition(int x, int y) {
 std::string wordWrap(std::string text) {
 	int width = 0;
 	std::string result = "";
-	int counter = 0;
+	long long int counter = 0;
 
 	// Cannot do word wrapping if disabled
 	if (bWordWrapToggle == false) return text;
@@ -227,8 +267,8 @@ std::string wordWrap(std::string text) {
 	GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbiWordWrap);
 	width = csbiWordWrap.srWindow.Right - csbiWordWrap.srWindow.Left + 1;
 
-	int lastSpace = -1;
-	for (int i = 0; i < text.length(); i++) {
+	size_t lastSpace = -1;
+	for (size_t i = 0; i < text.length(); i++) {
 		if (text[i] == '\n') {
 			counter = 0;
 			lastSpace = -1;
@@ -263,7 +303,9 @@ void DirectionsDisplay(std::string sPrompt) {
 		colour(sColourGlobal, sColourGlobalBack);
 	}
 	else if (bDisplayDirections == true && bAnsiVTSequences == false) {
+		colour(CYN, sColourGlobalBack);
 		std::cout << (sPrompt) << std::endl;
+		colour(sColourGlobal, sColourGlobalBack);
 	}
 	return;
 }
@@ -276,7 +318,9 @@ void VerbosityDisplay(std::string sPrompt) {
 		colour(sColourGlobal, sColourGlobalBack);
 	}
 	else if (bDisplayVerboseMessages == true && bAnsiVTSequences == false) {
+		colour(GRAY, BLK);
 		std::cerr << "Verbose Message: " << sPrompt << std::endl;
+		colour(sColourGlobal, sColourGlobalBack);
 	}
 	return;
 }
@@ -488,7 +532,7 @@ void slowcharCentredFn(bool bNewLine, std::string sText) {
 
 // Function for outputting characters slowly with the same colour
 void slowcolourfn(std::string nColourFore, std::string nColourBack, std::string sSlowchar) {
-	int size = 0;
+	size_t size = 0;
 	// Add word wrapping
 	sSlowchar = wordWrap(sSlowchar);
 	// Get size of sSlowChar
@@ -507,7 +551,7 @@ void slowcolourfn(std::string nColourFore, std::string nColourBack, std::string 
 
 // Function for outputting characters slowly
 void slowcharfn(bool nline, std::string sSlowchar) {
-	int size = 0;
+	size_t size = 0;
 
 	// Add word wrapping
 	sSlowchar = wordWrap(sSlowchar);
@@ -600,6 +644,100 @@ bool ConsoleWTBugCheck() {
 	}
 }
 
+// Switch colours depending on ANSI or WIN32 fallback support
+void ColourTypeSwitch() 
+{
+	// Change to ANSI colour variety
+	if (bAnsiVTSequences == true) 
+	{
+		// Set reset definitions
+		NOULINE_STR = "\x1b[24m";
+		NOBOLD_STR = "\x1b[22m";
+		NOBLINK_STR = "\x1b[25m";
+		NOSTRIKE_STR = "\x1b[29m";
+
+		// Set colour definitions with RGB ANSI
+		// Standard colours
+		BLK = "0;0;0";
+		RED = "255;0;0";
+		GRN = "22;198;12";
+		YLW = "231;186;0";
+		BLU = "0;0;255";
+		MAG = "136;23;152";
+		CYN = "58;150;221";
+		WHT = "242;242;242";
+
+		// Bright colours
+		GRAY = "118;118;118";
+		LRED = "231;72;86";
+		LGRN = "0;255;0";
+		LYLW = "255;255;0";
+		LBLU = "59;120;255";
+		LMAG = "180;0;158";
+		LCYN = "97;214;214";
+		LWHT = "255;255;255";
+
+		// Reset definitions of colours to new values
+		sColourGlobal = LWHT;
+		sColourGlobalBack = BLK;
+
+		sColourHighlight = LWHT;
+		sColourHighlightBack = BLU;
+
+		sColourTitle = BLK;
+		sColourTitleBack = LCYN;
+
+		sColourSubheading = LWHT;
+		sColourSubheadingBack = MAG;
+	}
+
+	// Use fallback WIN32 API colour variety
+	else 
+	{
+		// Set reset definitions to nothing- they will not be needed
+		NOULINE_STR = "";
+		NOBOLD_STR = "";
+		NOBLINK_STR = "";
+		NOSTRIKE_STR = "";
+
+		// Set colour definitions to support the older Windows Console API
+		// Standard colours
+		BLK = "0";
+		BLU = "1";
+		GRN = "2";
+		CYN = "3";
+		RED = "4";
+		MAG = "5";
+		YLW = "6";
+		WHT = "7";
+
+		// Bright colours
+		GRAY = "8";
+		LBLU = "9";
+		LGRN = "10";
+		LCYN = "11";
+		LRED = "12";
+		LMAG = "13";
+		LYLW = "14";
+		LWHT = "15";
+
+		// Reset definitions of colours to new values
+		sColourGlobal = LWHT;
+		sColourGlobalBack = BLK;
+
+		sColourHighlight = LWHT;
+		sColourHighlightBack = BLU;
+
+		sColourTitle = BLK;
+		sColourTitleBack = LCYN;
+
+		sColourSubheading = LWHT;
+		sColourSubheadingBack = MAG;
+	}
+
+	return;
+}
+
 // Function to manage startup tasks
 void ProgramInitialisation() {
 	// Set random colours if random colours on startup are enabled
@@ -624,22 +762,23 @@ void ProgramInitialisation() {
 		// Disable ANSI virtual terminal sequences
 		bAnsiVTSequences = false;
 
-		VerbosityDisplay("This terminal cannot do Virtual Terminal Sequences.\nThis session will only run with black and white colours.\n");
+		VerbosityDisplay("This terminal cannot do Virtual Terminal Sequences.\nThis session will use the WIN32 API fallback colour set for operation.\n");
 
-		// Set colours to Bright White using widely compatible WIN32 API
-		HANDLE hColour = GetStdHandle(STD_OUTPUT_HANDLE);
-		SetConsoleTextAttribute(hColour, 15);
+		// Set the colours
+		ColourTypeSwitch();
 
-		// Set reset definitions to nothing- they will not be needed
-		NOULINE_STR = "";
-		NOBOLD_STR = "";
-		NOBLINK_STR = "";
-		NOSTRIKE_STR = "";
+		// Clear screen to set screen buffer to black colour
+		colour(sColourGlobal, sColourGlobalBack);
 
 		cls();
 	}
 	else {
+		// Keep ANSI VT sequences enabled
 		bAnsiVTSequences = true;
+
+		// Set the colours
+		ColourTypeSwitch();
+
 		// Clear screen to set screen buffer to black colour
 		colour(sColourGlobal, sColourGlobalBack);
 		cls();
@@ -781,7 +920,7 @@ int main(int argc, char* argv[])
 		/* The following will be based on parsing sCommandArgsBuffer for the actual arguments. */
 		// Copy the string arguments into sStringCommandArgs with correct formatting
 		sCommandArgsBuffer += " ";
-		for (int nDashPos = 0, nSpacePos = 0, i = 0; i < 128; i++, nDashPos = 0, nSpacePos = 0)
+		for (size_t nDashPos = 0, nSpacePos = 0, i = 0; i < 128; i++, nDashPos = 0, nSpacePos = 0)
 		{ 
 			// Firstly, check which type of string syntax is first (lower is closer to beginning)
 			//
@@ -801,7 +940,7 @@ int main(int argc, char* argv[])
 
 					// For loop uses struct so declaration of multiple variables in for loop is possible
 					//
-					for (struct { int j = 0; bool bAlreadyErased = false; } loop; loop.j < sTest.length(); loop.j++) 
+					for (struct { size_t j = 0; bool bAlreadyErased = false; } loop; loop.j < sTest.length(); loop.j++) 
 					{
 						if (sTest[loop.j] == '\"') {
 							break;
@@ -847,7 +986,7 @@ int main(int argc, char* argv[])
 		}
 
 		// Copy the letter after a dash into sCommandInputArgs
-		for (int i = 0, j = 0; i < sCommandArgsBuffer.length(); i++) {
+		for (size_t i = 0, j = 0; i < sCommandArgsBuffer.length(); i++) {
 			if (i > 0) {
 				// Character after must not be a space to prevent conflict with string parser 
 				if (sCommandArgsBuffer[i - 1] != '-' && sCommandArgsBuffer[i + 1] != '-' && sCommandArgsBuffer[i] == '-') {

@@ -120,7 +120,7 @@ public:
 			sHighlightBuffer = ">> " + sOptions[nIndex - 1] + " <<";
 
 			// 2. Get length of sBuffer. Put into nHighlightBuffer
-			int nHighlightBuffer = sHighlightBuffer.length();
+			size_t nHighlightBuffer = sHighlightBuffer.length();
 
 			// Only redraw options on first load - CPU optimisation, reduces flickering
 			if (bReiterated == false) 
@@ -221,8 +221,8 @@ public:
 				// exit with code -1 if ESC is pressed
 				else if (nKey == 27) {
 
-					// Break if ESC pressed immediately, without any reiterations
-					if (bReiterated == false) break;
+					// Break if ESC pressed immediately, without any reiterations - for consoles with windows terminal bug #14774
+					if (bReiterated == false && bConsoleBugGCSBI == true) break;
 
 					// Darken the index highlight to indicate that this OptionSelect session isn't being used anymore
 					GetConsoleScreenBufferInfo(hOptionSelect, &csbiOptionSelect);

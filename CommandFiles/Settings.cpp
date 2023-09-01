@@ -9,6 +9,7 @@ void Exiting();
 long double num(std::string);
 void SetCursorAttributes();
 void colourSubheading();
+void ColourTypeSwitch();
 
 extern bool bDisplayDirections;
 extern bool bDisplayVerboseMessages;
@@ -369,6 +370,12 @@ void AnsiSettings(short int nChoice = 0) {
 	if (nChoice == 1) {
 		if (EnableVTMode() != false) {
 			bAnsiVTSequences = true;
+
+			// Set new colours
+			ColourTypeSwitch();
+			colour(sColourGlobal, sColourGlobalBack);
+			cls(); // Set colours to whole screen
+
 			colour(LGRN, sColourGlobalBack);
 			std::cout << "ANSI VT sequences successfully enabled.\n";
 			colour(sColourGlobal, sColourGlobalBack);
@@ -386,12 +393,18 @@ void AnsiSettings(short int nChoice = 0) {
 	}
 	else if (nChoice == 2) {
 		colour(YLW, sColourGlobalBack);
-		std::cout << wordWrap("WARNING: This WILL disable ALL colours AND text formatting from the point of this message.") << '\n';
+		std::cout << wordWrap("WARNING: This WILL disable RGB colours AND text formatting from the point of this message.") << '\n';
 		
-		if (YesNo(wordWrap("Would you like to proceed? [y/n] > "))) {
-			colour(sColourGlobal, sColourGlobalBack);
+		if (YesNo(wordWrap("Would you like to proceed? [y/n] > "))) 
+		{
 			bAnsiVTSequences = false;
-			colour(YLW, sColourGlobalBack);
+
+			// Set new colours
+			ColourTypeSwitch();
+			colour(sColourGlobal, sColourGlobalBack);
+			cls(); // Set to whole screen
+
+			colour(LGRN, sColourGlobalBack);
 			std::cout << "ANSI VT sequences successfully disabled.\n";
 			colour(sColourGlobal, sColourGlobalBack);
 
@@ -470,15 +483,6 @@ void WordWrapSettings(short int nChoice = 0) {
 
 void CursorSettings(short int nChoice = 0, short int nChoiceBlink = 0, short int nChoiceShow = 0, short int nChoiceShape = 0) {
 
-	// Doesn't work without ANSI (might support Get/SetConsoleCursorInfo in the future for legacy consoles)
-	if (!bAnsiVTSequences) {
-		colour(RED, sColourGlobalBack);
-		std::cout << wordWrap("Sorry, but this setting cannot be modified without terminal ANSI VT support.") << '\n';
-		Exiting();
-		colour(sColourGlobal, sColourGlobalBack);
-		return;
-	}
-
 	if (nChoice == 0) {
 		OptionSelectEngine oseCursor;
 		oseCursor.nSizeOfOptions = 3;
@@ -489,7 +493,22 @@ void CursorSettings(short int nChoice = 0, short int nChoiceBlink = 0, short int
 		};
 		oseCursor.sOptions = sOptions;
 
-		nChoice = oseCursor.OptionSelect("Please select your desired option for the Cursor settings:", " ___CURSOR SETTINGS___ ");
+		while (true) {
+			nChoice = oseCursor.OptionSelect("Please select your desired option for the Cursor settings:", " ___CURSOR SETTINGS___ ");
+
+			if (nChoice == 1 || nChoice == 3) {
+
+				// Doesn't work without ANSI
+				if (!bAnsiVTSequences) {
+					colour(RED, sColourGlobalBack);
+					std::cout << wordWrap("Sorry, but this setting cannot be modified without terminal ANSI VT support.") << '\n';
+					Exiting();
+					colour(sColourGlobal, sColourGlobalBack);
+				}
+				else break;
+			}
+			else break;
+		}
 	}
 
 	// Enable/Disable Cursor blinking

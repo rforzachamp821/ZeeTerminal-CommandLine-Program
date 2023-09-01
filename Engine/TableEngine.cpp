@@ -9,8 +9,8 @@ protected:
 	// GetLargestTableMemberSize - Gets the largest string out of an array of members passed into the function
 	// Arguments: sMembers is for the array of members that are to be checked. 
 	// The biggest size is returned if successful, otherwise -1 is returned if an error occured.
-	int GetColumnSize(std::vector<std::string> vsMembers) {
-		int nLargestSize = 0;
+	size_t GetColumnSize(std::vector<std::string> vsMembers) {
+		size_t nLargestSize = 0;
 
 		for (int i = 0; i < vsMembers.size(); i++) {
 			if (vsMembers[i].size() > nLargestSize) {

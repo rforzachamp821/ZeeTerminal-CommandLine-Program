@@ -416,7 +416,7 @@ public:
 				// Get position
 				dCurrentPosition = BASS_ChannelBytes2Seconds(stream, BASS_ChannelGetPosition(stream, BASS_POS_BYTE));
 				// Output position
-				std::cout << "Media file: ";
+				std::cout << "Audio file: ";
 				colour(LCYN, sColourGlobalBack);
 				std::cout << dCurrentPosition;
 				colour(sColourGlobal, sColourGlobalBack);
