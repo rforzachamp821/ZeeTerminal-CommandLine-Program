@@ -8,13 +8,12 @@ void SetCursorPosition(int, int);
 void CentreColouredText(std::string, short int);
 void cls();
 
-extern std::string sColourGlobal;
-extern std::string sColourGlobalBack;
-extern bool bDisplayDirections;
+
+extern ConfigFileSystem ConfigObjMain;
 extern bool bConsoleBugGCSBI;
 
 //
-// TAG3 OptionSelectEngine - Class for OptionSelect function, allows for easy debugging too.
+// ZT OptionSelectEngine - Class for OptionSelect function, allows for easy debugging too.
 //
 class OptionSelectEngine {
 public:
@@ -23,14 +22,14 @@ public:
 
 	OptionSelectEngine() {
 		// Display only when verbose messages are turned on
-		VerbosityDisplay("New OptionSelectEngine Object Created.");
+		VerbosityDisplay("New OptionSelectEngine Object Created.\n");
 		// Set values to default
 		int nSizeOfOptions = 0;
 	}
 
 	~OptionSelectEngine() {
 		// Display verbose destructor message
-		VerbosityDisplay("OptionSelectEngine Object has been destroyed.");
+		VerbosityDisplay("OptionSelectEngine Object has been destroyed.\n");
 	}
 
 	// OptionSelect - A selection UI that allows for easy arrow-key OR W/S-key navigation.
@@ -69,7 +68,7 @@ public:
 		// 13 is ascii for ENTER key
 		bool bReiterated = false;
 		int nIndexIncrease = 3; // 0 for decrease, 1 for increase, 2 for starting position, 3 for ending position
-		while (nKey != 13) {
+		while (true) {
 
 			// Get terminal height
 			GetConsoleScreenBufferInfo(hOptionSelect, &csbiOptionSelect);
@@ -130,8 +129,15 @@ public:
 					// Set cursor position
 					SetCursorPosition(0, (nStartingRow + i + 1));
 
-					// 4. Measure size of sOptions[i] and make equal number of spaces, then go to the beginning of the line
-					std::cout << std::setw(sOptions[i].length() + 6) << std::cout.fill(' ') << '\r'; // + 6 because ">> " and " <<" combined are 6 chars
+					// Mitigation for a terminal colour bug on older-style Windows terminals (specifically Conhost.exe)
+					if (i <= 0) {
+						GetConsoleScreenBufferInfo(hOptionSelect, &csbiOptionSelect);
+						std::cout << std::setw(csbiOptionSelect.srWindow.Right - csbiOptionSelect.srWindow.Left) << std::cout.fill(' ') << '\r';
+					}
+					else {
+						// 4. Measure size of sOptions[i] and make equal number of spaces, then go to the beginning of the line
+						std::cout << std::setw(sOptions[i].length() + 6) << std::cout.fill(' ') << '\r'; // + 6 because ">> " and " <<" combined are 6 chars
+					}
 
 					// 5. Output option
 					if (i == (nIndex - 1)) {
@@ -145,11 +151,11 @@ public:
 					else std::cout << sOptions[i];
 
 					// Reset to default colour
-					colour(sColourGlobal, sColourGlobalBack);
+					colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
 					std::cout << "\n";
 				}
 
-				if (bDisplayDirections) {
+				if (ConfigObjMain.bDisplayDirections) {
 					// Add newlines for DirectionsDisplay
 					std::cout << "\n\n";
 
@@ -182,7 +188,7 @@ public:
 				// 4. Output new sHighlightBuffer
 				colourHighlight();
 				std::cout << sHighlightBuffer;
-				colour(sColourGlobal, sColourGlobalBack);
+				colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
 
 				// 5. Put index height into nIndexHeight for ESC keypress and next nIndex-only redraw
 				GetConsoleScreenBufferInfo(hOptionSelect, &csbiOptionSelect);
@@ -193,6 +199,7 @@ public:
 			}
 
 
+			bool bIsEnter = false;
 			// While loop to skip next code on wrong input, CPU optimisation
 			while (true) {
 				// Set nEndingCursorHeight to cursor height at this point
@@ -209,14 +216,29 @@ public:
 					SetCursorPosition(csbiOptionSelect.dwCursorPosition.X, csbiOptionSelect.dwCursorPosition.Y);
 
 					// Set colour back to default and exit
-					colour(sColourGlobal, sColourGlobalBack);
+					colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
 					return -1;
 				}
 
+				// Exit if ENTER was pressed (from previous non-iteration around the ms console bug)
+				else if (nKey == 13) {
+					bIsEnter = true;
+
+					break;
+				}
+				
+
 				// Get input
 				nKey = _getch();
-				if (nKey == 80 || nKey == 72 || nKey == 119 || nKey == 115 || nKey == 13) {
+				if (nKey == 80 || nKey == 72 || nKey == 119 || nKey == 115) {
 					break;
+				}
+				// Enter key
+				else if (nKey == 13) {
+					// Break if ESC pressed immediately, without any reiterations - for consoles with windows terminal bug #14774
+					if (bReiterated == false && bConsoleBugGCSBI == true) break;
+
+					bIsEnter = true;
 				}
 				// exit with code -1 if ESC is pressed
 				else if (nKey == 27) {
@@ -232,11 +254,14 @@ public:
 					SetCursorPosition(csbiOptionSelect.dwCursorPosition.X, csbiOptionSelect.dwCursorPosition.Y);
 
 					// Set colour back to default and exit
-					colour(sColourGlobal, sColourGlobalBack);
+					colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
 					return -1;
 				}
 				else continue;
 			}
+
+			// Exit on enter keypress
+			if (bIsEnter == true) break;
 
 			bReiterated = true;
 		}
@@ -249,7 +274,7 @@ public:
 		SetCursorPosition(csbiOptionSelect.dwCursorPosition.X, csbiOptionSelect.dwCursorPosition.Y);
 
 		// Set colour back to default and exit
-		colour(sColourGlobal, sColourGlobalBack);
+		colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
 
 		return nIndex;
 	}

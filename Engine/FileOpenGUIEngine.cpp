@@ -1,6 +1,8 @@
 
-#include <atlstr.h>
 std::wstring s2ws(const std::string&);
+std::string ws2s(const std::wstring&);
+void VerbosityDisplay(std::string);
+void UserErrorDisplay(std::string);
 
 // FileOpenGUIEngine - Engine for the File Open Dialogue Box GUI.
 //
@@ -42,13 +44,13 @@ public:
 
 	// Constructor
 	FileOpenGUIEngine() {
-		VerbosityDisplay("\nGUIEngine Object Created.\n");
+		VerbosityDisplay("FileOpenGUIEngine Object Created.\n");
 		sFinalFilePath = "";
 	}
 
 	// Destructor
 	~FileOpenGUIEngine() {
-		VerbosityDisplay("\nGUIEngine Object Destroyed.\n");
+		VerbosityDisplay("FileOpenGUIEngine Object Destroyed.\n");
 		// Nothing to clear/destroy
 	}
 
@@ -67,7 +69,11 @@ public:
 		// Initialise COM libraries
 		hr = CoInitializeEx(NULL, COINIT_MULTITHREADED | COINIT_DISABLE_OLE1DDE);
 		if (FAILED(hr)) {
-			VerbosityDisplay("ERROR - Could not initialise the COM library.\n");
+			VerbosityDisplay("In FileOpenGUIEngine::FileOpenDialogue(): ERROR - Could not initialise the COM library.\n");
+			colour(RED, ConfigObjMain.sColourGlobalBack);
+			UserErrorDisplay("ERROR: Failed to load libraries that are required for operation. Please try again later.\n");
+			colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
+
 			goto done;
 		}
 
@@ -80,7 +86,11 @@ public:
 		);
 
 		if (FAILED(hr)) { 
-			VerbosityDisplay("ERROR - Could not initialise the FileOpenDialog object.\n");
+			VerbosityDisplay("In FileOpenGUIEngine::FileOpenDialogue(): ERROR - Could not initialise the FileOpenDialog object.\n");
+			colour(RED, ConfigObjMain.sColourGlobalBack);
+			UserErrorDisplay("ERROR: Failed to create platform for the dialogue box. Please try again later.\n");
+			colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
+
 			goto done; 
 		}
 
@@ -88,7 +98,11 @@ public:
 		hr = pFileOpen->SetTitle(s2ws(sTitle).c_str());
 
 		if (FAILED(hr)) {
-			VerbosityDisplay("ERROR - Failed to set window title of dialogue box.\n");
+			VerbosityDisplay("In FileOpenGUIEngine::FileOpenDialogue(): ERROR - Failed to set window title of dialogue box.\n");
+			colour(RED, ConfigObjMain.sColourGlobalBack);
+			UserErrorDisplay("ERROR: Failed to set the title for the dialogue box. Please try again later.\n");
+			colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
+
 			goto done;
 		}
 
@@ -102,7 +116,11 @@ public:
 			goto done;
 		}
 		else if (FAILED(hr)) {
-			VerbosityDisplay("ERROR - Failed to display the file dialogue box.\n");
+			VerbosityDisplay("In FileOpenGUIEngine::FileOpenDialogue(): ERROR - Failed to display the file dialogue box using current setup.\n");
+			colour(RED, ConfigObjMain.sColourGlobalBack);
+			UserErrorDisplay("ERROR: Failed to display the file dialogue box. Please try again later.\n");
+			colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
+
 			goto done;
 		}
 
@@ -111,25 +129,27 @@ public:
 		hr = pFileOpen->GetResult(&pItem);
 
 		if (FAILED(hr)) {
-			VerbosityDisplay("ERROR - Failed to get the full results from the File Dialogue Box.\n");
+			VerbosityDisplay("In FileOpenGUIEngine::FileOpenDialogue(): ERROR - Failed to get the full results from the File Dialogue Box.\n");
+			colour(RED, ConfigObjMain.sColourGlobalBack);
+			UserErrorDisplay("ERROR: Failed to get results, such as filepath, from the dialogue box platform. Please try again later.\n");
+			colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
+
 			goto done;
 		}
 
 		hr = pItem->GetDisplayName(SIGDN_FILESYSPATH, &pwszFilePath);
-		sFinalFilePath = CW2A(pwszFilePath);
+		sFinalFilePath = ws2s(pwszFilePath);
 
 		if (FAILED(hr)) {
-			VerbosityDisplay("ERROR - Failed to get the filepath from the results from the File Dialogue Box.\n");
+			VerbosityDisplay("In FileOpenGUIEngine::FileOpenDialogue(): ERROR - Failed to get the filepath from the results from the File Dialogue Box.\n");
+			colour(RED, ConfigObjMain.sColourGlobalBack);
+			UserErrorDisplay("ERROR: Failed to get filepath from gathered results from the dialogue box platform. Please try again later.\n");
+			colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
+
 			goto done;
 		}
 
 	done:
-		if (FAILED(hr))
-		{
-			colour(RED, sColourGlobalBack);
-			std::cout << "\nAn error occured while opening the file/showing the dialogue box.\n";
-			colour(sColourGlobal, sColourGlobalBack);
-		}
 
 		CoTaskMemFree(pwszFilePath);
 

@@ -1,4 +1,7 @@
 void colour(std::string, std::string);
+void sleep(long long int);
+
+extern ConfigFileSystem ConfigObjMain;
 
 
 // A switch-case function for the ColourBackground function.
@@ -70,16 +73,19 @@ void ColourBackgroundSwitch(int* nChoice, std::string* sSettingVariableBack, std
 		*sSettingVariableBack = LWHT;
 		break;
 	default:
-		colour(YLW, BLK);
-		std::cout << "An error occured, and the colour has not been changed.\nPlease try again later.\n";
+		VerbosityDisplay("In ColourBackgroundSwitch() - ERROR: Default switch case statement activated, so nChoice seems to be incorrect.\n");
+		UserErrorDisplay("An error occured, and the colour has not been changed.\nPlease try again later.\n");
 		break;
 	}
+
+	ConfigObjMain.WriteConfigFile();
 
 	return;
 }
 
 // A switch-case function for the ColourForeground function.
-void ColourForegroundSwitch(int* nChoice, std::string* sSettingVariableBack, std::string* sSettingVariable) {
+void ColourForegroundSwitch(int* nChoice, std::string* sSettingVariableBack, std::string* sSettingVariable) 
+{
 	// Switch case for selecting colour
 	switch (*nChoice) {
 	case 1:
@@ -147,12 +153,75 @@ void ColourForegroundSwitch(int* nChoice, std::string* sSettingVariableBack, std
 		*sSettingVariable = LWHT;
 		break;
 	default:
-		colour(YLW, BLK);
-		std::cout << "An error occured, and the colour has not been changed.\nPlease try again later.\n";
+		VerbosityDisplay("In ColourForegroundSwitch() - ERROR: Default switch case statement activated, so nChoice seems to be incorrect.\n");
+		UserErrorDisplay("An error occured, and the colour has not been changed.\nPlease try again later.\n");
 		break;
 	}
 
+	ConfigObjMain.WriteConfigFile();
+
 	return;
+}
+
+// A switch-case function that returns a colour associated with its number.
+std::string NumberToColour(int nNumberChoice) {
+
+	// Switch case based on number choice
+	switch (nNumberChoice) {
+	case 1:
+		return BLK;
+		break;
+	case 2:
+		return BLU;
+		break;
+	case 3:
+		return GRN;
+		break;
+	case 4:
+		return CYN;
+		break;
+	case 5:
+		return RED;
+		break;
+	case 6:
+		return MAG;
+		break;
+	case 7:
+		return YLW;
+		break;
+	case 8:
+		return WHT;
+		break;
+	case 9:
+		return GRAY;
+		break;
+	case 10:
+		return LBLU;
+		break;
+	case 11:
+		return LGRN;
+		break;
+	case 12:
+		return LCYN;
+		break;
+	case 13:
+		return LRED;
+		break;
+	case 14:
+		return LMAG;
+		break;
+	case 15:
+		return LYLW;
+		break;
+	case 16:
+		return LWHT;
+		break;
+	default:
+		VerbosityDisplay("ERROR - An error occured when returning the colour string associated with its number. This is probably a bug.\n");
+		break;
+	}
+
+	return "";
 }
 
 // A switch-case function for the MessageBox command (icon).
@@ -175,9 +244,9 @@ int MessageBoxIconSwitch(std::string sIconName) {
 		return 64;
 	}
 	else {
-		colour(RED, sColourGlobalBack);
-		std::cerr << wordWrap("ERROR - The specified icon argument seems to be incorrect.\nPlease add one from the list of icon options.\nSee 'messagebox -h' for more info.\n");
-		colour(sColourGlobal, sColourGlobalBack);
+		VerbosityDisplay("In MessageBoxIconSwitch() - ERROR: Incorrect icon argument detected.\n");
+		UserErrorDisplay("ERROR - The specified icon argument seems to be incorrect.\nPlease add one from the list of icon options.\nSee 'messagebox -h' for more info.\n");
+
 		return 1;
 	}
 
@@ -213,14 +282,508 @@ int MessageBoxButtonSwitch(std::string sButtonName) {
 		return 6;
 	}
 	else {
-		colour(RED, sColourGlobalBack);
-		std::cerr << wordWrap("ERROR - Your button argument seems to be incorrect.\nPlease make sure it is from the list of button options.\nSee 'messagebox -h' for more info. Using default option...\n");
-		colour(sColourGlobal, sColourGlobalBack);
+		VerbosityDisplay("In MessageBoxButtonSwitch() - ERROR: Incorrect button argument detected.\n");
+		UserErrorDisplay("ERROR - Your button argument seems to be incorrect.\nPlease make sure it is from the list of button options.\nSee 'messagebox -h' for more info. Using default option...\n");
 
 		return 0;
 	}
 
 	return 0;
+}
+
+// Mission Impossible Theme Song in Beeps
+//
+void MissionImpossibleTheme() {
+	MultimediaEngine meSong;
+
+	meSong.BeepSound(784, 150);
+	sleep(300);
+	meSong.BeepSound(784, 150);
+	sleep(300);
+	meSong.BeepSound(932, 150);
+	sleep(150);
+	meSong.BeepSound(1047, 150);
+	sleep(150);
+	meSong.BeepSound(784, 150);
+	sleep(300);
+	meSong.BeepSound(784, 150);
+	sleep(300);
+	meSong.BeepSound(699, 150);
+	sleep(150);
+	meSong.BeepSound(740, 150);
+	sleep(150);
+	meSong.BeepSound(784, 150);
+	sleep(300);
+	meSong.BeepSound(784, 150);
+	sleep(300);
+	meSong.BeepSound(932, 150);
+	sleep(150);
+	meSong.BeepSound(1047, 150);
+	sleep(150);
+	meSong.BeepSound(784, 150);
+	sleep(300);
+	meSong.BeepSound(784, 150);
+	sleep(300);
+	meSong.BeepSound(699, 150);
+	sleep(150);
+	meSong.BeepSound(740, 150);
+	sleep(150);
+	meSong.BeepSound(932, 150);
+	meSong.BeepSound(784, 150);
+	meSong.BeepSound(587, 1200);
+	sleep(75);
+	meSong.BeepSound(932, 150);
+	meSong.BeepSound(784, 150);
+	meSong.BeepSound(554, 1200);
+	sleep(75);
+	meSong.BeepSound(932, 150);
+	meSong.BeepSound(784, 150);
+	meSong.BeepSound(523, 1200);
+	sleep(150);
+	meSong.BeepSound(466, 150);
+	meSong.BeepSound(523, 150);
+
+	return;
+}
+
+// Happy Birthday Song in Beep Sounds
+//
+void HappyBirthdaySong() {
+	MultimediaEngine meSong;
+	
+	meSong.BeepSound(1059.274, 300);
+	meSong.BeepSound(1059.274, 200);
+	meSong.BeepSound(1188.995, 500);
+	meSong.BeepSound(1059.274, 500);
+	meSong.BeepSound(1413.961, 500);
+	meSong.BeepSound(1334.601, 950);
+
+	meSong.BeepSound(1059.274, 300);
+	meSong.BeepSound(1059.274, 200);
+	meSong.BeepSound(1188.995, 500);
+	meSong.BeepSound(1059.274, 500);
+	meSong.BeepSound(1587.117, 500);
+	meSong.BeepSound(1413.961, 950);
+
+	meSong.BeepSound(1059.274, 300);
+	meSong.BeepSound(1059.274, 200);
+	meSong.BeepSound(2118.547, 500);
+	meSong.BeepSound(1781.479, 500);
+	meSong.BeepSound(1413.961, 500);
+	meSong.BeepSound(1334.601, 500);
+	meSong.BeepSound(1188.995, 500);
+	meSong.BeepSound(1887.411, 300);
+	meSong.BeepSound(1887.411, 200);
+	meSong.BeepSound(1781.479, 500);
+	meSong.BeepSound(1413.961, 500);
+	meSong.BeepSound(1587.117, 500);
+	meSong.BeepSound(1413.961, 900);
+
+	return;
+}
+
+// Super Mario Theme Song in Beep Sounds
+//
+void SuperMarioTheme() {
+
+	MultimediaEngine meSong;
+
+	meSong.BeepSound(659, 125);
+	meSong.BeepSound(659, 125);
+	sleep(125);
+	meSong.BeepSound(659, 125);
+	sleep(167);
+	meSong.BeepSound(523, 125);
+	meSong.BeepSound(659, 125);
+	sleep(125);
+	meSong.BeepSound(784, 125);
+	sleep(375);
+	meSong.BeepSound(392, 125);
+	sleep(375);
+	meSong.BeepSound(523, 125);
+	sleep(250);
+	meSong.BeepSound(392, 125);
+	sleep(250);
+	meSong.BeepSound(330, 125);
+	sleep(250);
+	meSong.BeepSound(440, 125);
+	sleep(125);
+	meSong.BeepSound(494, 125);
+	sleep(125);
+	meSong.BeepSound(466, 125);
+	sleep(42);
+	meSong.BeepSound(440, 125);
+	sleep(125);
+	meSong.BeepSound(392, 125);
+	sleep(125);
+	meSong.BeepSound(659, 125);
+	sleep(125);
+	meSong.BeepSound(784, 125);
+	sleep(125);
+	meSong.BeepSound(880, 125);
+	sleep(125);
+	meSong.BeepSound(698, 125);
+	meSong.BeepSound(784, 125);
+	sleep(125);
+	meSong.BeepSound(659, 125);
+	sleep(125);
+	meSong.BeepSound(523, 125);
+	sleep(125);
+	meSong.BeepSound(587, 125);
+	meSong.BeepSound(494, 125);
+	sleep(125);
+	meSong.BeepSound(523, 125);
+	sleep(250);
+	meSong.BeepSound(392, 125);
+	sleep(250);
+	meSong.BeepSound(330, 125);
+	sleep(250);
+	meSong.BeepSound(440, 125);
+	sleep(125);
+	meSong.BeepSound(494, 125);
+	sleep(125);
+	meSong.BeepSound(466, 125);
+	sleep(42);
+	meSong.BeepSound(440, 125);
+	sleep(125);
+	meSong.BeepSound(392, 125);
+	sleep(125);
+	meSong.BeepSound(659, 125);
+	sleep(125);
+	meSong.BeepSound(784, 125);
+	sleep(125);
+	meSong.BeepSound(880, 125);
+	sleep(125);
+	meSong.BeepSound(698, 125);
+	meSong.BeepSound(784, 125);
+	sleep(125);
+	meSong.BeepSound(659, 125);
+	sleep(125);
+	meSong.BeepSound(523, 125);
+	sleep(125);
+	meSong.BeepSound(587, 125);
+	meSong.BeepSound(494, 125);
+	sleep(375);
+	meSong.BeepSound(784, 125);
+	meSong.BeepSound(740, 125);
+	meSong.BeepSound(698, 125);
+	sleep(42);
+	meSong.BeepSound(622, 125);
+	sleep(125);
+	meSong.BeepSound(659, 125);
+	sleep(167);
+	meSong.BeepSound(415, 125);
+	meSong.BeepSound(440, 125);
+	meSong.BeepSound(523, 125);
+	sleep(125);
+	meSong.BeepSound(440, 125);
+	meSong.BeepSound(523, 125);
+	meSong.BeepSound(587, 125);
+	sleep(250);
+	meSong.BeepSound(784, 125);
+	meSong.BeepSound(740, 125);
+	meSong.BeepSound(698, 125);
+	sleep(42);
+	meSong.BeepSound(622, 125);
+	sleep(125);
+	meSong.BeepSound(659, 125);
+	sleep(167);
+	meSong.BeepSound(698, 125);
+	sleep(125);
+	meSong.BeepSound(698, 125);
+	meSong.BeepSound(698, 125);
+	sleep(625);
+	meSong.BeepSound(784, 125);
+	meSong.BeepSound(740, 125);
+	meSong.BeepSound(698, 125);
+	sleep(42);
+	meSong.BeepSound(622, 125);
+	sleep(125);
+	meSong.BeepSound(659, 125);
+	sleep(167);
+	meSong.BeepSound(415, 125);
+	meSong.BeepSound(440, 125);
+	meSong.BeepSound(523, 125);
+	sleep(125);
+	meSong.BeepSound(440, 125);
+	meSong.BeepSound(523, 125);
+	meSong.BeepSound(587, 125);
+	sleep(250);
+	meSong.BeepSound(622, 125);
+	sleep(250);
+	meSong.BeepSound(587, 125);
+	sleep(250);
+	meSong.BeepSound(523, 125);
+	sleep(1125);
+	meSong.BeepSound(784, 125);
+	meSong.BeepSound(740, 125);
+	meSong.BeepSound(698, 125);
+	sleep(42);
+	meSong.BeepSound(622, 125);
+	sleep(125);
+	meSong.BeepSound(659, 125);
+	sleep(167);
+	meSong.BeepSound(415, 125);
+	meSong.BeepSound(440, 125);
+	meSong.BeepSound(523, 125);
+	sleep(125);
+	meSong.BeepSound(440, 125);
+	meSong.BeepSound(523, 125);
+	meSong.BeepSound(587, 125);
+	sleep(250);
+	meSong.BeepSound(784, 125);
+	meSong.BeepSound(740, 125);
+	meSong.BeepSound(698, 125);
+	sleep(42);
+	meSong.BeepSound(622, 125);
+	sleep(125);
+	meSong.BeepSound(659, 125);
+	sleep(167);
+	meSong.BeepSound(698, 125);
+	sleep(125);
+	meSong.BeepSound(698, 125);
+	meSong.BeepSound(698, 125);
+	sleep(625);
+	meSong.BeepSound(784, 125);
+	meSong.BeepSound(740, 125);
+	meSong.BeepSound(698, 125);
+	sleep(42);
+	meSong.BeepSound(622, 125);
+	sleep(125);
+	meSong.BeepSound(659, 125);
+	sleep(167);
+	meSong.BeepSound(415, 125);
+	meSong.BeepSound(440, 125);
+	meSong.BeepSound(523, 125);
+	sleep(125);
+	meSong.BeepSound(440, 125);
+	meSong.BeepSound(523, 125);
+	meSong.BeepSound(587, 125);
+	sleep(250);
+	meSong.BeepSound(622, 125);
+	sleep(250);
+	meSong.BeepSound(587, 125);
+	sleep(250);
+	meSong.BeepSound(523, 125);
+	sleep(625);
+
+	return;
+}
+
+// DunDunDun song in Beep Sounds
+//
+void DunDunDunSound() {
+	MultimediaEngine meSong;
+
+	meSong.BeepSound(1568, 250);
+	meSong.BeepSound(1568, 250);
+	meSong.BeepSound(1568, 250);
+	meSong.BeepSound(1245, 1250);
+	meSong.BeepSound(1397, 250);
+	meSong.BeepSound(1397, 250);
+	meSong.BeepSound(1397, 250);
+	meSong.BeepSound(1175, 1250);
+
+	return;
+}
+
+// Star Wars Imperial March Theme in Beep Sounds
+//
+void StarWarsImperialMarch() {
+	MultimediaEngine meSong;
+
+	meSong.BeepSound(440, 500);
+	meSong.BeepSound(440, 500);
+	meSong.BeepSound(440, 500);
+	meSong.BeepSound(349, 350);
+	meSong.BeepSound(523, 150);
+	meSong.BeepSound(440, 500);
+	meSong.BeepSound(349, 350);
+	meSong.BeepSound(523, 150);
+	meSong.BeepSound(440, 1000);
+	meSong.BeepSound(659, 500);
+	meSong.BeepSound(659, 500);
+	meSong.BeepSound(659, 500);
+	meSong.BeepSound(698, 350);
+	meSong.BeepSound(523, 150);
+	meSong.BeepSound(415, 500);
+	meSong.BeepSound(349, 350);
+	meSong.BeepSound(523, 150);
+	meSong.BeepSound(440, 1000);
+
+	return;
+}
+
+// HackerTyper - Traditional hacker-typer using a snippet of the linux kernel source code
+// Arguments: nSpeed - The speed of the character output in characters.
+// Return Values: None
+// 
+void HackerTyper(unsigned long long int nSpeed = 3) {
+	std::string sHackerText = "struct group_info init_groups = { .usage = ATOMIC_INIT(2) };\n\nstruct group_info *groups_alloc(int gidsetsize){\n\n   struct group_info *group_info;\n\n       int nblocks;\n\n        int i;\n\n\n\n  nblocks = (gidsetsize + NGROUPS_PER_BLOCK - 1) / NGROUPS_PER_BLOCK;\n\n /* Make sure we always allocate at least one indirect block pointer */\n\n      nblocks = nblocks ? : 1;\n\n    group_info = kmalloc(sizeof(*group_info) + nblocks*sizeof(gid_t *), GFP_USER);\n\n      if (!group_info)\n\n            return NULL;\n\n        group_info->ngroups = gidsetsize;\n\n   group_info->nblocks = nblocks;\n\n      atomic_set(&group_info->usage, 1);\n\n\n\n      if (gidsetsize <= NGROUPS_SMALL)\n\n            group_info->blocks[0] = group_info->small_block;\n\n    else {\n\n              for (i = 0; i < nblocks; i++) {\n\n                    gid_t *b;\n\n                    b = (void *)__get_free_page(GFP_USER);\n\n                      if (!b)\n\n            goto out_undo_partial_alloc;\n\n                 group_info->blocks[i] = b;\n\n          }\n\n   }\n\n   return group_info;\n\n\n\nout_undo_partial_alloc:\n\n   while (--i >= 0) {\n\n          free_page((unsigned long)group_info->blocks[i]);\n\n    }\n\n   kfree(group_info);\n\n  return NULL;\n\n}\n\n\n\nEXPORT_SYMBOL(groups_alloc);\n\n\n\nvoid groups_free(struct group_info *group_info)\n\n{\n\n   if (group_info->blocks[0] != group_info->small_block) {\n\n             int i;\n\n              for (i = 0; i < group_info->nblocks; i++)\n\n                   free_page((unsigned long)group_info->blocks[i]);\n\n    }\n\n   kfree(group_info);\n\n}\n\n\n\nEXPORT_SYMBOL(groups_free);\n\n\n\n/* export the group_info to a user-space array */\n\nstatic int groups_to_user(gid_t __user *grouplist,\n\n                     const struct group_info *group_info)\n\n{\n\n int i;\n\n      unsigned int count = group_info->ngroups;\n\n\n\n       for (i = 0; i < group_info->nblocks; i++) {\n\n         unsigned int cp_count = min(NGROUPS_PER_BLOCK, count);\n\n              unsigned int len = cp_count * sizeof(*grouplist);\n\n\n\n               if (copy_to_user(grouplist, group_info->blocks[i], len))\n\n   return -EFAULT;\n\n\n\n          grouplist += NGROUPS_PER_BLOCK;\n\n             count -= cp_count;\n\n  }\n\n   return 0;\n\n}\n\n\n\n/* fill a group_info from a user-space array - it must be allocated already */\n\nstatic int groups_from_user(struct group_info *group_info,\n\n    gid_t __user *grouplist)\n\n{\n\n     int i;\n\n      unsigned int count = group_info->ngroups;\n\n\n\n       for (i = 0; i < group_info->nblocks; i++) {\n\n         unsigned int cp_count = min(NGROUPS_PER_BLOCK, count);\n\n              unsigned int len = cp_count * sizeof(*grouplist);\n\n\n\n               if (copy_from_user(group_info->blocks[i], grouplist, len))\n\n                  return -EFAULT;\n\n\n\n         grouplist += NGROUPS_PER_BLOCK;\n\n             count -= cp_count;\n\n  }\n\n   return 0;\n\n}\n\n\n\n/* a simple Shell sort */\n\nstatic void groups_sort(struct group_info *group_info)\n\n{\n\n      int base, max, stride;\n\n      int gidsetsize = group_info->ngroups;\n\n\n\n   for (stride = 1; stride < gidsetsize; stride = 3 * stride + 1)\n\n              ; /* nothing */\n\n     stride /= 3;\n\n\n\n    while (stride) {\n\n            max = gidsetsize - stride;\n\n          for (base = 0; base < max; base++) {\n\n                        int left = base;\n\n                    int right = left + stride;\n\n gid_t tmp = GROUP_AT(group_info, right);\n\n\n\n                 while (left >= 0 && GROUP_AT(group_info, left) > tmp) {\n\n                             GROUP_AT(group_info, right) =\n\n                                   GROUP_AT(group_info, left);\n\n                             right = left;\n\n                               left -= stride;\n\n            }\n\n                    GROUP_AT(group_info, right) = tmp;\n\n          }\n\n           stride /= 3;\n\n        }\n\n}\n\n\n\n/* a simple bsearch */\n\nint groups_search(const struct group_info *group_info, gid_t grp)\n\n{\n\n      unsigned int left, right;\n\n\n\n       if (!group_info)\n\n            return 0;\n\n\n\n       left = 0;\n\n   right = group_info->ngroups;\n\n        while (left < right) {\n\n              unsigned int mid = left + (right - left)/2;\n\n        if (grp > GROUP_AT(group_info, mid))\n\n                 left = mid + 1;\n\n             else if (grp < GROUP_AT(group_info, mid))\n\n                   right = mid;\n\n                else\n\n                        return 1;\n\n   }\n\n  return 0;\n\n}\n\n\n\n";
+	char cKey = 0; // Key pressed (for exit functions and stuff)
+
+	// Change colour to RGB Green
+	colour(LGRN, ConfigObjMain.sColourGlobalBack);
+
+	// Output based on nSpeed speed, and exit on ESC keypress
+	std::cout << " --> ";
+	while (cKey != 27)
+	{
+		for (unsigned long long int i = 0; i < sHackerText.length(); i += nSpeed)
+		{
+			// Get key
+			cKey = _getch();
+			// Exit on ESC keypress (27 is ASCII Code)
+			if (cKey == 27) break;
+
+			// Near the end of the string - Output up to end of sHackerText
+			if (sHackerText.length() - 1 < (i + nSpeed))
+			{
+				for (; i < sHackerText.length(); i++)
+				{
+					std::cout << sHackerText[i];
+				}
+
+				break;
+			}
+
+			// In the middle of string - Output normally
+			else
+			{
+				unsigned long long int nCapChanger = 0; // to change limit of j
+				for (unsigned long long int j = 0; j < nSpeed + nCapChanger; j++)
+				{
+					std::cout << sHackerText[i + j];
+
+					// Ignore space counting by increasing cap
+					if (sHackerText[i + j] == ' ') nCapChanger++;
+				}
+
+				// Increment i by the cap to get it up to speed
+				i += nCapChanger;
+			}
+		}
+	}
+
+	// Switch colours to default
+	colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
+
+	std::cout << '\n';
+	Exiting();
+	return;
+}
+
+// HackerTyperFile - A hacker typer, but you can use your own file for the text.
+// Arguments: sFilePath - The file path for the custom file to be used.
+//            nSpeed - The speed of the character output in characters.
+// Return Values: TRUE or 1 for success, FALSE or 0 for fail.
+// 
+bool HackerTyperFile(std::string sFilePath, unsigned long long int nSpeed = 3) {
+	std::string sFinalFilePath = "";
+	char cKey = 0;
+
+	// Check for speechmarks in case of copy from file explorer
+	if (sFilePath[0] == '"' && sFilePath[sFilePath.length() - 1] == '"') {
+		sFinalFilePath = sFilePath.substr(1, (sFilePath.length() - 2));
+	}
+	else sFinalFilePath = sFilePath;
+
+	// Check if the file actually exists
+	std::ifstream FilePathTest(sFinalFilePath);
+	if (FilePathTest.fail()) {
+		VerbosityDisplay("ERROR: In HackerTyperFile() - Test file stream failed to open file path. Incorrect filepath detected.\n");
+		UserErrorDisplay("ERROR - File does not exist. Please ensure the filepath that has been used exists, and try again later.\n");
+		FilePathTest.close();
+		return false;
+	}
+	else FilePathTest.close();
+
+	// Copy file into string
+	std::ifstream FilePathIn(sFilePath);
+	std::string sFileContents = "";
+	std::string sBuffer = "";
+
+	while (!FilePathIn.eof())
+	{
+		std::getline(FilePathIn, sBuffer, '\n');
+		sBuffer += "\n"; // USE \\n for copying new text into string manually
+		sFileContents += sBuffer;
+		sBuffer = "";
+	}
+
+	// Change colour to RGB Green
+	colour(LGRN, ConfigObjMain.sColourGlobalBack);
+
+	// Output based on nSpeed speed, and exit on ESC keypress
+	std::cout << " --> ";
+	while (cKey != 27)
+	{
+		for (unsigned long long int i = 0; i < sFileContents.length(); i += nSpeed)
+		{
+			// Get key
+			cKey = _getch();
+			// Exit on ESC keypress (27 is ASCII Code)
+			if (cKey == 27) break;
+
+			// Near the end of the string - Output up to end of sFileContents
+			if (sFileContents.length() - 1 < (i + nSpeed))
+			{
+				for (; i < sFileContents.length(); i++)
+				{
+					std::cout << sFileContents[i];
+				}
+
+				break;
+			}
+
+			// In the middle of string - Output normally
+			else
+			{
+				unsigned long long int nCapChanger = 0; // to change limit of j
+				for (unsigned long long int j = 0; j < nSpeed + nCapChanger; j++)
+				{
+					std::cout << sFileContents[i + j];
+
+					// Ignore space counting by increasing cap
+					if (sFileContents[i + j] == ' ') nCapChanger++;
+				}
+
+				// Increment i by the cap to get it up to speed
+				i += nCapChanger;
+			}
+		}
+	}
+
+	// Switch colours to default
+	colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
+
+	std::cout << '\n';
+	Exiting();
+
+	return true;
+}
+
+// ResetExpl - Resets explorer.exe on the system running ZeeTerminal.
+// Arguments: None
+// Return values: TRUE or 1 for success, FALSE or 0 for fail.
+//
+bool ResetExpl() {
+	
+	// Kill explorer.exe
+	system("taskkill /f /im explorer.exe");
+
+	// Start explorer.exe using ShellExecuteA
+	HRESULT hr = CoInitializeEx(NULL, COINIT_MULTITHREADED | COINIT_DISABLE_OLE1DDE);
+	if (FAILED(hr)) {
+		VerbosityDisplay("In ResetExpl() - ERROR: Failed to initialise the COM Library.\n");
+		UserErrorDisplay("ERROR - Failed to load libraries that are required for operation. Please try again later.\n");
+
+		return false;
+	}
+
+	ShellExecuteA(NULL, "open", "C:\\Windows\\explorer.exe", NULL, "C:\\Windows\\", NULL);
+
+	return true;
 }
 
 

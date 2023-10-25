@@ -7,13 +7,13 @@ std::string CentreText(std::string);
 void cls();
 void colour(std::string, std::string);
 void colourTitle();
+void colourHighlight();
+std::string wordWrap(std::string);
 
-extern std::string sColourGlobal;
-extern std::string sColourGlobalBack;
-
+extern ConfigFileSystem ConfigObjMain;
 
 //
-// TAG3 ScreenNavigateEngine - Class for ScreenNavigate function, allows for easy debugging too.
+// ZT ScreenNavigateEngine - Class for ScreenNavigate function, allows for easy debugging too.
 //
 class ScreenNavigateEngine {
 public:
@@ -22,14 +22,14 @@ public:
 
 	ScreenNavigateEngine() {
 		// Display verbosity message if corresponding boolean allows it
-		VerbosityDisplay("New ScreenNavigateEngine Object Created.");
+		VerbosityDisplay("New ScreenNavigateEngine Object Created.\n");
 		// Set values to default
 		nSizeOfScreens = 0;
 	}
 
 	~ScreenNavigateEngine() {
 		// Display destructor verbose message
-		VerbosityDisplay("ScreenNavigateEngine Object has been destroyed.");
+		VerbosityDisplay("ScreenNavigateEngine Object has been destroyed.\n");
 	}
 
 	// ScreenNavigate - An interactive display UI that allows for quick and easy screen switching in commands, using easy arrow-key OR A/D-key navigation.
@@ -39,6 +39,7 @@ public:
 		int nNumberOfScreens = 0;
 		int nIndex = 1;
 		int nKey = 0;
+		CONSOLE_SCREEN_BUFFER_INFO csbiScreenNavigate;
 
 		// Count the number of screens
 		for (int i = 0; i < nSizeOfScreens; i++) {
@@ -67,16 +68,29 @@ public:
 
 			// Output title of all combined screens, centred
 			CentreColouredText(sTitle, 1);
-			colour(sColourGlobal, sColourGlobalBack);
+			colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
 			std::cout << std::endl;
+
 			// Output directions of use using DirectionsDisplay()
 			DirectionsDisplay("Press the 'A' key or left arrow key to move left.\nPress the 'D' key or right arrow key to move right.\nPress ESC to exit.\n\n");
+
 			// Output screen number out of total screen number
 			std::string sPageNum = "~~PAGE NUMBER: " + std::to_string(nIndex) + "/" + std::to_string(nNumberOfScreens) + "~~\n";
 			CentreColouredText(sPageNum, 2);
+
 			// Output correct screen
-			colour(sColourGlobal, sColourGlobalBack);
-			std::cout << sScreens[nIndex - 1] << std::endl;
+			colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
+			std::cout << wordWrap(sScreens[nIndex - 1]) << '\n';
+
+			// Check ending cursor height to see if scroll-up message should be outputted
+			GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbiScreenNavigate);
+			if (csbiScreenNavigate.dwCursorPosition.Y >= csbiScreenNavigate.srWindow.Bottom - csbiScreenNavigate.srWindow.Top) {
+				std::cout << '\n';
+				colourHighlight();
+				std::cout << " ^ ^ ^ SCROLL UP FOR MORE INFO ^ ^ ^ ";
+				colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
+				std::cout << '\n';
+			}
 
 			// while loop to skip next code on wrong input, optimisation
 			while (true) {

@@ -9,7 +9,7 @@ public:
 	bool bSetByUser =						false;
 
 	RGBColourPresetSystem() {
-		VerbosityDisplay("RGBColourPreset Object Created.");
+		VerbosityDisplay("RGBColourPreset Object Created.\n");
 		// Initialise values to default
 		sColourPresetForeground = "255;255;255";
 		sColourPresetBackground = "0;0;0";
@@ -19,6 +19,6 @@ public:
 
 	~RGBColourPresetSystem() {
 		// Display message that object destroyed
-		VerbosityDisplay("RGBColourPreset Object Destroyed.");
+		VerbosityDisplay("RGBColourPreset Object Destroyed.\n");
 	}
 };

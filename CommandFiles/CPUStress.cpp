@@ -1,11 +1,11 @@
 
 void colour(std::string, std::string);
-void clearkeebbuf();
+void ClearKeyboardBuffer();
 void slowcolourfn(std::string, std::string, std::string);
 void slowcharCentredFn(bool, std::string);
-long double num(std::string);
-std::string str(std::string);
-void sleep(int);
+long double NumInput(std::string);
+std::string StrInput(std::string);
+void sleep(long long int);
 void Exiting();
 
 std::atomic<bool> StopCpuStress = false;
@@ -15,8 +15,8 @@ unsigned long long int nReiterationCount = 0;
 unsigned long long int nCurrentReiterationNum = 0;
 bool bCpuStressKeyboardTermination = false;
 
-extern std::string sColourGlobal;
-extern std::string sColourGlobalBack;
+extern ConfigFileSystem ConfigObjMain;
+
 
 // 1 for single core, 2 for multi core
 void CpuStressTestWorker(short int nSingleOrMultiCore) {
@@ -89,7 +89,7 @@ void CpuBenchmark(short int nSingleOrMulti, long long int nArgNum = -1) {
 		if (nSingleOrMulti == 1) std::cout << "\nThe default number of reiterations is 100,000.\n";
 		else if (nSingleOrMulti == 2) std::cout << "\nThe default number of reiterations is 1 billion.\n";
 
-		nInput = num("Please input the number of reiterations that you want (negative number to exit, 0 for default, more is more intensive): > ");
+		nInput = NumInput("Please input the number of reiterations that you want (negative number to exit, 0 for default, more is more intensive): > ");
 	}
 	else nInput = nArgNum;
 
@@ -110,8 +110,8 @@ void CpuBenchmark(short int nSingleOrMulti, long long int nArgNum = -1) {
 
 		// Start timer and call the cpu benchmark worker only once for single core
 		std::cout << "Starting single-core benchmark with " << nReiterationCount << " reiterations, 1 core.\n";
-		slowcolourfn(LGRN, sColourGlobalBack, "Single-core benchmark has started...\n");
-		clearkeebbuf();
+		slowcolourfn(LGRN, ConfigObjMain.sColourGlobalBack, "Single-core benchmark has started...\n");
+		ClearKeyboardBuffer();
 
 		start = std::chrono::steady_clock::now();
 
@@ -126,10 +126,10 @@ void CpuBenchmark(short int nSingleOrMulti, long long int nArgNum = -1) {
 			std::cout << "Single-core benchmark complete. Your computer took " << ldElapsedTime.count() << " seconds to complete the test.\nCompare that with your friend's scores!\n";
 		}
 		else {
-			colour(YLW, sColourGlobalBack);
-			clearkeebbuf();
+			colour(YLW, ConfigObjMain.sColourGlobalBack);
+			ClearKeyboardBuffer();
 			std::cout << "\nThe single-core benchmark was terminated by a keyboard press.\nExiting...\n";
-			colour(sColourGlobal, sColourGlobalBack);
+			colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
 		}
 	}
 
@@ -142,8 +142,8 @@ void CpuBenchmark(short int nSingleOrMulti, long long int nArgNum = -1) {
 
 		// Start timer and call the cpu benchmark worker nLogicalCoreCount times
 		std::cout << "Starting multi-core benchmark with " << nReiterationCount << " reiterations, " << nLogicalCoreCount << " logical cores.\n";
-		slowcolourfn(LGRN, sColourGlobalBack, "Multi-core benchmark has started...\n");
-		clearkeebbuf();
+		slowcolourfn(LGRN, ConfigObjMain.sColourGlobalBack, "Multi-core benchmark has started...\n");
+		ClearKeyboardBuffer();
 
 		start = std::chrono::steady_clock::now();
 		for (int i = 0; i < nLogicalCoreCount; i++) {
@@ -184,10 +184,10 @@ void CpuBenchmark(short int nSingleOrMulti, long long int nArgNum = -1) {
 			std::cout << "Multi-core benchmark complete. Your computer took " << ldElapsedTime.count() << " seconds to complete the test.\nCompare that with your friend's scores!\n";
 		}
 		else {
-			colour(YLW, sColourGlobalBack);
+			colour(YLW, ConfigObjMain.sColourGlobalBack);
 			std::cout << "\nThe multi-core benchmark was terminated by a keyboard press.\nExiting...\n";
-			clearkeebbuf();
-			colour(sColourGlobal, sColourGlobalBack);
+			ClearKeyboardBuffer();
+			colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
 		}
 	}
 
@@ -205,22 +205,22 @@ void CpuStressTest(short int nSingleOrMulti, bool bIsArgument = false) {
 		std::cout << "Remember, you can always stop the stress test by pressing any key while it's going.\nPress any key to begin the test, or ESC to terminate...";
 		char cKeyCST = _getch();
 		if (cKeyCST == 27) {
-			colour(YLW, sColourGlobalBack);
+			colour(YLW, ConfigObjMain.sColourGlobalBack);
 			std::cout << "\nESC pressed. Exiting...\n";
-			colour(sColourGlobal, sColourGlobalBack);
+			colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
 			return;
 		}
 	}
 
-	slowcolourfn(LGRN, sColourGlobalBack, "\nStress test has started...\n");
+	slowcolourfn(LGRN, ConfigObjMain.sColourGlobalBack, "\nStress test has started...\n");
 
 	if (nSingleOrMulti == 1) {
 		nSingleOrMulti = 1;
 		CpuStressTestWorker(1);
 		// CpuStressTestWorker only exits when key is pressed
-		colour(YLW, sColourGlobalBack);
+		colour(YLW, ConfigObjMain.sColourGlobalBack);
 		std::cout << "\nStress test terminated. Exiting...\n";
-		colour(sColourGlobal, sColourGlobalBack);
+		colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
 	}
 	else if (nSingleOrMulti == 2) {
 		nSingleOrMulti = 2;
@@ -248,58 +248,11 @@ void CpuStressTest(short int nSingleOrMulti, bool bIsArgument = false) {
 		// Put back StopCpuStress to default to not affect next round
 		StopCpuStress = false;
 
-		colour(YLW, sColourGlobalBack);
+		colour(YLW, ConfigObjMain.sColourGlobalBack);
 		std::cout << "\nStress test terminated. Exiting...\n";
-		colour(sColourGlobal, sColourGlobalBack);
+		colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
 	}
 
-	clearkeebbuf();
-	return;
-}
-
-void CpuStress() {
-	OptionSelectEngine CpuStress;
-
-	// Starting page
-	CentreColouredText(" ___CPUSTRESS___ ", 1);
-	std::cout << '\n';
-	slowcharCentredFn(true, "CPUStress can stress or benchmark your CPU in multiple different ways.");
-
-	while (true) {
-
-		std::cout << '\n';
-		CentreColouredText("You can stop a test at any time by pressing a key on the keyboard.", 2);
-		std::cout << "\n\n";
-
-		CpuStress.nSizeOfOptions = 4;
-		std::string sOptions[] = {
-			"CPU Benchmark - Single Core",
-			"CPU Benchmark - Multi Core",
-			"CPU Stress Test - Single Core",
-			"CPU Stress Test - Multi Core"
-		};
-		CpuStress.sOptions = sOptions;
-
-		int nChoice = CpuStress.OptionSelect("Please select your desired option (single core is less intensive, multi core is more intensive):", "");
-
-		if (nChoice == 1) {
-			CpuBenchmark(1);
-			std::cin.ignore(std::numeric_limits<int>::max(), '\n');
-		}
-		else if (nChoice == 2) {
-			CpuBenchmark(2);
-			std::cin.ignore(std::numeric_limits<int>::max(), '\n');
-		}
-		else if (nChoice == 3) {
-			CpuStressTest(1);
-		}
-		else if (nChoice == 4) {
-			CpuStressTest(2);
-		}
-		else if (nChoice == -1) {
-			return;
-		}
-	}
-
+	ClearKeyboardBuffer();
 	return;
 }

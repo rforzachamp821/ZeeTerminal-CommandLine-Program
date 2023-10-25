@@ -14,7 +14,7 @@ extern bool bDisplayDirections;
 extern bool bConsoleBugGCSBI;
 
 //
-// TAG3 OptionSelectEngine - Class for OptionSelect function, allows for easy debugging too.
+// ZeeTerminal OptionSelectEngine - Class for OptionSelect function, allows for easy debugging too.
 //
 class OptionSelectEngine {
 public:

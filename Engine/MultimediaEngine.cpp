@@ -10,10 +10,13 @@
 #pragma comment(lib, "strmiids.lib")
 #pragma comment(lib, "bass.lib")
 
-void Exiting();
-void VerbosityDisplay(std::string);
-void colour(std::string, std::string);
-void clearkeebbuf();
+void		Exiting();
+void		VerbosityDisplay(std::string);
+void		UserErrorDisplay(std::string);
+void		colour(std::string, std::string);
+void		ClearKeyboardBuffer();
+void		SetCursorAttributes();
+std::string wordWrap(std::string);
 std::string CentreText(std::string);
 
 class MultimediaEngine {
@@ -45,7 +48,7 @@ protected:
 			return true;
 		}
 		else {
-			std::cerr << "ERROR - Failed to clear all filters.\n";
+			UserErrorDisplay("ERROR - Failed to clear all filters.\n");
 			pEnum->Release();
 			return false;
 		}
@@ -58,13 +61,13 @@ public:
 
 	// Constructor
 	MultimediaEngine() {
-		VerbosityDisplay("\nMultimediaEngine Object Created.\n");
+		VerbosityDisplay("MultimediaEngine Object Created.\n");
 		// Nothing to set after this
 	}
 	
 	// Destructor
 	~MultimediaEngine() {
-		VerbosityDisplay("\nMultimediaEngine Object Destroyed.\n");
+		VerbosityDisplay("MultimediaEngine Object Destroyed.\n");
 		// Nothing to delete/destroy after this
 	}
 
@@ -80,6 +83,7 @@ public:
 		std::wstring wsFilePath;
 		bool bSuccess = true;
 		bool bRepeatActivated = false;
+		bool bUserCursorVisibilitySetting = ConfigObjMain.bShowCursor;
 
 		std::cout << '\n';
 
@@ -90,10 +94,12 @@ public:
 		else wsFilePath = wsInputFilePath;
 
 		// Initialize the COM library
-		HRESULT hr = CoInitializeEx(NULL, COINIT_MULTITHREADED);
+		HRESULT hr = CoInitializeEx(NULL, COINIT_MULTITHREADED | COINIT_DISABLE_OLE1DDE);
 		if (FAILED(hr))
 		{
-			VerbosityDisplay("ERROR - Could not initialize COM library");
+			VerbosityDisplay("In MultimediaEngine::DShowMultimediaPlayer(): ERROR - Failed to initialise the COM library.");
+			UserErrorDisplay("ERROR: Failed to load libraries that are required for operation. Please try again later.\n");
+
 			bSuccess = false;
 			goto cleanup;
 		}
@@ -104,7 +110,9 @@ public:
 		hr = CoCreateInstance(CLSID_FilterGraph, NULL, CLSCTX_INPROC_SERVER, IID_IGraphBuilder, (void**)&pGraph);
 		if (FAILED(hr))
 		{
-			VerbosityDisplay("ERROR - Could not create the Filter Graph Manager.");
+			VerbosityDisplay("In MultimediaEngine::DShowMultimediaPlayer(): ERROR - Could not create the DirectShow Filter Graph Manager.");
+			UserErrorDisplay("ERROR: Failed to create the media player's management system. Please try again later.\n");
+
 			bSuccess = false;
 			goto cleanup;
 		}
@@ -113,7 +121,9 @@ public:
 		hr = pGraph->QueryInterface(IID_IMediaControl, (void**)&pControl);
 		if (FAILED(hr))
 		{
-			VerbosityDisplay("ERROR - Could not create the Filter Media Controls.");
+			VerbosityDisplay("In MultimediaEngine::DShowMultimediaPlayer(): ERROR - Could not create the DirectShow Filter Media Controls.");
+			UserErrorDisplay("ERROR: Failed to initialise the media control system. Please try again later.\n");
+
 			bSuccess = false;
 			goto cleanup;
 		}
@@ -122,7 +132,9 @@ public:
 		hr = pGraph->QueryInterface(IID_IMediaEvent, (void**)&pEvent);
 		if (FAILED(hr))
 		{
-			VerbosityDisplay("ERROR - Could not create the Filter Media Event.");
+			VerbosityDisplay("In MultimediaEngine::DShowMultimediaPlayer(): ERROR - Could not create the DirectShow Filter Media Event.");
+			UserErrorDisplay("ERROR: Failed to initialise the Media Event Manager. Please try again later.\n");
+
 			bSuccess = false;
 			goto cleanup;
 		}
@@ -156,12 +168,17 @@ public:
 				hr = pGraph->QueryInterface(IID_IMediaPosition, (void**)&pPos);
 				hr = pPos->get_Duration(&dDuration);
 				if (FAILED(hr)) {
-					VerbosityDisplay("ERROR - Failed to get current duration.\n");
+					VerbosityDisplay("In MultimediaEngine::DShowMultimediaPlayer(): ERROR - Failed to get current duration.\n");
 				}
 
 				// Audio controls
 				if (bRepeatActivated == false)
 					std::cout << "Press space or 'p' to pause/unpause, 'r' to activate repeating media file, and ESC or 'e' to exit.\nPress the left arrow key to go backwards, and the right arrow key to fast forward.\n\n\n\n";
+				
+				// Turn off cursor visibility, as it would cause flickering when outputting media time
+				ConfigObjMain.bShowCursor = false;
+				SetCursorAttributes();
+
 				while (dCurrentPosition < dDuration) {
 
 					// Get current media reading position
@@ -169,13 +186,13 @@ public:
 
 					// Output position
 					std::cout << "Media file: ";
-					colour(LCYN, sColourGlobalBack);
+					colour(LCYN, ConfigObjMain.sColourGlobalBack);
 					std::cout << dCurrentPosition;
-					colour(sColourGlobal, sColourGlobalBack);
+					colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
 					std::cout << " sec out of ";
-					colour(LCYN, sColourGlobalBack);
+					colour(LCYN, ConfigObjMain.sColourGlobalBack);
 					std::cout << (int)dDuration;
-					colour(sColourGlobal, sColourGlobalBack);
+					colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
 					std::cout << " sec        \r";
 
 					// For compatibility with check for finished playback
@@ -198,7 +215,7 @@ public:
 					// Controls
 					if (c == ' ' || c == 'p' || c == 'P') {
 						// Set colour of messages
-						colour(YLW, sColourGlobalBack);
+						colour(YLW, ConfigObjMain.sColourGlobalBack);
 						// Get cursor position and set it to one higher than media output 
 						GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbiPlayer);
 						CursorPos.Y = csbiPlayer.dwCursorPosition.Y - 1;
@@ -227,7 +244,7 @@ public:
 						// Finally, reset cursor position and colours
 						CursorPos.Y = csbiPlayer.dwCursorPosition.Y;
 						SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), CursorPos);
-						colour(sColourGlobal, sColourGlobalBack);
+						colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
 
 						continue;
 					}
@@ -246,9 +263,7 @@ public:
 						else hr = pPos->put_CurrentPosition(dDuration);
 
 						if (FAILED(hr)) {
-							colour(RED, sColourGlobalBack);
-							std::cerr << "An error occured when seeking forwards.\n";
-							colour(sColourGlobal, sColourGlobalBack);
+							UserErrorDisplay("An error occured when seeking forwards.\n");
 							continue;
 						}
 
@@ -261,9 +276,7 @@ public:
 						else hr = pPos->put_CurrentPosition(0);
 
 						if (FAILED(hr)) {
-							colour(RED, sColourGlobalBack);
-							std::cerr << "An error occured when seeking backwards.\n";
-							colour(sColourGlobal, sColourGlobalBack);
+							UserErrorDisplay("An error occured when seeking backwards.\n");
 							continue;
 						}
 
@@ -271,7 +284,7 @@ public:
 					}
 					else if (c == 'r') {
 						// Set colour of messages
-						colour(YLW, sColourGlobalBack);
+						colour(YLW, ConfigObjMain.sColourGlobalBack);
 						// Get cursor co-ords
 						GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbiPlayer);
 						CursorPos.Y = csbiPlayer.dwCursorPosition.Y - 2;
@@ -293,7 +306,7 @@ public:
 						// Reset co-ords and colours to previous
 						CursorPos.Y = csbiPlayer.dwCursorPosition.Y;
 						SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), CursorPos);
-						colour(sColourGlobal, sColourGlobalBack);
+						colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
 
 						continue;
 					}
@@ -309,7 +322,8 @@ public:
 						goto playfile;
 					}
 					else {
-						VerbosityDisplay("ERROR - Failed to repeat media.\n");
+						VerbosityDisplay("In MultimediaEngine::DShowMultimediaPlayer(): ERROR - Filter unloading failed, therefore repeating media failed.\n");
+						UserErrorDisplay("ERROR: Failed to repeat media playback.\n");
 						bSuccess = false;
 						goto cleanup;
 					}
@@ -320,22 +334,30 @@ public:
 
 			}
 			else {
-				VerbosityDisplay("ERROR - Could not play back media. Check if the file was removed?\n");
+				VerbosityDisplay("In MultimediaEngine::DShowMultimediaPlayer(): ERROR - Could not play back media. Check if the file was deleted?\n");
+				UserErrorDisplay("ERROR: Failed to play back media. Check if the file was deleted, and try again later.\n");
 				bSuccess = false;
 				goto cleanup;
 			}
 
-			colour(LGRN, sColourGlobalBack);
+			// Stop playback
+			pControl->Stop();
+			colour(LGRN, ConfigObjMain.sColourGlobalBack);
 			std::cout << '\n' << CentreText("Playback finished.") << '\n';
-			colour(sColourGlobal, sColourGlobalBack);
+			colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
 		}
 		else {
-			VerbosityDisplay("ERROR - Failed to read file. Possibly wrong file format?\n");
+			VerbosityDisplay("In MultimediaEngine::DShowMultimediaPlayer(): ERROR - Render file to graph operation failed. Possible bad file format.\n");
+			UserErrorDisplay("ERROR: Failed to read from file. Please check if the file meets the file format requirements, and try again later.\n");
 			bSuccess = false;
 			goto cleanup;
 		}
 
 	cleanup:
+
+		// Revert cursor visibility back to user default
+		ConfigObjMain.bShowCursor = bUserCursorVisibilitySetting;
+		SetCursorAttributes();
 
 		// Clean up in reverse order.
 		RemoveFilters(pGraph);
@@ -355,6 +377,7 @@ public:
 	bool BASSAudioPlayer(std::string sInputFilePath) {
 		std::string sFilePath = "";
 		bool bRepeatActivated = false;
+		bool bUserCursorVisibilitySetting = ConfigObjMain.bShowCursor;
 
 		// Check for speechmarks in case of copy from file explorer
 		if (sInputFilePath[0] == '"' && sInputFilePath[sInputFilePath.length() - 1] == '"') {
@@ -363,19 +386,21 @@ public:
 		else sFilePath = sInputFilePath;
 
 		// Initialize BASS library
-		if (!BASS_Init(-1, 192000, 0, 0, NULL)) {
-			VerbosityDisplay("ERROR - Failed to initialise the BASS library.\n");
+		if (!BASS_Init(-1, 192000, BASS_DEVICE_FREQ, 0, NULL)) {
+			VerbosityDisplay("In MultimediaEngine::BASSAudioPlayer(): ERROR - Failed to initialise the BASS library.\n");
+			UserErrorDisplay("ERROR: Failed to load the required libraries to start the BASS Audio Player. Please try again later.\n");
+
 			return false;
 		}
 
 		// Load plugins for OPUS, FLAC
 		HPLUGIN pluginopus = BASS_PluginLoad("bassopus.dll", 0);
 		if (pluginopus == 0) {
-			VerbosityDisplay("ERROR - Failed to load OPUS plugin.\nPlease check if the bassopus.dll file is in the same directory as TerminalAppGen3.\nWill continue anyway.\n");
+			VerbosityDisplay("ERROR - Failed to load OPUS plugin.\nPlease check if the bassopus.dll file is in the same directory as ZeeTerminal.\nWill proceed anyway.\n");
 		}
 		HPLUGIN pluginflac = BASS_PluginLoad("bassflac.dll", 0);
 		if (pluginflac == 0) {
-			VerbosityDisplay("ERROR - Failed to load FLAC plugin.\nPlease check if the bassflac.dll file is in the same directory as TerminalAppGen3.\nWill continue anyway.\n");
+			VerbosityDisplay("ERROR - Failed to load FLAC plugin.\nPlease check if the bassflac.dll file is in the same directory as ZeeTerminal.\nWill proceed anyway.\n");
 		}
 
 		do {
@@ -384,7 +409,9 @@ public:
 			HSTREAM stream = BASS_StreamCreateFile(FALSE, sFilePath.c_str(), 0, 0, BASS_STREAM_PRESCAN);
 			if (stream == 0) {
 				// Error message
-				VerbosityDisplay("ERROR - Failed to load file into stream. Possibly nonexistent file, or a bug on the developer's end.\n");
+				VerbosityDisplay("In MultimediaEngine::BASSAudioPlayer(): ERROR - Failed to load file into stream. Possibly nonexistent file, or a bug on the developer's end.\n");
+				UserErrorDisplay("ERROR: Failed to load file into stream. Possibly nonexistent file, please try again later.\n");
+
 				BASS_PluginFree(pluginflac);
 				BASS_PluginFree(pluginopus);
 				BASS_Free();
@@ -395,7 +422,9 @@ public:
 			// Play the audio file
 			if (!BASS_ChannelPlay(stream, bRepeatActivated)) {
 				// Error message
-				VerbosityDisplay("ERROR - Failed to play file. Possibly bad file format/corrupted file?\n");
+				VerbosityDisplay("In MultimediaEngine::BASSAudioPlayer(): ERROR - Failed to play file. Bad file format/corrupted file possible.\n");
+				UserErrorDisplay("ERROR: Failed to play file. Possibly a corrupt file, or an incorrect file format.\n");
+
 				BASS_StreamFree(stream);
 				BASS_PluginFree(pluginflac);
 				BASS_PluginFree(pluginopus);
@@ -409,21 +438,27 @@ public:
 			CONSOLE_SCREEN_BUFFER_INFO csbiPlayer;
 			COORD CursorPos{};
 
+			// Media controls
 			if (bRepeatActivated == false)
 				std::cout << "Press space or 'p' to pause/unpause, 'r' to activate repeating media file, and ESC or 'e' to exit.\nPress the left arrow key to seek backwards, and the right arrow key to seek forwards.\n\n\n\n";
+			
+			// Set cursor visibility to false to prevent flickering when showing media time
+			ConfigObjMain.bShowCursor = false;
+			SetCursorAttributes();
+			
 			while (dCurrentPosition < dDuration) {
 
 				// Get position
 				dCurrentPosition = BASS_ChannelBytes2Seconds(stream, BASS_ChannelGetPosition(stream, BASS_POS_BYTE));
 				// Output position
 				std::cout << "Audio file: ";
-				colour(LCYN, sColourGlobalBack);
+				colour(LCYN, ConfigObjMain.sColourGlobalBack);
 				std::cout << dCurrentPosition;
-				colour(sColourGlobal, sColourGlobalBack);
+				colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
 				std::cout << " sec out of ";
-				colour(LCYN, sColourGlobalBack);
+				colour(LCYN, ConfigObjMain.sColourGlobalBack);
 				std::cout << (int)dDuration;
-				colour(sColourGlobal, sColourGlobalBack);
+				colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
 				std::cout << " sec        \r";
 
 				if (_kbhit()) {
@@ -452,30 +487,30 @@ public:
 					if (!bWasPaused) {
 						// Output according message to what happened with the function
 						if (BASS_ChannelPause(stream)) {
-							colour(YLW, sColourGlobalBack);
+							colour(YLW, ConfigObjMain.sColourGlobalBack);
 							std::cout << "Paused.           ";
-							colour(sColourGlobal, sColourGlobalBack);
+							colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
 							bWasPaused = true;
 						}
 						else {
-							colour(RED, sColourGlobalBack);
+							colour(RED, ConfigObjMain.sColourGlobalBack);
 							std::cerr << "Failed to pause.  ";
-							colour(sColourGlobal, sColourGlobalBack);
+							colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
 							continue;
 						}
 					}
 					else {
 						// Output according message to what happened with the function
 						if (BASS_ChannelPlay(stream, false)) {
-							colour(YLW, sColourGlobalBack);
+							colour(YLW, ConfigObjMain.sColourGlobalBack);
 							std::cout << "Unpaused.         ";
-							colour(sColourGlobal, sColourGlobalBack);
+							colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
 							bWasPaused = false;
 						}
 						else {
-							colour(RED, sColourGlobalBack);
+							colour(RED, ConfigObjMain.sColourGlobalBack);
 							std::cerr << "Failed to unpause.";
-							colour(sColourGlobal, sColourGlobalBack);
+							colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
 							continue;
 						}
 					}
@@ -498,15 +533,15 @@ public:
 
 					// Set repeat boolean to true/false depending on what was set before
 					if (bRepeatActivated) {
-						colour(YLW, sColourGlobalBack);
+						colour(YLW, ConfigObjMain.sColourGlobalBack);
 						std::cout << "Repeat deactivated."; // Spaces if deactivated previously
-						colour(sColourGlobal, sColourGlobalBack);
+						colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
 						bRepeatActivated = false;
 					}
 					else {
-						colour(YLW, sColourGlobalBack);
+						colour(YLW, ConfigObjMain.sColourGlobalBack);
 						std::cout << "Repeat activated.  "; // Spaces if deactivated previously
-						colour(sColourGlobal, sColourGlobalBack);
+						colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
 						bRepeatActivated = true;
 					}
 
@@ -520,10 +555,15 @@ public:
 				else if (c == 27 || c == 'e' || c == 'E') { // 27 is ASCII for ESC
 					std::cout << std::endl;
 					if (!BASS_Stop()) {
-						VerbosityDisplay("Failed to stop audio playback before exit.\n");
+						VerbosityDisplay("In MultimediaEngine::BASSAudioPlayer(): ERROR - Failed to stop audio playback before exit.\n");
 					}
 					else {
 						Exiting();
+
+						// Revert cursor visibility back to user default
+						ConfigObjMain.bShowCursor = bUserCursorVisibilitySetting;
+						SetCursorAttributes();
+
 						// Free resources
 						BASS_StreamFree(stream);
 						BASS_PluginFree(pluginflac);
@@ -538,17 +578,13 @@ public:
 				else if (c == 77 || c == 'd' || c == 'D') { // 77 is ASCII for right arrow
 					if (dCurrentPosition + 5 <= dDuration) {
 						if (!BASS_ChannelSetPosition(stream, BASS_ChannelSeconds2Bytes(stream, dCurrentPosition + 5), BASS_POS_BYTE)) {
-							colour(RED, sColourGlobalBack);
-							std::cerr << "An error occured when seeking forwards.\n";
-							colour(sColourGlobal, sColourGlobalBack);
+							UserErrorDisplay("An error occured when seeking forwards.\n");
 							continue;
 						}
 					}
 					else {
 						if (!BASS_ChannelSetPosition(stream, BASS_ChannelSeconds2Bytes(stream, dDuration - 0.00001), BASS_POS_BYTE)) {
-							colour(RED, sColourGlobalBack);
-							std::cerr << "An error occured when seeking forwards.\n";
-							colour(sColourGlobal, sColourGlobalBack);
+							UserErrorDisplay("An error occured when seeking forwards.\n");
 							continue;
 						}
 					}
@@ -560,17 +596,13 @@ public:
 				else if (c == 75 || c == 'a' || c == 'A') { // 75 is ASCII for left arrow
 					if (dCurrentPosition - 5 >= 0) {
 						if (!BASS_ChannelSetPosition(stream, BASS_ChannelSeconds2Bytes(stream, dCurrentPosition - 5), BASS_POS_BYTE)) {
-							colour(RED, sColourGlobalBack);
-							std::cerr << "An error occured when seeking backwards.\n";
-							colour(sColourGlobal, sColourGlobalBack);
+							UserErrorDisplay("An error occured when seeking backwards.\n");
 							continue;
 						}
 					}
 					else {
 						if (!BASS_ChannelSetPosition(stream, BASS_ChannelSeconds2Bytes(stream, 0), BASS_POS_BYTE)) {
-							colour(RED, sColourGlobalBack);
-							std::cerr << "An error occured when seeking backwards.\n";
-							colour(sColourGlobal, sColourGlobalBack);
+							UserErrorDisplay("An error occured when seeking backwards.\n");
 							continue;
 						}
 					}
@@ -585,9 +617,13 @@ public:
 
 		} while (bRepeatActivated == true);
 
-		colour(LGRN, sColourGlobalBack);
+		colour(LGRN, ConfigObjMain.sColourGlobalBack);
 		std::cout << '\n' << CentreText("Playback finished.") << '\n';
-		colour(sColourGlobal, sColourGlobalBack);
+		colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
+
+		// Revert cursor visibility back to user default
+		ConfigObjMain.bShowCursor = bUserCursorVisibilitySetting;
+		SetCursorAttributes();
 
 		// Clear the BASS library memory
 		BASS_PluginFree(pluginflac);
@@ -615,7 +651,9 @@ public:
 			return true;
 		}
 		else {
-			VerbosityDisplay("MMAPIAudioPlayer error: file not found.\n");
+			VerbosityDisplay("In MultimediaEngine::MMAPIAudioPlayer(): ERROR - File not found, or incorrect path detected.\n");
+			UserErrorDisplay("ERROR: File doesn't seem to be found. Please check your filepath and try again.\n");
+
 			return false;
 		}
 
@@ -630,7 +668,9 @@ public:
 	bool TTSOutput(std::wstring wsText) {
 
 		if (FAILED(CoInitialize(NULL))) {
-			VerbosityDisplay("ERROR - Failed to initialise the COM library.\n");
+			VerbosityDisplay("In MultimediaEngine::TTSOutput(): ERROR - Failed to initialise the COM library.\n");
+			UserErrorDisplay("ERROR: The required libraries to run Text-To-Speech failed to load. Please try again later.\n");
+
 			CoUninitialize();
 			return true;
 		}
@@ -646,7 +686,9 @@ public:
 			delete pVoice;
 		}
 		else {
-			VerbosityDisplay("ERROR - Failed to create SAPI instance.\n");
+			VerbosityDisplay("In MultimediaEngine::TTSOutput(): ERROR - Failed to create SAPI instance.\n");
+			UserErrorDisplay("ERROR: Failed to create the handler to output the voice audio. Please try again later.\n");
+
 			CoUninitialize();
 			return false;
 		}
@@ -657,12 +699,12 @@ public:
 
 	// BeepSound - Produces access to produce a low-latency, audible and constant beep sound.
 	// Arguments: dFrequency - Set the frequency of the beep sound. This is measured in Hertz.
-	//            dDuration - Set the duration of the sound. This is measured in SECONDS.
+	//            dDuration - Set the duration of the sound. This is measured in MILLISECONDS.
 	//            bExitOnKeyPress - Exit on keypress while sound is being outputted.
-	// Return values: No return values.
+	// Return values: TRUE or 1 for uninterrupted output, and FALSE or 0 for key pressed.
 	// Notes: Providing no arguments will give a 500hz beep sound for 1 second.
 	//
-	void BeepSound(long double dFrequency = 500, long double dDuration = 1, bool bExitOnKeyPress = false) {
+	bool BeepSound(long double dFrequency = 500, long double dDuration = 1, bool bExitOnKeyPress = false) {
 		HWAVEOUT hWaveOut;
 		WAVEFORMATEX wfx;
 		wfx.wFormatTag = WAVE_FORMAT_PCM;
@@ -672,8 +714,9 @@ public:
 		wfx.nBlockAlign = 2;
 		wfx.wBitsPerSample = 16;
 		wfx.cbSize = 0;
+		bool bReturnValue = true;
 
-		const int bufferSize = wfx.nSamplesPerSec * wfx.nBlockAlign * dDuration;
+		const int bufferSize = wfx.nSamplesPerSec * wfx.nBlockAlign * (dDuration * 0.001);
 		short int* buffer = new short int[bufferSize];
 
 		waveOutOpen(&hWaveOut, WAVE_MAPPER, &wfx, 0, 0, CALLBACK_NULL);
@@ -696,7 +739,8 @@ public:
 			if (_kbhit() && bExitOnKeyPress == true) {
 				waveOutReset(hWaveOut);
 				// Clean keyboard buffer to clear the key that was inputted
-				clearkeebbuf();
+				ClearKeyboardBuffer();
+				bReturnValue = false;
 				break;
 			}
 		}
@@ -707,6 +751,6 @@ public:
 
 		waveOutClose(hWaveOut);
 
-		return;
+		return bReturnValue;
 	}
 };

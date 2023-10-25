@@ -25,13 +25,13 @@ public:
 	
 	// TableEngine constructor
 	TableEngine() {
-		VerbosityDisplay("TableEngine Object Created.");
+		VerbosityDisplay("TableEngine Object Created.\n");
 		return; // Nothing needs to be initialised as there's only a vector
 	}
 
 	// TableEngine destructor
 	~TableEngine() {
-		VerbosityDisplay("TableEngine Object Destroyed.");
+		VerbosityDisplay("TableEngine Object Destroyed.\n");
 		return;
 	}
 

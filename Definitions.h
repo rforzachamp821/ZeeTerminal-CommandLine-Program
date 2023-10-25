@@ -1,18 +1,21 @@
 #pragma once
 
+// ZeeTerminal Source Code Version
+constexpr const char* ZT_VERSION = "0.4.0";
+
 // Normal colour definitions
 std::string BLK = "0;0;0";
-std::string RED = "255;0;0";
+std::string RED = "230;0;0";
 std::string GRN = "22;198;12";
 std::string YLW = "231;186;0";
 std::string BLU = "0;0;255";
 std::string MAG = "136;23;152";
 std::string CYN = "58;150;221";
-std::string WHT = "242;242;242";
+std::string WHT = "215;215;215"; // Used to be 242;242;242
 
 // Bright colour definitions
 std::string GRAY = "118;118;118";
-std::string LRED = "231;72;86";
+std::string LRED = "251;96;127"; // 231;72;86 is normal
 std::string LGRN = "0;255;0";
 std::string LYLW = "255;255;0";
 std::string LBLU = "59;120;255";
