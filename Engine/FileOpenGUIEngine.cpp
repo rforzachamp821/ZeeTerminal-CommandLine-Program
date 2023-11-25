@@ -18,7 +18,7 @@ protected:
 	// Arguments - *iObject - the object to release/clear.
 	// Return values: TRUE or 1 for success, FALSE or 0 for fail.
 	//
-	bool ThroroughRelease(IUnknown *iObject) 
+	bool ThoroughRelease(IUnknown *iObject) 
 	{
 		HRESULT hr = S_OK;
 
@@ -67,7 +67,7 @@ public:
 		LPWSTR pwszFilePath = NULL;
 
 		// Initialise COM libraries
-		hr = CoInitializeEx(NULL, COINIT_MULTITHREADED | COINIT_DISABLE_OLE1DDE);
+		hr = CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
 		if (FAILED(hr)) {
 			VerbosityDisplay("In FileOpenGUIEngine::FileOpenDialogue(): ERROR - Could not initialise the COM library.\n");
 			colour(RED, ConfigObjMain.sColourGlobalBack);
@@ -155,11 +155,11 @@ public:
 
 		if (pItem)
 		{
-			ThroroughRelease(pItem);
+			ThoroughRelease(pItem);
 		}
 		if (pFileOpen)
 		{
-			ThroroughRelease(pFileOpen);
+			ThoroughRelease(pFileOpen);
 		}
 
 		CoUninitialize();

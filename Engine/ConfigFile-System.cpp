@@ -1,10 +1,10 @@
 
 void VerbosityDisplay(std::string);
 void UserErrorDisplay(std::string);
-bool isNumber(std::string);
+bool isNumberi(const std::string);
+bool isNumberll(const std::string);
 
 extern RGBColourPresetSystem RGBPreset[3];
-
 
 //
 // ConfigFileSystem - Centres and manages the configuration file system of ZeeTerminal.
@@ -35,7 +35,8 @@ protected:
 			+ "bWordWrapToggle=" + std::to_string(bWordWrapToggle) + "\n"
 			+ "bCursorBlink=" + std::to_string(bCursorBlink) + "\n"
 			+ "bTermCustomThemeSupport=" + std::to_string(bTermCustomThemeSupport) + "\n"
-			+ "bAutoReadableContrast=" + std::to_string(bAutoReadableContrast) + "\n\n"
+			+ "bAutoReadableContrast=" + std::to_string(bAutoReadableContrast) + "\n"
+			+ "bAnsiVTSequences=" + std::to_string(bAnsiVTSequences) + "\n\n"
 
 			+ "# Integer Non-Switch Setting Variables\n#\n"
 			+ "nSlowCharSpeed=" + std::to_string(nSlowCharSpeed) + "\n"
@@ -65,7 +66,7 @@ protected:
 			+ "sColourPresetForeground3=" + RGBPreset[2].sColourPresetForeground + "\n"
 			+ "sColourPresetBackground3=" + RGBPreset[2].sColourPresetBackground + "\n"
 			+ "sPresetName3=" + RGBPreset[2].sPresetName + "\n"
-			+ "bSetByUser3=" + std::to_string(RGBPreset[2].bSetByUser) + "\n\n";
+			+ "bSetByUser3=" + std::to_string(RGBPreset[2].bSetByUser);
 
 		// Return config value to skip programming steps in some parts of config file system
 		return sConfigFileContents;
@@ -83,9 +84,10 @@ public:
 	bool bCursorBlink = true;
 	bool bTermCustomThemeSupport = false;
 	bool bAutoReadableContrast = true;
+	bool bAnsiVTSequences = true;
 
-	int nSlowCharSpeed = 32;
-	int nCursorShape = 5; // TYPES are: block blinking (1), block steady (2), underline blinking (3), underline steady (4), bar blinking (5), bar steady (6)
+	long long int nSlowCharSpeed = 32;
+	long long int nCursorShape = 5; // TYPES are: block blinking (1), block steady (2), underline blinking (3), underline steady (4), bar blinking (5), bar steady (6)
 
 	std::string sColourGlobal = LWHT;
 	std::string sColourGlobalBack = BLK;
@@ -263,7 +265,7 @@ public:
 		// Check every line until the end of the file
 		//
 		VerbosityDisplay("In ConfigFileSystem::ReadConfigFile(): Note - Configuration File Read Operation has commenced.\n");
-		int nLineNum = 0;
+		uint64_t nLineNum = 0;
 		while (!MainStreamIn.eof()) {
 			nLineNum++;
 
@@ -328,7 +330,7 @@ public:
 					break;
 				}
 				else if (sOptionBuffer == "bSetByUser" + std::to_string(i + 1)) {
-					if (isNumber(sValueBuffer)) RGBPreset[i].bSetByUser = std::stoi(sValueBuffer);
+					if (isNumberi(sValueBuffer)) RGBPreset[i].bSetByUser = std::stoi(sValueBuffer);
 					bRGBPresetFound = true;
 					break;
 				}
@@ -336,37 +338,40 @@ public:
 
 			// Switches
 			if (sOptionBuffer == "bDisplayDirections") {
-				if (isNumber(sValueBuffer)) bDisplayDirections = std::stoi(sValueBuffer);
+				if (isNumberi(sValueBuffer)) bDisplayDirections = std::stoi(sValueBuffer);
 			}
 			else if (sOptionBuffer == "bDisplayVerboseMessages") {
-				if (isNumber(sValueBuffer)) bDisplayVerboseMessages = std::stoi(sValueBuffer);
+				if (isNumberi(sValueBuffer)) bDisplayVerboseMessages = std::stoi(sValueBuffer);
 			}
 			else if (sOptionBuffer == "bRandomColoursOnStartup") {
-				if (isNumber(sValueBuffer)) bRandomColoursOnStartup = std::stoi(sValueBuffer);
+				if (isNumberi(sValueBuffer)) bRandomColoursOnStartup = std::stoi(sValueBuffer);
 			}
 			else if (sOptionBuffer == "bShowCursor") {
-				if (isNumber(sValueBuffer)) bShowCursor = std::stoi(sValueBuffer);
+				if (isNumberi(sValueBuffer)) bShowCursor = std::stoi(sValueBuffer);
 			}
 			else if (sOptionBuffer == "bWordWrapToggle") {
-				if (isNumber(sValueBuffer)) bWordWrapToggle = std::stoi(sValueBuffer);
+				if (isNumberi(sValueBuffer)) bWordWrapToggle = std::stoi(sValueBuffer);
 			}
 			else if (sOptionBuffer == "bCursorBlink") {
-				if (isNumber(sValueBuffer)) bCursorBlink = std::stoi(sValueBuffer);
+				if (isNumberi(sValueBuffer)) bCursorBlink = std::stoi(sValueBuffer);
 			}
 			else if (sOptionBuffer == "bTermCustomThemeSupport") {
-				if (isNumber(sValueBuffer)) bTermCustomThemeSupport = std::stoi(sValueBuffer);
+				if (isNumberi(sValueBuffer)) bTermCustomThemeSupport = std::stoi(sValueBuffer);
 			}
 			else if (sOptionBuffer == "bAutoReadableContrast") {
-				if (isNumber(sValueBuffer)) bAutoReadableContrast = std::stoi(sValueBuffer);
+				if (isNumberi(sValueBuffer)) bAutoReadableContrast = std::stoi(sValueBuffer);
+			}
+			else if (sOptionBuffer == "bAnsiVTSequences") {
+				if (isNumberi(sValueBuffer)) bAnsiVTSequences = std::stoi(sValueBuffer);
 			}
 
 			// Integer Variables
 			else if (sOptionBuffer == "nSlowCharSpeed") {
-				if (isNumber(sValueBuffer)) nSlowCharSpeed = std::stoll(sValueBuffer);
+				if (isNumberll(sValueBuffer)) nSlowCharSpeed = std::stoll(sValueBuffer);
 			}
 			else if (sOptionBuffer == "nCursorShape") {
-				if (isNumber(sValueBuffer)) {
-					int nTester = std::stoll(sValueBuffer);
+				if (isNumberll(sValueBuffer)) {
+					long long int nTester = std::stoll(sValueBuffer);
 					if (nTester != 1 && nTester != 2 && nTester != 3 && nTester != 4 && nTester != 5 && nTester != 6) {
 						VerbosityDisplay("In ConfigFileSystem::ReadConfigFile(): Warning - nCursorShape value incorrect. Must be 1,2,3,4,5 or 6. Value left unchanged.\n");
 					}

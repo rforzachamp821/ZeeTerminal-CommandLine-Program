@@ -1,3 +1,17 @@
+
+//
+// ZeeTerminal Main and Shared Engine Components
+/***
+ *      _____        _____                   _             _
+ *     |__  /___  __|_   _|__ _ __ _ __ ___ (_)_ __   __ _| |
+ *       / // _ \/ _ \| |/ _ \ '__| '_ ` _ \| | '_ \ / _` | |
+ *      / /|  __/  __/| |  __/ |  | | | | | | | | | | (_| | |
+ *     /____\___|\___||_|\___|_|  |_| |_| |_|_|_| |_|\__,_|_|
+ * 
+ */
+// (c) Ryan Zorkot, 2023. Licensed under MIT.
+//
+
 #include <iostream>
 #include <string>
 #include <sstream>
@@ -14,8 +28,8 @@
 #include <mmsystem.h>
 #include <random>
 #include <shobjidl.h>
-#include <codecvt>
 #include <powrprof.h>
+#include <codecvt>
 #include "Engine\RGBColourPreset-System.cpp"
 #include "Engine\ConfigFile-System.cpp"
 #include "Engine\ScreenNavigateEngine.cpp"
@@ -36,11 +50,12 @@ RGBColourPresetSystem	RGBPreset[3]; // Possibly [5] in a future update?
 bool					bConsoleBugGCSBI = false; // WindowsTerminal Bug PR#14774 Workaround
 bool					bAnsiVTSequences = true;
 std::string				sCommandInputRAW = "";
-std::string				sStringCommandArgs[128]; // Made global because you can't pass an std::string array into a function, therefore Commands() wouldn't work properly
-									             // on multi-argument commands.
-const int				nArgArraySize = 128; // Array size for all argument arrays
-unsigned long long int	nNumOfInputtedCommands = 0; // Counter for number of inputted commands since the start of the ZeeTerminal session.
-unsigned long long int	nNumOfSuccessfulInputtedCommands = 0; // Counter for number of successful inputted commands since the start of the ZeeTerminal session.
+std::string				sStringOptionCommandArgs[nArgArraySize]; // Made global because you can't pass an std::string array into a function, therefore Commands() wouldn't work properly
+                                                       // on multi-argument commands.
+std::string				sStringDataCommandArgs[nArgArraySize]; // Made global because you can't pass an std::string array into a function, therefore Commands() wouldn't work properly
+                                                     // on multi-argument commands.
+uint64_t				nNumOfInputtedCommands = 0; // Counter for number of inputted commands since the start of the ZeeTerminal session.
+uint64_t				nNumOfSuccessfulInputtedCommands = 0; // Counter for number of successful inputted commands since the start of the ZeeTerminal session.
 
 std::string				sLastColourFore = ""; // Last set colour of any kind - foreground
 std::string				sLastColourBack = ""; // Last set colour of any kind - background
@@ -157,9 +172,19 @@ inline void colour(std::string sColourForegroundChoice, std::string sColourBackg
 	// Windows Console API - activated when no ANSI support is detected and is a fallback (16-colours)
 	else {
 
+		int nBackgroundColourFinal = 0;
+		int nForegroundColourFinal = 0;
+
 		// Now, modify the background input choice 
-		int nBackgroundColourFinal = std::stoi(sColourBackgroundChoice);
-		int nForegroundColourFinal = std::stoi(sColourForegroundChoice);
+		// Check for number
+		if (isNumberi(sColourForegroundChoice) && isNumberi(sColourBackgroundChoice)) {
+			nBackgroundColourFinal = std::stoi(sColourBackgroundChoice);
+			nForegroundColourFinal = std::stoi(sColourForegroundChoice);
+		}
+		else {
+			// Check failed, do not change colour
+			return;
+		}
 
 		// Maintain a readable contrast if the setting is set to true
 		if (ConfigObjMain.bAutoReadableContrast == true) 
@@ -191,7 +216,7 @@ inline void colour(std::string sColourForegroundChoice, std::string sColourBackg
 		nBackgroundColourFinal *= 16; // WINAPI works on a 16 colour system
 
 		// Finally, add the colours and set the colour
-		SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), nBackgroundColourFinal + nForegroundColourFinal);
+		SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), (nBackgroundColourFinal + nForegroundColourFinal));
 	}
 
 	return;
@@ -230,16 +255,19 @@ inline void colourSubheading()
 inline void sleep(long long int ms) { std::this_thread::sleep_for(std::chrono::milliseconds(ms)); }
 
 // Function to choose random number
-long double RandNum(long double max, long double min) {
-	std::random_device dev;
-	std::mt19937_64 rng(dev());
-	std::uniform_int_distribution<std::mt19937_64::result_type> dist(min, max); // distribution in range [min, max]
+long double RandNum(long double max, long double min) 
+{
+	std::random_device rdRandNum;
+	std::mt19937_64 mtRandNumGen(rdRandNum());
 
-	return dist(rng);
+	// distribution in range [min, max]
+	std::uniform_real_distribution<> dist(min, max);
+
+	return dist(mtRandNumGen);
 }
 
 // Converter from wide string to string
-std::string ws2s(const std::wstring &wstr) {
+std::string ws2s(const std::wstring& wstr) {
 	// Use UTF-8 for this
 	std::wstring_convert<std::codecvt_utf8<wchar_t>, wchar_t> converterX;
 
@@ -254,8 +282,122 @@ std::wstring s2ws(const std::string& str) {
 	return converterX.from_bytes(str);
 }
 
-// Checks whether std::string argument is a string or not
-bool isNumber(const std::string sNumberTest) {
+// Checks whether std::string argument is a number or not - long double
+bool isNumberld(const std::string sNumberTest) {
+	// Not a number as there's nothing in the string
+	if (sNumberTest.length() <= 0) return false;
+
+	// Check if all digits are numbers
+	for (size_t i = 0; i < sNumberTest.length(); i++) {
+		// Check for negative at the beginning if i is 0
+
+		// skip character if it's a decimal point
+		if (sNumberTest[i] == '.') continue;
+		else if (sNumberTest[i] == '-' && i == 0) {
+			// Allowed, since i is at the beginning of the string
+			continue;
+		}
+		else if (isdigit(sNumberTest[i]) == false) return false;
+	}
+
+	// Test if above stold() range
+	try {
+		long double nRangeTest = std::stold(sNumberTest);
+	}
+	catch (const std::out_of_range& oorIsNumber) {
+		VerbosityDisplay("In isNumberld(): Exception caught - Number is too high/low (out of range).");
+		return false;
+	}
+
+	return true;
+}
+
+// Checks whether std::string argument is a number or not - 64-bit integer
+bool isNumberll(const std::string sNumberTest) {
+	// Not a number as there's nothing in the string
+	if (sNumberTest.length() <= 0) return false;
+
+	// Check if all digits are numbers
+	for (size_t i = 0; i < sNumberTest.length(); i++) {
+		// skip character if it's a decimal point
+		if (sNumberTest[i] == '.') continue;
+		else if (sNumberTest[i] == '-' && i == 0) {
+			// Allowed, since i is at the beginning of the string
+			continue;
+		}
+		else if (isdigit(sNumberTest[i]) == false) return false;
+	}
+
+	// Test if above stoll() range
+	try {
+		long long int nRangeTest = std::stoll(sNumberTest);
+	}
+	catch (const std::out_of_range& oorIsNumber) {
+		VerbosityDisplay("In isNumberll(): Exception caught - Number is too high/low (out of range).");
+		return false;
+	}
+
+	return true;
+}
+
+// Checks whether std::string argument is a number or not - 32-bit integer
+bool isNumberl(const std::string sNumberTest) {
+	// Not a number as there's nothing in the string
+	if (sNumberTest.length() <= 0) return false;
+
+	// Check if all digits are numbers
+	for (size_t i = 0; i < sNumberTest.length(); i++) {
+		// skip character if it's a decimal point
+		if (sNumberTest[i] == '.') continue;
+		else if (sNumberTest[i] == '-' && i == 0) {
+			// Allowed, since i is at the beginning of the string
+			continue;
+		}
+		else if (isdigit(sNumberTest[i]) == false) return false;
+	}
+
+	// Test if above stoll() range
+	try {
+		long int nRangeTest = std::stol(sNumberTest);
+	}
+	catch (const std::out_of_range& oorIsNumber) {
+		VerbosityDisplay("In isNumberl(): Exception caught - Number is too high/low (out of range).");
+		return false;
+	}
+
+	return true;
+}
+
+// Checks whether std::string argument is a number or not - integer
+bool isNumberi(const std::string sNumberTest) {
+	// Not a number as there's nothing in the string
+	if (sNumberTest.length() <= 0) return false;
+
+	// Check if all digits are numbers
+	for (size_t i = 0; i < sNumberTest.length(); i++) {
+		// skip character if it's a decimal point
+		if (sNumberTest[i] == '.') continue;
+		else if (sNumberTest[i] == '-' && i == 0) {
+			// Allowed, since i is at the beginning of the string
+			continue;
+		}
+		else if (isdigit(sNumberTest[i]) == false) return false;
+	}
+
+	// Test if above stoi() range
+	try {
+		int nRangeTest = std::stoi(sNumberTest);
+	}
+	catch (const std::out_of_range& oorIsNumber) {
+		VerbosityDisplay("In isNumberi(): Exception caught - Number is too high/low (out of range).");
+		return false;
+	}
+
+	return true;
+}
+
+// Checks whether std::string argument is a number or not - unsigned 64-bit integer
+bool isNumberull(const std::string sNumberTest) {
 	// Not a number as there's nothing in the string
 	if (sNumberTest.length() <= 0) return false;
 
@@ -266,12 +408,36 @@ bool isNumber(const std::string sNumberTest) {
 		else if (isdigit(sNumberTest[i]) == false) return false;
 	}
 
-	// Test if above stold() range
+	// Test if above stoll() range
 	try {
-		long double nRangeTest = std::stold(sNumberTest);
+		uint64_t nRangeTest = std::stoull(sNumberTest);
 	}
 	catch (const std::out_of_range& oorIsNumber) {
-		VerbosityDisplay("Exception caught - Number is too high/low (out of range).");
+		VerbosityDisplay("In isNumberull(): Exception caught - Number is too high/low (out of range).");
+		return false;
+	}
+
+	return true;
+}
+
+// Checks whether std::string argument is a number or not - unsigned 32-bit integer
+bool isNumberul(const std::string sNumberTest) {
+	// Not a number as there's nothing in the string
+	if (sNumberTest.length() <= 0) return false;
+
+	// Check if all digits are numbers
+	for (size_t i = 0; i < sNumberTest.length(); i++) {
+		// skip character if it's a decimal point
+		if (sNumberTest[i] == '.') continue;
+		else if (isdigit(sNumberTest[i]) == false) return false;
+	}
+
+	// Test if above stoll() range
+	try {
+		unsigned long int nRangeTest = std::stoul(sNumberTest);
+	}
+	catch (const std::out_of_range& oorIsNumber) {
+		VerbosityDisplay("In isNumberul(): Exception caught - Number is too high/low (out of range).");
 		return false;
 	}
 
@@ -289,19 +455,25 @@ void ClearKeyboardBuffer() {
 // Function to set console cursor position
 inline void SetCursorPosition(int x, int y) {
 	
-	COORD CursorPos{};
-	CursorPos.X = x;
-	CursorPos.Y = y;
-	SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), CursorPos);
+	if (!bAnsiVTSequences) {
+		COORD CursorPos{};
+		CursorPos.X = x;
+		CursorPos.Y = y;
+		SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), CursorPos);
+	}
+	else {
+		std::cout << "\033[" << y + 1 << ";" << x + 1 << "H";
+	}
+
+	return;
 }
 
 // wordWrap - Adds line/word wrapping to a string, based on the console window width.
 //
 // This takes in an std::string as an argument, and returns another std::string with the word wrapping in the string.
-std::string wordWrap(std::string text) {
-	int width = 0;
+std::string wordWrap(std::string text, long long int nCustomStartCounter, long long int nCustomWidth) {
 	std::string result = "";
-	long long int counter = 0;
+	long long int counter = nCustomStartCounter;
 
 	// Cannot do word wrapping if disabled
 	if (ConfigObjMain.bWordWrapToggle == false) return text;
@@ -309,19 +481,30 @@ std::string wordWrap(std::string text) {
 	// Get console window size
 	CONSOLE_SCREEN_BUFFER_INFO csbiWordWrap;
 	GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbiWordWrap);
-	width = csbiWordWrap.srWindow.Right - csbiWordWrap.srWindow.Left + 1;
+	long long int width = csbiWordWrap.srWindow.Right - csbiWordWrap.srWindow.Left + 1;
+	if (nCustomWidth > 0) width = nCustomWidth;
+
+
+	if (counter < 0) {
+		// Set counter to the cursor X position, due to the fact that it shouldn't be 
+		// assumed that word wrapping will start from the very beginning of a line
+		counter = csbiWordWrap.dwCursorPosition.X;
+	}
 
 	size_t lastSpace = -1;
 	for (size_t i = 0; i < text.length(); i++) {
 
 		// Counter mods
 		if (text[i] == '\n') {
-			counter = 0;
+			counter = -1;
 			lastSpace = -1;
 		}
 		else if (text[i] == '\t') {
+
 			// tabstop is usually 8 spaces; might be dynamic in future
-			counter += 8;
+			size_t nNumOfSpacesForTab = 8 - (counter % 8);
+			if (nNumOfSpacesForTab == 0) nNumOfSpacesForTab = 8;
+			counter += nNumOfSpacesForTab;
 		}
 
 		// Counter check
@@ -338,24 +521,171 @@ std::string wordWrap(std::string text) {
 		if (text[i] == ' ') {
 			lastSpace = result.length();
 		}
+
 		result += text[i];
+
 		counter++;
 	}
 	return result;
 }
 
-// Function to display extra help information for specific commands
-inline void DirectionsDisplay(std::string sPrompt) {
-	if (ConfigObjMain.bDisplayDirections == true && bAnsiVTSequences == true) {
-		colour(CYN, ConfigObjMain.sColourGlobalBack);
-		std::cout << "\x1b[" << ULINE << "m" << (sPrompt) << "\x1b[" << NOULINE << "m" << std::endl;
+// Function to display extra help information for specific commands for user's sake
+void DirectionsDisplay(std::string sPrompt) 
+{
+	if (ConfigObjMain.bDisplayDirections == true) 
+	{
+		CONSOLE_SCREEN_BUFFER_INFO csbiDirections;
+		int nBoxWidth = 0;
+		std::vector<std::string> sLines = {};
+		std::string sBuffer = "";
+
+		// Use a for loop to check for box width, height, line length and contents, etc
+		for (int i = 0, nCounter = 0; i < sPrompt.length(); i++, nCounter++) {
+			if (sPrompt[i] == '\n') {
+
+				// Early check for line size
+				if (nBoxWidth < nCounter) {
+					// Get current terminal width
+					GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbiDirections);
+
+					// Check for oversized line length
+					if (csbiDirections.srWindow.Right - csbiDirections.srWindow.Left - 3 > nCounter) {
+						nBoxWidth = nCounter;
+					}
+					else {
+						nBoxWidth = csbiDirections.srWindow.Right - csbiDirections.srWindow.Left - 3;
+
+						// Create new lines
+						// Get change between box width and counter to determine number of lines
+						int nNumOfLines = ((nCounter - nBoxWidth) / nBoxWidth) + 1;
+
+						// Append new lines to vector
+						for (int j = 0; j <= nNumOfLines; j++) {
+
+							// Get line
+							sLines.push_back(sBuffer.substr(0, nBoxWidth));
+
+							// Erase line from string
+							sBuffer.erase(0, nBoxWidth);
+						}
+
+						// Reset counter
+						nCounter = 0;
+
+						// Reset buffer
+						sBuffer = "";
+
+						continue;
+					}
+
+				}
+
+				// Reset counter
+				nCounter = 0;
+
+				// Push accumulated buffer contents into vector
+				sLines.push_back(sBuffer);
+
+				// Reset buffer
+				sBuffer = "";
+
+				continue;
+			}
+
+			if (nBoxWidth < nCounter) {
+				// Get current terminal width
+				GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbiDirections);
+
+				// Check for oversized line length
+				if (csbiDirections.srWindow.Right - csbiDirections.srWindow.Left - 3 > nCounter) {
+					nBoxWidth = nCounter;
+				}
+				else {
+					nBoxWidth = csbiDirections.srWindow.Right - csbiDirections.srWindow.Left - 3;
+				}
+			}
+
+			sBuffer += sPrompt[i];
+		}
+
+		// Check for line size - determines final box width
+		int nBufferLength = sBuffer.length();
+		if (nBoxWidth < nBufferLength) {
+			// Get current terminal width
+			GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbiDirections);
+
+			// Check for oversized line length
+			if (csbiDirections.srWindow.Right - csbiDirections.srWindow.Left - 3 > nBufferLength) {
+				nBoxWidth = nBufferLength;
+			}
+			else {
+				nBoxWidth = csbiDirections.srWindow.Right - csbiDirections.srWindow.Left - 3;
+
+				// Create new lines
+				// Get change between box width and counter to determine number of lines
+				int nNumOfLines = ((nBufferLength - nBoxWidth) / nBoxWidth) + 1;
+
+				// Append new lines to vector
+				for (int j = 0; j <= nNumOfLines; j++) {
+
+					// Get line
+					sLines.push_back(sBuffer.substr(0, nBoxWidth));
+
+					// Erase line from string
+					sBuffer.erase(0, nBoxWidth);
+				}
+
+				// Reset buffer
+				sBuffer = "";
+			}
+		}
+		else sLines.push_back(sBuffer);
+
+
+		// to support 1 asterisk and 1 whitespace on each side of the text
+		nBoxWidth += 4;
+
+		GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbiDirections);
+		if (csbiDirections.srWindow.Right - csbiDirections.srWindow.Left + 1 < nBoxWidth) {
+			nBoxWidth = csbiDirections.srWindow.Right - csbiDirections.srWindow.Left + 1;
+		}
+
+
+		// Firstly, output box top
+		colour(LRED, ConfigObjMain.sColourGlobalBack);
+		std::cout << std::string(nBoxWidth, '=');
+		colour(GRN, ConfigObjMain.sColourGlobalBack);
+
+		// Secondly, output text with appropriate padding using for loop to reiterate through line vector
+		std::cout << '\n';
+		for (int i = 0; i < sLines.size(); i++) {
+			sBuffer = sLines[i];
+			for (int j = 0; j < nBoxWidth - sLines[i].length() - 4; j++) { // -4 as the box width was first incremented by 4 before this
+				sBuffer += ' '; // Add space
+			}
+
+			// Output padding
+			colour(LRED, ConfigObjMain.sColourGlobalBack);
+			std::cout << "* ";
+			colour(GRN, ConfigObjMain.sColourGlobalBack);
+
+			// Output line and spaces
+			std::cout << sBuffer;
+
+			// Output padding
+			colour(LRED, ConfigObjMain.sColourGlobalBack);
+			std::cout << " *\n";
+			colour(GRN, ConfigObjMain.sColourGlobalBack);
+		}
+
+		// Finally, output box bottom
+		colour(LRED, ConfigObjMain.sColourGlobalBack);
+		std::cout << std::string(nBoxWidth, '=');
+
+		std::cout << '\n';
 		colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
 	}
-	else if (ConfigObjMain.bDisplayDirections == true && bAnsiVTSequences == false) {
-		colour(CYN, ConfigObjMain.sColourGlobalBack);
-		std::cout << (sPrompt) << std::endl;
-		colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
-	}
+
 	return;
 }
 
@@ -380,8 +710,8 @@ inline void UserErrorDisplay(std::string sError) {
 	return;
 }
 
-// Function to output stuff for converters and calculators
-long double NumInput(std::string sPrompt) {
+// Function to handle +/- number input - long double
+long double NumInputld(std::string sPrompt) {
 	long double num;
 
 	while (true) {
@@ -394,7 +724,174 @@ long double NumInput(std::string sPrompt) {
 			std::cin.clear();
 			std::cin.ignore(std::numeric_limits<int>::max(), '\n');
 			colour(RED, ConfigObjMain.sColourGlobalBack);
-			std::cerr << wordWrap("Your input was incorrect. Please try again.\n");
+			std::cerr << wordWrap("Your input was incorrect, or the number inputted was too high/low. Please try again.\n");
+			colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
+			continue;
+		}
+		else {
+			std::cin.ignore(std::numeric_limits<int>::max(), '\n');
+			break;
+		}
+	}
+
+	return num;
+}
+
+// Function to handle +/- number input - long long int
+long long int NumInputll(std::string sPrompt) {
+	long long int num;
+
+	while (true) {
+		std::cout << wordWrap(sPrompt);
+		colour(LYLW, ConfigObjMain.sColourGlobalBack);
+		std::cin >> num;
+		colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
+
+		if (std::cin.fail()) {
+			std::cin.clear();
+			std::cin.ignore(std::numeric_limits<int>::max(), '\n');
+			colour(RED, ConfigObjMain.sColourGlobalBack);
+			std::cerr << wordWrap("Your input was incorrect, or the number inputted was too high/low. Please try again.\n");
+			colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
+			continue;
+		}
+		else {
+			std::cin.ignore(std::numeric_limits<int>::max(), '\n');
+			break;
+		}
+	}
+
+	return num;
+}
+
+// Function to handle +/- number input - long int
+long int NumInputl(std::string sPrompt) {
+	long int num;
+
+	while (true) {
+		std::cout << wordWrap(sPrompt);
+		colour(LYLW, ConfigObjMain.sColourGlobalBack);
+		std::cin >> num;
+		colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
+
+		if (std::cin.fail()) {
+			std::cin.clear();
+			std::cin.ignore(std::numeric_limits<int>::max(), '\n');
+			colour(RED, ConfigObjMain.sColourGlobalBack);
+			std::cerr << wordWrap("Your input was incorrect, or the number inputted was too high/low. Please try again.\n");
+			colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
+			continue;
+		}
+		else {
+			std::cin.ignore(std::numeric_limits<int>::max(), '\n');
+			break;
+		}
+	}
+
+	return num;
+}
+
+// Function to handle +/- number input - int
+int NumInputi(std::string sPrompt) {
+	int num;
+
+	while (true) {
+		std::cout << wordWrap(sPrompt);
+		colour(LYLW, ConfigObjMain.sColourGlobalBack);
+		std::cin >> num;
+		colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
+
+		if (std::cin.fail()) {
+			std::cin.clear();
+			std::cin.ignore(std::numeric_limits<int>::max(), '\n');
+			colour(RED, ConfigObjMain.sColourGlobalBack);
+			std::cerr << wordWrap("Your input was incorrect, or the number inputted was too high/low. Please try again.\n");
+			colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
+			continue;
+		}
+		else {
+			std::cin.ignore(std::numeric_limits<int>::max(), '\n');
+			break;
+		}
+	}
+
+	return num;
+}
+
+// Function to handle only positive number input - uint64_t
+uint64_t PositiveNumInputull(std::string sPrompt) {
+	uint64_t num = 0;
+	std::string sInput = "";
+	bool bSuccess = true;
+
+	while (true) {
+		// Reset variables on next iteration
+		bSuccess = true;
+
+		std::cout << wordWrap(sPrompt);
+		colour(LYLW, ConfigObjMain.sColourGlobalBack);
+		std::cin >> sInput;
+		colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
+		
+		// Convert string input for integer into unsigned 64-bit integer, while checking for correct input AND negative number
+		// Check if number
+		if (isNumberull(sInput) == false) {
+			bSuccess = false;
+		}
+
+		// Convert to number
+		if (bSuccess == true) {
+			num = std::stoull(sInput);
+		}
+
+		if (std::cin.fail() || num < 0 || bSuccess == false) {
+			std::cin.clear();
+			std::cin.ignore(std::numeric_limits<int>::max(), '\n');
+			colour(RED, ConfigObjMain.sColourGlobalBack);
+			std::cerr << wordWrap("Your input was incorrect, or the number inputted was too high/low. Please try again.\n");
+			colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
+			continue;
+		}
+		else {
+			std::cin.ignore(std::numeric_limits<int>::max(), '\n');
+			break;
+		}
+	}
+
+	return num;
+}
+
+// Function to handle only positive number input - unsigned long int
+unsigned long int PositiveNumInputul(std::string sPrompt) {
+	unsigned long int num = 0;
+	std::string sInput = "";
+	bool bSuccess = true;
+
+	while (true) {
+		// Reset variables on next iteration
+		bSuccess = true;
+
+		std::cout << wordWrap(sPrompt);
+		colour(LYLW, ConfigObjMain.sColourGlobalBack);
+		std::cin >> sInput;
+		colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
+
+		// Convert string input for integer into unsigned 64-bit integer, while checking for correct input AND negative number
+		// Check if number
+		if (isNumberul(sInput) == false) {
+			bSuccess = false;
+		}
+
+		// Convert to number
+		if (bSuccess == true) {
+			num = std::stoul(sInput);
+		}
+
+		if (std::cin.fail() || num < 0 || bSuccess == false) {
+			std::cin.clear();
+			std::cin.ignore(std::numeric_limits<int>::max(), '\n');
+			colour(RED, ConfigObjMain.sColourGlobalBack);
+			std::cerr << wordWrap("Your input was incorrect, or the number inputted was too high/low. Please try again.\n");
 			colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
 			continue;
 		}
@@ -543,21 +1040,35 @@ void CentreColouredText(std::string sText, short int nTypeOfText) {
 
 	// Check to prevent memory overspill
 	if (sText.length() >= (nWidth + 1)) {
-		std::cout << sText;
+		
+		// Output with correct colour
+		if (nTypeOfText == 1) colourTitle();
+		else if (nTypeOfText == 2) colourSubheading();
+
+		// Word wrapping because text is longer than display width, so word wrapping is necessary
+		std::cout << wordWrap(sText); 
+		
+		// Reset underline and bold
+		std::cout << NOULINE_STR << NOBOLD_STR;
+
+		// Default colour
+		colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
+
 		return;
 	}
 
 	// Output string of spaces first with default colour
 	colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
 	std::cout << wordWrap(std::string((nWidth - sText.length()) / 2, ' ')); 
+
 	// Then output the string itself, with correct colour
 	if (nTypeOfText == 1) colourTitle();
 	else if (nTypeOfText == 2) colourSubheading();
 	std::cout << sText;
+
 	// Reset underline and bold
-	if (bAnsiVTSequences) {
-		std::cout << "\x1b[" << NOULINE << "m\x1b[" << NOBOLD << "m";
-	}
+	std::cout << NOULINE_STR << NOBOLD_STR;
+
 	// Default colour
 	colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
 
@@ -700,14 +1211,20 @@ inline void Exiting() {
 }
 
 // A function designated for resetting the global colours.
-inline void ResetColour() {
-
+inline void ResetColour() 
+{
 	// Reset all RGB to default
 	ConfigObjMain.sColourGlobal = LWHT;
 	ConfigObjMain.sColourGlobalBack = BLK;
-	// Output reset message
+
+	// Optional reset-everything command for ANSI VT Sequence-supporting terminals
+	if (bAnsiVTSequences) {
+		std::cout << "\x1b[" << RESETALL << "m";
+	}
+
+	// Output reset message with default colours
 	colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
-	std::cout << "\x1b[" << RESETALL << "m\nColours have been reset to default.\n";
+	std::cout << "\nColours have been reset to default.\n";
 
 	return;
 }
@@ -730,6 +1247,7 @@ bool EnableVTMode()
 	}
 
 	dwMode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
+	dwMode |= ENABLE_WRAP_AT_EOL_OUTPUT;
 	if (!SetConsoleMode(hOut, dwMode))
 	{
 		return false;
@@ -812,6 +1330,12 @@ void ColourTypeSwitch()
 		NOBLINK_STR = "\x1b[25m";
 		NOSTRIKE_STR = "\x1b[29m";
 
+		// Set formatting definitions
+		ULINE_STR = "\x1b[4m";
+		BOLD_STR = "\x1b[1m";
+		BLINK_STR = "\x1b[5m";
+		STRIKE_STR = "\x1b[9m";
+
 
 		// Set colour definitions with RGB ANSI
 		// Standard colours
@@ -840,23 +1364,36 @@ void ColourTypeSwitch()
 			|| ConfigObjMain.sColourGlobalBack.find(';') == std::string::npos
 			|| ConfigObjMain.sColourHighlight.find(';') == std::string::npos
 			|| ConfigObjMain.sColourHighlightBack.find(';') == std::string::npos
+			|| ConfigObjMain.sColourSubheading.find(';') == std::string::npos
 			|| ConfigObjMain.sColourSubheadingBack.find(';') == std::string::npos
 			|| ConfigObjMain.sColourTitle.find(';') == std::string::npos
 			|| ConfigObjMain.sColourTitleBack.find(';') == std::string::npos
 			)
 		{
 			// Reset definitions of colours to new values
-			ConfigObjMain.sColourGlobal = LWHT;
-			ConfigObjMain.sColourGlobalBack = BLK;
+			ConfigObjMain.sColourGlobal = Win32ToAnsiColours(ConfigObjMain.sColourGlobal);
+			if (ConfigObjMain.sColourGlobal == "") ConfigObjMain.sColourGlobal = LWHT;
 
-			ConfigObjMain.sColourHighlight = LWHT;
-			ConfigObjMain.sColourHighlightBack = BLU;
+			ConfigObjMain.sColourGlobalBack = Win32ToAnsiColours(ConfigObjMain.sColourGlobalBack);
+			if (ConfigObjMain.sColourGlobalBack == "") ConfigObjMain.sColourGlobalBack = BLK;
 
-			ConfigObjMain.sColourTitle = BLK;
-			ConfigObjMain.sColourTitleBack = LCYN;
+			ConfigObjMain.sColourHighlight = Win32ToAnsiColours(ConfigObjMain.sColourHighlight);
+			if (ConfigObjMain.sColourHighlight == "") ConfigObjMain.sColourHighlight = LWHT;
 
-			ConfigObjMain.sColourSubheading = LWHT;
-			ConfigObjMain.sColourSubheadingBack = MAG;
+			ConfigObjMain.sColourHighlightBack = Win32ToAnsiColours(ConfigObjMain.sColourHighlightBack);
+			if (ConfigObjMain.sColourHighlightBack == "") ConfigObjMain.sColourHighlightBack = BLU;
+
+			ConfigObjMain.sColourTitle = Win32ToAnsiColours(ConfigObjMain.sColourTitle);
+			if (ConfigObjMain.sColourTitle == "") ConfigObjMain.sColourTitle = BLK;
+
+			ConfigObjMain.sColourTitleBack = Win32ToAnsiColours(ConfigObjMain.sColourTitleBack);
+			if (ConfigObjMain.sColourTitleBack == "") ConfigObjMain.sColourTitleBack = LCYN;
+
+			ConfigObjMain.sColourSubheading = Win32ToAnsiColours(ConfigObjMain.sColourSubheading);
+			if (ConfigObjMain.sColourSubheading == "") ConfigObjMain.sColourSubheading = LWHT;
+
+			ConfigObjMain.sColourSubheadingBack = Win32ToAnsiColours(ConfigObjMain.sColourSubheadingBack);
+			if (ConfigObjMain.sColourSubheadingBack == "") ConfigObjMain.sColourSubheadingBack = MAG;
 
 			ConfigObjMain.WriteConfigFile();
 		}
@@ -865,12 +1402,17 @@ void ColourTypeSwitch()
 	// Use fallback WIN32 API colour variety
 	else 
 	{
-
 		// Set reset definitions to nothing- they will not be needed
 		NOULINE_STR = "";
 		NOBOLD_STR = "";
 		NOBLINK_STR = "";
 		NOSTRIKE_STR = "";
+
+		// Set formatting definitions to nothing- they will not be needed
+		ULINE_STR = "";
+		BOLD_STR = "";
+		BLINK_STR = "";
+		STRIKE_STR = "";
 
 		// Set colour definitions to support the older Windows Console API
 		// Standard colours
@@ -899,23 +1441,36 @@ void ColourTypeSwitch()
 			|| ConfigObjMain.sColourGlobalBack.find(';') != std::string::npos
 			|| ConfigObjMain.sColourHighlight.find(';') != std::string::npos
 			|| ConfigObjMain.sColourHighlightBack.find(';') != std::string::npos
+			|| ConfigObjMain.sColourSubheading.find(';') != std::string::npos
 			|| ConfigObjMain.sColourSubheadingBack.find(';') != std::string::npos
 			|| ConfigObjMain.sColourTitle.find(';') != std::string::npos
 			|| ConfigObjMain.sColourTitleBack.find(';') != std::string::npos
 			) 
 		{
 			// Reset definitions of colours to new values
-			ConfigObjMain.sColourGlobal = LWHT;
-			ConfigObjMain.sColourGlobalBack = BLK;
+			ConfigObjMain.sColourGlobal = AnsiToWin32Colours(ConfigObjMain.sColourGlobal);
+			if (ConfigObjMain.sColourGlobal == "") ConfigObjMain.sColourGlobal = LWHT;
 
-			ConfigObjMain.sColourHighlight = LWHT;
-			ConfigObjMain.sColourHighlightBack = BLU;
+			ConfigObjMain.sColourGlobalBack = AnsiToWin32Colours(ConfigObjMain.sColourGlobalBack);
+			if (ConfigObjMain.sColourGlobalBack == "") ConfigObjMain.sColourGlobalBack = BLK;
 
-			ConfigObjMain.sColourTitle = BLK;
-			ConfigObjMain.sColourTitleBack = LCYN;
+			ConfigObjMain.sColourHighlight = AnsiToWin32Colours(ConfigObjMain.sColourHighlight);
+			if (ConfigObjMain.sColourHighlight == "") ConfigObjMain.sColourHighlight = LWHT;
 
-			ConfigObjMain.sColourSubheading = LWHT;
-			ConfigObjMain.sColourSubheadingBack = MAG;
+			ConfigObjMain.sColourHighlightBack = AnsiToWin32Colours(ConfigObjMain.sColourHighlightBack);
+			if (ConfigObjMain.sColourHighlightBack == "") ConfigObjMain.sColourHighlightBack = BLU;
+
+			ConfigObjMain.sColourTitle = AnsiToWin32Colours(ConfigObjMain.sColourTitle);
+			if (ConfigObjMain.sColourTitle == "") ConfigObjMain.sColourTitle = BLK;
+
+			ConfigObjMain.sColourTitleBack = AnsiToWin32Colours(ConfigObjMain.sColourTitleBack);
+			if (ConfigObjMain.sColourTitleBack == "") ConfigObjMain.sColourTitleBack = LCYN;
+
+			ConfigObjMain.sColourSubheading = AnsiToWin32Colours(ConfigObjMain.sColourSubheading);
+			if (ConfigObjMain.sColourSubheading == "") ConfigObjMain.sColourSubheading = LWHT;
+
+			ConfigObjMain.sColourSubheadingBack = AnsiToWin32Colours(ConfigObjMain.sColourSubheadingBack);
+			if (ConfigObjMain.sColourSubheadingBack == "") ConfigObjMain.sColourSubheadingBack = MAG;
 
 			ConfigObjMain.WriteConfigFile();
 		}
@@ -930,16 +1485,14 @@ void ProgramInitialisation()
 {
 	// Set random colours if random colours on startup are enabled
 	if (ConfigObjMain.bRandomColoursOnStartup == true) {
-		// Can't do without ANSI VT Sequences
-		if (bAnsiVTSequences) {
-			// Pick random foreground colour
-			int nRandForeground = RandNum(16, 1);
-			ColourForegroundSwitch(&nRandForeground, &ConfigObjMain.sColourGlobalBack, &ConfigObjMain.sColourGlobal);
 
-			// Pick random background colour
-			int nRandBackground = RandNum(16, 1);
-			ColourBackgroundSwitch(&nRandBackground, &ConfigObjMain.sColourGlobalBack, &ConfigObjMain.sColourGlobal);
-		}
+		// Pick random foreground colour
+		int nRandForeground = (int)RandNum(16, 1);
+		ColourForegroundSwitch(&nRandForeground, &ConfigObjMain.sColourGlobalBack, &ConfigObjMain.sColourGlobal);
+
+		// Pick random background colour
+		int nRandBackground = (int)RandNum(16, 1);
+		ColourBackgroundSwitch(&nRandBackground, &ConfigObjMain.sColourGlobalBack, &ConfigObjMain.sColourGlobal);
 
 		// Set colours to the whole screen
 		cls();
@@ -947,7 +1500,7 @@ void ProgramInitialisation()
 
 	// Check for Virtual Terminal (ANSI) Sequence Support
 	if (EnableVTMode() == false) {
-		// Disable ANSI virtual terminal sequences
+		// Disable ANSI virtual terminal sequences - do not refer to the configuration file
 		bAnsiVTSequences = false;
 
 		VerbosityDisplay("This terminal cannot do Virtual Terminal Sequences.\nThis session will use the WIN32 API fallback colour set for operation.\n");
@@ -961,8 +1514,8 @@ void ProgramInitialisation()
 		cls();
 	}
 	else {
-		// Keep ANSI VT sequences enabled
-		bAnsiVTSequences = true;
+		// Use user-set setting in the configuration file
+		bAnsiVTSequences = ConfigObjMain.bAnsiVTSequences;
 
 		// Set the colours
 		ColourTypeSwitch();
@@ -971,7 +1524,7 @@ void ProgramInitialisation()
 		colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
 		cls();
 
-		VerbosityDisplay("This terminal has Virtual Terminal Sequences support.\nThis session will run with colour support.\n");
+		VerbosityDisplay("This terminal has Virtual Terminal Sequences support.\nThis session will run with ANSI RGB colour support.\n");
 	}
 
 	// Check for existence of bug PR#14774 in console window
@@ -1015,7 +1568,7 @@ int main(int argc, char* argv[])
 	std::string sCommandInput = "";
 	std::string sCommand = "";
 	std::string sCommandArgsBuffer = "";
-	char sCommandInputArgs[128] = {};
+	char sCommandInputArgs[nArgArraySize] = {};
 
 	// Get the program ready, sort out environment
 	std::cout << "Getting ready...\n";
@@ -1023,7 +1576,8 @@ int main(int argc, char* argv[])
 	// sCommandInputArgs and sStringCommandArgs
 	for (int i = 0; i < nArgArraySize; i++) {
 		sCommandInputArgs[i] = ' ';
-		sStringCommandArgs[i] = "";
+		sStringDataCommandArgs[i] = "";
+		sStringOptionCommandArgs[i] = "";
 	}
 
 	// Initialise everything else in program
@@ -1031,13 +1585,17 @@ int main(int argc, char* argv[])
 
 	colour(NumberToColour(RandNum(16, 1)), ConfigObjMain.sColourGlobalBack);
 
-	if (bAnsiVTSequences == true) std::cout << "\x1b[" << BLINK << 'm';
+	if (bAnsiVTSequences == true) std::cout << BLINK_STR;
 	slowcharfn(true, "Welcome to ZeeTerminal!");
+	if (bAnsiVTSequences == true) std::cout << NOBLINK_STR;
 
 	// Alert new user about the existence of a short tutorial
 	if (ConfigObjMain.GetFileAgeInfo() == true) {
 		colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
+		// Sleep statements to keep user calm
+		sleep(500);
 		slowcharfn(true, "\nIt looks like you haven't used this application before.");
+		sleep(100);
 
 		if (YesNo("\nWould you like a short tutorial on how to use it? ['y' for yes, 'n' for no]: > ")) {
 			colour(LGRN, ConfigObjMain.sColourGlobalBack);
@@ -1089,7 +1647,8 @@ int main(int argc, char* argv[])
 			// Initialise sCommandInputArgs to make all spaces
 			for (int i = 0; i < nArgArraySize; i++) {
 				sCommandInputArgs[i] = ' ';
-				sStringCommandArgs[i] = "";
+				sStringDataCommandArgs[i] = "";
+				sStringOptionCommandArgs[i] = "";
 			}
 		}
 
@@ -1097,7 +1656,7 @@ int main(int argc, char* argv[])
 		std::istringstream sCommandInputIn(sCommandInput);
 
 		// For loop to start checking from after any spaces inputted by the user
-		for (int i = 0; i < sCommandInput.length(); i++) {
+		for (int i = 0; i < sCommandInput.length() && !sCommandInputIn.eof(); i++) {
 			std::getline(sCommandInputIn, sCommand, ' ');
 			if (sCommand != "") break;
 		}
@@ -1116,12 +1675,12 @@ int main(int argc, char* argv[])
 		}
 
 		// Optimisation for exit command (doesn't need to be in Commands())
-		if (sCommand == "exit" || sCommand == "0") {
+		if (sCommand == "exit" || sCommand == "0" || sCommand == "2") {
 			nNumOfInputtedCommands++;
 			nNumOfSuccessfulInputtedCommands++;
 			colour(GRN, ConfigObjMain.sColourGlobalBack);
 			std::cout << "\nHave a good day/night!\n";
-			colour(RED, ConfigObjMain.sColourGlobalBack);
+			colour(YLW, ConfigObjMain.sColourGlobalBack);
 			slowcharfn(false, "Exiting...\n");
 			colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
 			return 0;
@@ -1134,9 +1693,75 @@ int main(int argc, char* argv[])
 		const std::string sCommandArgsBufferRAW = sCommandArgsBuffer + " ";
 
 		/* The following will be based on parsing sCommandArgsBuffer for the actual arguments. */
-		// Copy the string arguments into sStringCommandArgs with correct formatting
+		// Copy the string option arguments into sStringOptionCommandArgs with correct formatting
 		sCommandArgsBuffer += " ";
 		sCommandArgsBuffer = " " + sCommandArgsBuffer;
+		for (size_t nDashPos = 0, nSpacePos = 0, i = 0; i < 128; i++, nDashPos = 0, nSpacePos = 0)
+		{
+			// Firstly, check which type of string syntax is first (lower is closer to beginning)
+			//
+			if (sCommandArgsBuffer.find("--\"", 0) > sCommandArgsBuffer.find("--", 0))
+			{
+				// Anything with -- at the beginning
+				if (sCommandArgsBuffer.find("--", 0) != std::string::npos)
+				{
+					// Get next occurence of " --"
+					nDashPos = sCommandArgsBuffer.find("--", 0);
+					// Get occurence of ' ' after nDashPos new location
+					nSpacePos = sCommandArgsBuffer.find(" ", nDashPos + 2);
+
+					/* Check for confliction with --" */
+					//
+					std::string sTest = sCommandArgsBuffer.substr((nDashPos + 2), nSpacePos - (nDashPos + 2));
+
+					// For loop uses struct so declaration of multiple variables in for loop is possible
+					//
+					for (struct { size_t j = 0; bool bAlreadyErased = false; } loop; loop.j < sTest.length(); loop.j++)
+					{
+						if (sTest[loop.j] == '\"') {
+							break;
+						}
+						else {
+
+							// Only read and erase string if first time passing by the line of code
+							if (loop.bAlreadyErased == false) {
+								// Copy from after the dashes to the next space
+								sStringOptionCommandArgs[i] = sCommandArgsBuffer.substr((nDashPos + 2), nSpacePos - (nDashPos + 2));
+
+								// Erase the found string from the argument buffer to remove it from plain sight from parser
+								sCommandArgsBuffer.erase(nDashPos, nSpacePos - (nDashPos));
+
+								loop.bAlreadyErased = true;
+							}
+						}
+					}
+				}
+
+			}
+			else
+			{
+				// Anything with --" at the beginning
+				if (sCommandArgsBuffer.find("--\"", 0) != std::string::npos)
+				{
+					nDashPos = sCommandArgsBuffer.find("--\"", 0);
+					// Get next occurence of '"'
+					nSpacePos = sCommandArgsBuffer.find("\"", nDashPos + 3);
+					// Use space as fallback if there is no other speechmark
+					if (nSpacePos == std::string::npos) nSpacePos = sCommandArgsBuffer.find(" ", nDashPos);
+
+					// Copy from after the dashes to the next space/speechmark
+					sStringOptionCommandArgs[i] = sCommandArgsBuffer.substr((nDashPos + 3), nSpacePos - (nDashPos + 3));
+
+					// Erase the found string from the argument buffer to remove it from plain sight from parser
+					sCommandArgsBuffer.erase(nDashPos, nSpacePos + 1 - nDashPos);
+
+				}
+
+			}
+
+		}
+
+		// Copy the string data arguments into sStringDataCommandArgs with correct formatting
 		for (size_t nFirstMarkerPos = 0, nLastMarkerPos = 0, i = 0, nViableSpacePos = 0; i < nArgArraySize; i++, nFirstMarkerPos = 0, nLastMarkerPos = 0, nViableSpacePos = 0)
 		{
 			// Check for next viable space location
@@ -1174,7 +1799,7 @@ int main(int argc, char* argv[])
 					// Create new substring from these marking points
 					std::string sCommandArgument = sCommandArgsBuffer.substr(nFirstMarkerPos, nLastMarkerPos - nFirstMarkerPos);
 
-					sStringCommandArgs[i] = sCommandArgument;
+					sStringDataCommandArgs[i] = sCommandArgument;
 
 					// Erase substring from arugment buffer
 					sCommandArgsBuffer.erase(nFirstMarkerPos, nLastMarkerPos - nFirstMarkerPos);
@@ -1193,7 +1818,7 @@ int main(int argc, char* argv[])
 					nLastMarkerPos = sCommandArgsBuffer.find("\"", nFirstMarkerPos);
 
 					// Create new substring from these marking points
-					sStringCommandArgs[i] = sCommandArgsBuffer.substr(nFirstMarkerPos, nLastMarkerPos - nFirstMarkerPos);
+					sStringDataCommandArgs[i] = sCommandArgsBuffer.substr(nFirstMarkerPos, nLastMarkerPos - nFirstMarkerPos);
 
 					// Erase substring from argument buffer
 					// 

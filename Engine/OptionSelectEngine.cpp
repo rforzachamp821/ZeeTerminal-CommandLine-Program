@@ -7,29 +7,71 @@ void colourHighlight();
 void SetCursorPosition(int, int);
 void CentreColouredText(std::string, short int);
 void cls();
+long double RandNum(long double, long double);
+std::string NumberToColour(int);
 
 
 extern ConfigFileSystem ConfigObjMain;
 extern bool bConsoleBugGCSBI;
+extern bool bAnsiVTSequences;
 
 //
 // ZT OptionSelectEngine - Class for OptionSelect function, allows for easy debugging too.
 //
-class OptionSelectEngine {
+class OptionSelectEngine 
+{
+protected:
+
+	// Directions text to forward to DirectionsDisplay()
+	std::string sDirectionsText = "Press the 'W' key or up arrow key to move up.\nPress the 'S' key or down arrow key to move down.\nPress ENTER to continue with selection, or ESC to exit.";
+
+	// The indicator string for options
+	const std::string sOptionIndicator = "~| "; 
+
+	// DisplayOptionsIndicator - Displays the options indicator at calltime.
+	// Arguments: sColour - The foreground colour to display for the options indicator, in RGB units.
+	// Return values: None
+	//
+	void DisplayOptionsIndicator(std::string sColour) {
+		// 1. Set colour
+		colour(sColour, ConfigObjMain.sColourGlobalBack);
+		// 2. Display indicator
+		std::cout << sOptionIndicator;
+		// 3. Set colours back to normal and exit
+		colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
+		return;
+	}
+
 public:
+
 	int nSizeOfOptions = 0;
 	std::string* sOptions {};
 
 	OptionSelectEngine() {
 		// Display only when verbose messages are turned on
 		VerbosityDisplay("New OptionSelectEngine Object Created.\n");
+
 		// Set values to default
-		int nSizeOfOptions = 0;
+		nSizeOfOptions = 0;
+		sDirectionsText = "Press the 'W' key or up arrow key to move up.\nPress the 'S' key or down arrow key to move down.\nPress ENTER to continue with selection, or ESC to exit.";
 	}
 
 	~OptionSelectEngine() {
 		// Display verbose destructor message
 		VerbosityDisplay("OptionSelectEngine Object has been destroyed.\n");
+	}
+
+	// SetDirectionsText - Sets the direction text to a custom text, and replaces the default text.
+	//                   - Because there is a default directions text, this function is optional to call.
+	// Arguments: sText - The text to replace the default direction text with.
+	// Return values: None
+	//
+	void SetDirectionsText(std::string sText) 
+	{
+		// Set directions text
+		sDirectionsText = sText;
+
+		return;
 	}
 
 	// OptionSelect - A selection UI that allows for easy arrow-key OR W/S-key navigation.
@@ -45,10 +87,17 @@ public:
 		std::string sHighlightBuffer = "";
 		CONSOLE_SCREEN_BUFFER_INFO csbiOptionSelect;
 		HANDLE hOptionSelect = GetStdHandle(STD_OUTPUT_HANDLE);
+		std::vector<std::string> sOptionIndicatorColours; // indicating colour for each option.
 
 		// Count the number of options
 		for (int i = 0; i < nSizeOfOptions; i++) {
 			if (sOptions[i] != "") nNumberOfOptions++;
+		}
+
+		// Initialise option indicator colour vector
+		for (int i = 0; i < nSizeOfOptions; i++) {
+			// Calculate another random colour
+			sOptionIndicatorColours.push_back(NumberToColour(RandNum(16, 1)));
 		}
 		 
 		// Output a newline to prevent errors with overwriting cells of text
@@ -57,17 +106,19 @@ public:
 		// Display centred title
 		CentreColouredText(sTitle, 1);
 
-		// Display prompt message for selection options
-		std::cout << "\n" << sPrompt << "\n\n";
+		// Display prompt message for selection options with underline
+		std::cout << "\n";
+		std::cout << wordWrap(sPrompt) << "\n\n";
 
 		// Get correct row position into nStartingRow
 		GetConsoleScreenBufferInfo(hOptionSelect, &csbiOptionSelect);
 		int nStartingRow = csbiOptionSelect.dwCursorPosition.Y;
 
 
-		// 13 is ascii for ENTER key
+		// Reiteration boolean
 		bool bReiterated = false;
 		int nIndexIncrease = 3; // 0 for decrease, 1 for increase, 2 for starting position, 3 for ending position
+
 		while (true) {
 
 			// Get terminal height
@@ -80,11 +131,24 @@ public:
 			*///////////////////////////////////////////////////////////
 			if (bConsoleBugGCSBI == true) {
 				if (csbiOptionSelect.dwCursorPosition.Y == nWindowHeight && bReiterated == true) {
-					cls();
+					if (bAnsiVTSequences) {
+						// Alert user that above selection has been duplicated below
+						colour(BLK, YLW);
+						std::cout << wordWrap("Please note that the above OptionSelect session has been duplicated below, to work around the Windows Terminal #14774 bug.");
+						colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
+
+						std::cout << "\n\033[2J\033[1;1H";
+					}
+					else {
+						cls();
+					}
+					
 					// Display centred title
 					CentreColouredText(sTitle, 1);
-					// Display prompt message for selection options
-					std::cout << "\n" << sPrompt << "\n\n";
+
+					// Display prompt message for selection options with underline
+					std::cout << "\n";
+					std::cout << wordWrap(sPrompt) << "\n\n";
 
 					GetConsoleScreenBufferInfo(hOptionSelect, &csbiOptionSelect);
 					nStartingRow = csbiOptionSelect.dwCursorPosition.Y;
@@ -136,11 +200,12 @@ public:
 					}
 					else {
 						// 4. Measure size of sOptions[i] and make equal number of spaces, then go to the beginning of the line
-						std::cout << std::setw(sOptions[i].length() + 6) << std::cout.fill(' ') << '\r'; // + 6 because ">> " and " <<" combined are 6 chars
+						std::cout << std::setw(sOptions[i].length() + 6 + sOptionIndicator.length()) << std::cout.fill(' ') << '\r'; // + 6 because ">> " and " <<" combined are 6 chars
 					}
 
 					// 5. Output option
 					if (i == (nIndex - 1)) {
+						DisplayOptionsIndicator(sOptionIndicatorColours[i]);
 						colourHighlight();
 						std::cout << sHighlightBuffer;
 
@@ -148,7 +213,10 @@ public:
 						GetConsoleScreenBufferInfo(hOptionSelect, &csbiOptionSelect);
 						nIndexHeight = csbiOptionSelect.dwCursorPosition.Y;
 					}
-					else std::cout << sOptions[i];
+					else {
+						DisplayOptionsIndicator(sOptionIndicatorColours[i]);
+						std::cout << sOptions[i];
+					}
 
 					// Reset to default colour
 					colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
@@ -160,7 +228,7 @@ public:
 					std::cout << "\n\n";
 
 					// Add directions on how to use using DirectionsDisplay()
-					DirectionsDisplay("Press the 'W' key or up arrow key to move up.\nPress the 'S' key or down arrow key to move down.\nPress ENTER to continue with selection, or ESC to exit.");
+					DirectionsDisplay(sDirectionsText);
 				}
 
 			}
@@ -170,22 +238,36 @@ public:
 				SetCursorPosition(0, nIndexHeight);
 
 				// 2. Output spaces depending on previous nIndex option
-				if (nIndexIncrease == 1)
-					std::cout << std::setw(sOptions[nIndex - 2].length() + 6) << std::cout.fill(' ') << '\r' << sOptions[nIndex - 2];
+				if (nIndexIncrease == 1) {
+					std::cout << std::setw(sOptions[nIndex - 2].length() + 6 + sOptionIndicator.length()) << std::cout.fill(' ') << '\r';
+
+					DisplayOptionsIndicator(sOptionIndicatorColours[nIndex - 2]);
+					std::cout << sOptions[nIndex - 2];
+				}
 				else if (nIndexIncrease == 0) {
-					std::cout << std::setw(sOptions[nIndex].length() + 6) << std::cout.fill(' ') << '\r' << sOptions[nIndex];
+					std::cout << std::setw(sOptions[nIndex].length() + 6 + sOptionIndicator.length()) << std::cout.fill(' ') << '\r';
+
+					DisplayOptionsIndicator(sOptionIndicatorColours[nIndex]);
+					std::cout << sOptions[nIndex];
 				}
 				else if (nIndexIncrease == 2) {
-					std::cout << std::setw(sOptions[nNumberOfOptions - 1].length() + 6) << std::cout.fill(' ') << '\r' << sOptions[nNumberOfOptions - 1];
+					std::cout << std::setw(sOptions[nNumberOfOptions - 1].length() + 6 + sOptionIndicator.length()) << std::cout.fill(' ') << '\r';
+
+					DisplayOptionsIndicator(sOptionIndicatorColours[nNumberOfOptions - 1]);
+					std::cout << sOptions[nNumberOfOptions - 1];
 				}
 				else if (nIndexIncrease == 3) {
-					std::cout << std::setw(sOptions[0].length() + 6) << std::cout.fill(' ') << '\r' << sOptions[0];
+					std::cout << std::setw(sOptions[0].length() + 6 + sOptionIndicator.length()) << std::cout.fill(' ') << '\r';
+					
+					DisplayOptionsIndicator(sOptionIndicatorColours[0]);
+					std::cout << sOptions[0];
 				}
 					
 				// 3. Go to nIndex + nStartingRow
 				SetCursorPosition(0, nIndex + nStartingRow);
 
-				// 4. Output new sHighlightBuffer
+				// 4. Output new sHighlightBuffer and sOptionsIndicator
+				DisplayOptionsIndicator(sOptionIndicatorColours[nIndex - 1]);
 				colourHighlight();
 				std::cout << sHighlightBuffer;
 				colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
@@ -211,6 +293,7 @@ public:
 					// Darken the index highlight to indicate that this OptionSelect session isn't being used anymore
 					GetConsoleScreenBufferInfo(hOptionSelect, &csbiOptionSelect);
 					SetCursorPosition(0, nIndexHeight);
+					DisplayOptionsIndicator(sOptionIndicatorColours[nIndex - 1]);
 					colour(LWHT, GRAY);
 					std::cout << sHighlightBuffer;
 					SetCursorPosition(csbiOptionSelect.dwCursorPosition.X, csbiOptionSelect.dwCursorPosition.Y);
@@ -249,6 +332,7 @@ public:
 					// Darken the index highlight to indicate that this OptionSelect session isn't being used anymore
 					GetConsoleScreenBufferInfo(hOptionSelect, &csbiOptionSelect);
 					SetCursorPosition(0, nIndexHeight);
+					DisplayOptionsIndicator(sOptionIndicatorColours[nIndex - 1]);
 					colour(LWHT, GRAY);
 					std::cout << sHighlightBuffer;
 					SetCursorPosition(csbiOptionSelect.dwCursorPosition.X, csbiOptionSelect.dwCursorPosition.Y);
@@ -269,6 +353,7 @@ public:
 		// Darken the index highlight to indicate that this OptionSelect session isn't being used anymore
 		GetConsoleScreenBufferInfo(hOptionSelect, &csbiOptionSelect);
 		SetCursorPosition(0, nIndexHeight);
+		DisplayOptionsIndicator(sOptionIndicatorColours[nIndex - 1]);
 		colour(LWHT, GRAY);
 		std::cout << sHighlightBuffer;
 		SetCursorPosition(csbiOptionSelect.dwCursorPosition.X, csbiOptionSelect.dwCursorPosition.Y);

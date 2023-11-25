@@ -291,6 +291,118 @@ int MessageBoxButtonSwitch(std::string sButtonName) {
 	return 0;
 }
 
+// A switch-case function that returns the win32 equivalent of ANSI colours
+std::string Win32ToAnsiColours(std::string sWin32Colour) 
+{
+	if (sWin32Colour == BLK_WIN32) {
+		return BLK_ANSI;
+	}
+	else if (sWin32Colour == RED_WIN32) {
+		return RED_ANSI;
+	}
+	else if (sWin32Colour == GRN_WIN32) {
+		return GRN_ANSI;
+	}
+	else if (sWin32Colour == YLW_WIN32) {
+		return YLW_ANSI;
+	}
+	else if (sWin32Colour == BLU_WIN32) {
+		return BLU_ANSI;
+	}
+	else if (sWin32Colour == MAG_WIN32) {
+		return MAG_ANSI;
+	}
+	else if (sWin32Colour == CYN_WIN32) {
+		return CYN_ANSI;
+	}
+	else if (sWin32Colour == WHT_WIN32) {
+		return WHT_ANSI;
+	}
+	else if (sWin32Colour == GRAY_WIN32) {
+		return GRAY_ANSI;
+	}
+	else if (sWin32Colour == LRED_WIN32) {
+		return LRED_ANSI;
+	}
+	else if (sWin32Colour == LGRN_WIN32) {
+		return LGRN_ANSI;
+	}
+	else if (sWin32Colour == LYLW_WIN32) {
+		return LYLW_ANSI;
+	}
+	else if (sWin32Colour == LBLU_WIN32) {
+		return LBLU_ANSI;
+	}
+	else if (sWin32Colour == LMAG_WIN32) {
+		return LMAG_ANSI;
+	}
+	else if (sWin32Colour == LCYN_WIN32) {
+		return LCYN_ANSI;
+	}
+	else if (sWin32Colour == LWHT_WIN32) {
+		return LWHT_ANSI;
+	}
+	else {
+		return "";
+	}
+}
+
+// A switch-case function that returns the ANSI RGB equivalent of Win32 colours
+std::string AnsiToWin32Colours(std::string sAnsiColour)
+{
+	if (sAnsiColour == BLK_ANSI) {
+		return BLK_WIN32;
+	}
+	else if (sAnsiColour == RED_ANSI) {
+		return RED_WIN32;
+	}
+	else if (sAnsiColour == GRN_ANSI) {
+		return GRN_WIN32;
+	}
+	else if (sAnsiColour == YLW_ANSI) {
+		return YLW_WIN32;
+	}
+	else if (sAnsiColour == BLU_ANSI) {
+		return BLU_WIN32;
+	}
+	else if (sAnsiColour == MAG_ANSI) {
+		return MAG_WIN32;
+	}
+	else if (sAnsiColour == CYN_ANSI) {
+		return CYN_WIN32;
+	}
+	else if (sAnsiColour == WHT_ANSI) {
+		return WHT_WIN32;
+	}
+	else if (sAnsiColour == GRAY_ANSI) {
+		return GRAY_WIN32;
+	}
+	else if (sAnsiColour == LRED_ANSI) {
+		return LRED_WIN32;
+	}
+	else if (sAnsiColour == LGRN_ANSI) {
+		return LGRN_WIN32;
+	}
+	else if (sAnsiColour == LYLW_ANSI) {
+		return LYLW_WIN32;
+	}
+	else if (sAnsiColour == LBLU_ANSI) {
+		return LBLU_WIN32;
+	}
+	else if (sAnsiColour == LMAG_ANSI) {
+		return LMAG_WIN32;
+	}
+	else if (sAnsiColour == LCYN_ANSI) {
+		return LCYN_WIN32;
+	}
+	else if (sAnsiColour == LWHT_ANSI) {
+		return LWHT_WIN32;
+	}
+	else {
+		return "";
+	}
+}
+
 // Mission Impossible Theme Song in Beeps
 //
 void MissionImpossibleTheme() {
@@ -618,7 +730,7 @@ void StarWarsImperialMarch() {
 // Arguments: nSpeed - The speed of the character output in characters.
 // Return Values: None
 // 
-void HackerTyper(unsigned long long int nSpeed = 3) {
+void HackerTyper(uint64_t nSpeed = 3) {
 	std::string sHackerText = "struct group_info init_groups = { .usage = ATOMIC_INIT(2) };\n\nstruct group_info *groups_alloc(int gidsetsize){\n\n   struct group_info *group_info;\n\n       int nblocks;\n\n        int i;\n\n\n\n  nblocks = (gidsetsize + NGROUPS_PER_BLOCK - 1) / NGROUPS_PER_BLOCK;\n\n /* Make sure we always allocate at least one indirect block pointer */\n\n      nblocks = nblocks ? : 1;\n\n    group_info = kmalloc(sizeof(*group_info) + nblocks*sizeof(gid_t *), GFP_USER);\n\n      if (!group_info)\n\n            return NULL;\n\n        group_info->ngroups = gidsetsize;\n\n   group_info->nblocks = nblocks;\n\n      atomic_set(&group_info->usage, 1);\n\n\n\n      if (gidsetsize <= NGROUPS_SMALL)\n\n            group_info->blocks[0] = group_info->small_block;\n\n    else {\n\n              for (i = 0; i < nblocks; i++) {\n\n                    gid_t *b;\n\n                    b = (void *)__get_free_page(GFP_USER);\n\n                      if (!b)\n\n            goto out_undo_partial_alloc;\n\n                 group_info->blocks[i] = b;\n\n          }\n\n   }\n\n   return group_info;\n\n\n\nout_undo_partial_alloc:\n\n   while (--i >= 0) {\n\n          free_page((unsigned long)group_info->blocks[i]);\n\n    }\n\n   kfree(group_info);\n\n  return NULL;\n\n}\n\n\n\nEXPORT_SYMBOL(groups_alloc);\n\n\n\nvoid groups_free(struct group_info *group_info)\n\n{\n\n   if (group_info->blocks[0] != group_info->small_block) {\n\n             int i;\n\n              for (i = 0; i < group_info->nblocks; i++)\n\n                   free_page((unsigned long)group_info->blocks[i]);\n\n    }\n\n   kfree(group_info);\n\n}\n\n\n\nEXPORT_SYMBOL(groups_free);\n\n\n\n/* export the group_info to a user-space array */\n\nstatic int groups_to_user(gid_t __user *grouplist,\n\n                     const struct group_info *group_info)\n\n{\n\n int i;\n\n      unsigned int count = group_info->ngroups;\n\n\n\n       for (i = 0; i < group_info->nblocks; i++) {\n\n         unsigned int cp_count = min(NGROUPS_PER_BLOCK, count);\n\n              unsigned int len = cp_count * sizeof(*grouplist);\n\n\n\n               if (copy_to_user(grouplist, group_info->blocks[i], len))\n\n   return -EFAULT;\n\n\n\n          grouplist += NGROUPS_PER_BLOCK;\n\n             count -= cp_count;\n\n  }\n\n   return 0;\n\n}\n\n\n\n/* fill a group_info from a user-space array - it must be allocated already */\n\nstatic int groups_from_user(struct group_info *group_info,\n\n    gid_t __user *grouplist)\n\n{\n\n     int i;\n\n      unsigned int count = group_info->ngroups;\n\n\n\n       for (i = 0; i < group_info->nblocks; i++) {\n\n         unsigned int cp_count = min(NGROUPS_PER_BLOCK, count);\n\n              unsigned int len = cp_count * sizeof(*grouplist);\n\n\n\n               if (copy_from_user(group_info->blocks[i], grouplist, len))\n\n                  return -EFAULT;\n\n\n\n         grouplist += NGROUPS_PER_BLOCK;\n\n             count -= cp_count;\n\n  }\n\n   return 0;\n\n}\n\n\n\n/* a simple Shell sort */\n\nstatic void groups_sort(struct group_info *group_info)\n\n{\n\n      int base, max, stride;\n\n      int gidsetsize = group_info->ngroups;\n\n\n\n   for (stride = 1; stride < gidsetsize; stride = 3 * stride + 1)\n\n              ; /* nothing */\n\n     stride /= 3;\n\n\n\n    while (stride) {\n\n            max = gidsetsize - stride;\n\n          for (base = 0; base < max; base++) {\n\n                        int left = base;\n\n                    int right = left + stride;\n\n gid_t tmp = GROUP_AT(group_info, right);\n\n\n\n                 while (left >= 0 && GROUP_AT(group_info, left) > tmp) {\n\n                             GROUP_AT(group_info, right) =\n\n                                   GROUP_AT(group_info, left);\n\n                             right = left;\n\n                               left -= stride;\n\n            }\n\n                    GROUP_AT(group_info, right) = tmp;\n\n          }\n\n           stride /= 3;\n\n        }\n\n}\n\n\n\n/* a simple bsearch */\n\nint groups_search(const struct group_info *group_info, gid_t grp)\n\n{\n\n      unsigned int left, right;\n\n\n\n       if (!group_info)\n\n            return 0;\n\n\n\n       left = 0;\n\n   right = group_info->ngroups;\n\n        while (left < right) {\n\n              unsigned int mid = left + (right - left)/2;\n\n        if (grp > GROUP_AT(group_info, mid))\n\n                 left = mid + 1;\n\n             else if (grp < GROUP_AT(group_info, mid))\n\n                   right = mid;\n\n                else\n\n                        return 1;\n\n   }\n\n  return 0;\n\n}\n\n\n\n";
 	char cKey = 0; // Key pressed (for exit functions and stuff)
 
@@ -629,7 +741,7 @@ void HackerTyper(unsigned long long int nSpeed = 3) {
 	std::cout << " --> ";
 	while (cKey != 27)
 	{
-		for (unsigned long long int i = 0; i < sHackerText.length(); i += nSpeed)
+		for (uint64_t i = 0; i < sHackerText.length(); i += nSpeed)
 		{
 			// Get key
 			cKey = _getch();
@@ -650,8 +762,8 @@ void HackerTyper(unsigned long long int nSpeed = 3) {
 			// In the middle of string - Output normally
 			else
 			{
-				unsigned long long int nCapChanger = 0; // to change limit of j
-				for (unsigned long long int j = 0; j < nSpeed + nCapChanger; j++)
+				uint64_t nCapChanger = 0; // to change limit of j
+				for (uint64_t j = 0; j < nSpeed + nCapChanger; j++)
 				{
 					std::cout << sHackerText[i + j];
 
@@ -678,7 +790,7 @@ void HackerTyper(unsigned long long int nSpeed = 3) {
 //            nSpeed - The speed of the character output in characters.
 // Return Values: TRUE or 1 for success, FALSE or 0 for fail.
 // 
-bool HackerTyperFile(std::string sFilePath, unsigned long long int nSpeed = 3) {
+bool HackerTyperFile(std::string sFilePath, uint64_t nSpeed = 3) {
 	std::string sFinalFilePath = "";
 	char cKey = 0;
 
@@ -718,7 +830,7 @@ bool HackerTyperFile(std::string sFilePath, unsigned long long int nSpeed = 3) {
 	std::cout << " --> ";
 	while (cKey != 27)
 	{
-		for (unsigned long long int i = 0; i < sFileContents.length(); i += nSpeed)
+		for (uint64_t i = 0; i < sFileContents.length(); i += nSpeed)
 		{
 			// Get key
 			cKey = _getch();
@@ -739,8 +851,8 @@ bool HackerTyperFile(std::string sFilePath, unsigned long long int nSpeed = 3) {
 			// In the middle of string - Output normally
 			else
 			{
-				unsigned long long int nCapChanger = 0; // to change limit of j
-				for (unsigned long long int j = 0; j < nSpeed + nCapChanger; j++)
+				uint64_t nCapChanger = 0; // to change limit of j
+				for (uint64_t j = 0; j < nSpeed + nCapChanger; j++)
 				{
 					std::cout << sFileContents[i + j];
 
@@ -773,7 +885,7 @@ bool ResetExpl() {
 	system("taskkill /f /im explorer.exe");
 
 	// Start explorer.exe using ShellExecuteA
-	HRESULT hr = CoInitializeEx(NULL, COINIT_MULTITHREADED | COINIT_DISABLE_OLE1DDE);
+	HRESULT hr = CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
 	if (FAILED(hr)) {
 		VerbosityDisplay("In ResetExpl() - ERROR: Failed to initialise the COM Library.\n");
 		UserErrorDisplay("ERROR - Failed to load libraries that are required for operation. Please try again later.\n");

@@ -1,12 +1,11 @@
 
 void ColourForegroundSwitch(int*, std::string*, std::string*);
 void ColourBackgroundSwitch(int*, std::string*, std::string*);
-std::string wordWrap(std::string);
+std::string wordWrap(std::string, long long int, long long int);
 bool EnableVTMode();
 void colour(std::string, std::string);
 bool YesNo(std::string);
 void Exiting();
-long double NumInput(std::string);
 std::string StrInput(std::string);
 void SetCursorAttributes();
 void colourSubheading();
@@ -391,12 +390,14 @@ void AnsiSettings(short int nChoice = 0) {
 	if (nChoice == 1) {
 		if (EnableVTMode() != false) 
 		{
+			ConfigObjMain.bAnsiVTSequences = true;
 			bAnsiVTSequences = true;
-			// Write to configuration file immediately
+
+			// Write to config file immediately
 			ConfigObjMain.WriteConfigFile();
 
 			// Set new colours
-			ColourTypeSwitch();
+			ColourTypeSwitch(); // This will write to config file by default
 			colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
 			cls(); // Set colours to whole screen
 
@@ -407,26 +408,26 @@ void AnsiSettings(short int nChoice = 0) {
 		}
 		else {
 			colour(RED, ConfigObjMain.sColourGlobalBack);
-			std::cout << wordWrap("Sorry, you cannot enable ANSI escape codes as your terminal doesn't support it.") << std::endl;
-			colour(YLW, ConfigObjMain.sColourGlobalBack);
-			std::cout << "Exiting...\n";
-			colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
+			std::cout << wordWrap("Sorry, you cannot enable ANSI escape codes as your terminal doesn't support it.");
+			Exiting();
 			return;
 		}
 
 	}
 	else if (nChoice == 2) {
 		colour(YLW, ConfigObjMain.sColourGlobalBack);
-		std::cout << wordWrap("WARNING: This WILL disable RGB colours AND text formatting from the point of this message.") << '\n';
+		std::cout << wordWrap("WARNING: This WILL disable RGB colours AND text formatting from the point of this message.\nThis will also revert any custom RGB values to default.\nRGB Colour Presets will NOT be affected.\n");
 		
-		if (YesNo(wordWrap("Would you like to proceed? [y/n] > "))) 
+		if (YesNo(wordWrap("Would you like to proceed? [y/n] > ")))
 		{
+			ConfigObjMain.bAnsiVTSequences = false;
 			bAnsiVTSequences = false;
-			// Write to configuration file immediately
+
+			// Write to config file immediately
 			ConfigObjMain.WriteConfigFile();
 
 			// Set new colours
-			ColourTypeSwitch();
+			ColourTypeSwitch(); // This will write to config file by default
 			colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
 			cls(); // Set to whole screen
 
@@ -512,7 +513,7 @@ void WordWrapSettings(short int nChoice = 0) {
 	}
 }
 
-void CursorSettings(short int nChoice = 0, short int nChoiceBlink = 0, short int nChoiceShow = 0, short int nChoiceShape = 0) {
+void CursorSettings(short int nChoice = 0, short int nChoiceBlink = 0, short int nChoiceShow = 0, long long int nChoiceShape = 0) {
 
 	if (nChoice == 0) {
 		OptionSelectEngine oseCursor;
@@ -745,7 +746,7 @@ void CursorSettings(short int nChoice = 0, short int nChoiceBlink = 0, short int
 	}
 }
 
-void OtherSettings(short int nChoice = 0, int nChoiceSlowChSpeed = 0, bool bFromArg = false , short int nChoiceRandColStartup = 0, short int nTermCustomThemeSupport = 0, short int nReadableContrast = 0, std::string sTempConfigFileDir = "") {
+void OtherSettings(short int nChoice = 0, long long int nChoiceSlowChSpeed = 0, bool bFromArg = false , short int nChoiceRandColStartup = 0, short int nTermCustomThemeSupport = 0, short int nReadableContrast = 0, std::string sTempConfigFileDir = "") {
 
 	// Standard interface
 	if (nChoice == 0) {
@@ -771,9 +772,9 @@ void OtherSettings(short int nChoice = 0, int nChoiceSlowChSpeed = 0, bool bFrom
 			colourSubheading(); // extra info colour is the same as subheading colour
 			std::cout << "Higher numbers are faster." << NOULINE_STR;
 			colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
-			std::cout << "\nDefault Speed: 45\nCurrent Speed: " << ConfigObjMain.nSlowCharSpeed << "\n\n" << wordWrap("Input 0 to disable SlowChar entirely, and input a negative number to exit.") << '\n';
+			std::cout << "\nDefault Speed: 32\nCurrent Speed: " << ConfigObjMain.nSlowCharSpeed << wordWrap("\n\nInput 0 to disable SlowChar entirely, and input a negative number to exit.") << '\n';
 
-			nChoiceSlowChSpeed = NumInput("Please input how fast you want SlowChar to be: > ");
+			nChoiceSlowChSpeed = NumInputll("Please input how fast you want SlowChar to be: > ");
 		}
 
 		if (nChoiceSlowChSpeed < 0) {
@@ -959,40 +960,53 @@ void OtherSettings(short int nChoice = 0, int nChoiceSlowChSpeed = 0, bool bFrom
 	}
 
 	// Temporary Custom Config File Directory
-	else if (nChoice == 5) 
+	else if (nChoice == 5)
 	{
 		// Normal User UI
 		if (sTempConfigFileDir == "") {
 			std::cout << '\n';
 			CentreColouredText(" ___CUSTOM CONFIG FILE DIR___ ", 1);
-			std::cout << "\n\n";
-			sTempConfigFileDir = StrInput("Please input your desired custom config file directory (0 to exit, \"^open\" to use Windows File Dialogue): > ");
+
+			colour(YLW, ConfigObjMain.sColourGlobalBack);
+			std::cout << wordWrap("\n\nThis setting will only take effect for this session.\n");
+
+			colour(LCYN, ConfigObjMain.sColourGlobalBack);
+			std::cout << wordWrap("ZeeTerminal will treat the config file as it treats any other one. If any values are incorrect, they are either converted to values that are compatible with the current session, or overwritten with defaults if that's not possible.\n\n");
+			colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
+
+			sTempConfigFileDir = StrInput("Please input your desired custom config file directory (0 to exit, \"*open\" to use Windows File Dialogue): > ");
 
 			if (sTempConfigFileDir == "0") {
 				Exiting();
 				return;
 			}
-			else if (sTempConfigFileDir == "^open") {
-				FileOpenGUIEngine CustomDir;
-				if (CustomDir.FileOpenDialogue("Select a Configuration File of Choice") == false) {
-					Exiting();
-					return;
-				}
+		}
 
-				// Assign file name from file dialogue to input string
-				sTempConfigFileDir = CustomDir.GetFileName();
-				
-				// User cancelled if string is empty
-				if (sTempConfigFileDir == "") {
-					Exiting();
-					return;
-				}
+		if (sTempConfigFileDir == "*open") {
+			FileOpenGUIEngine CustomDir;
+
+			// Notify user of file dialogue opening
+			std::cout << wordWrap("Opening with the Windows File Dialogue...\n");
+
+			// Display the window
+			if (CustomDir.FileOpenDialogue("Select a Configuration File of Choice") == false) {
+				Exiting();
+				return;
 			}
 
-			// Check for speechmarks in case of copy from file explorer
-			if (sTempConfigFileDir[0] == '"' && sTempConfigFileDir[sTempConfigFileDir.length() - 1] == '"') {
-				sTempConfigFileDir = sTempConfigFileDir.substr(1, (sTempConfigFileDir.length() - 2));
+			// Assign file name from file dialogue to input string
+			sTempConfigFileDir = CustomDir.GetFileName();
+
+			// User cancelled if string is empty
+			if (sTempConfigFileDir == "") {
+				Exiting();
+				return;
 			}
+		}
+
+		// Check for speechmarks in case of copy from file explorer
+		if (sTempConfigFileDir[0] == '"' && sTempConfigFileDir[sTempConfigFileDir.length() - 1] == '"') {
+			sTempConfigFileDir = sTempConfigFileDir.substr(1, (sTempConfigFileDir.length() - 2));
 		}
 
 		// Test user input
@@ -1013,7 +1027,9 @@ void OtherSettings(short int nChoice = 0, int nChoiceSlowChSpeed = 0, bool bFrom
 		ConfigObjMain.sConfigFileUserLocation = sTempConfigFileDir;
 		// Read new config file immediately
 		ConfigObjMain.ReadConfigFile();
-		// Make sure it still works
+		// Check to make sure colours are correct for the session using ColourTypeSwitch().
+		ColourTypeSwitch();
+		// Write new values to the new config file
 		ConfigObjMain.WriteConfigFile();
 
 		colour(LGRN, ConfigObjMain.sColourGlobalBack);

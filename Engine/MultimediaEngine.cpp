@@ -16,7 +16,7 @@ void		UserErrorDisplay(std::string);
 void		colour(std::string, std::string);
 void		ClearKeyboardBuffer();
 void		SetCursorAttributes();
-std::string wordWrap(std::string);
+std::string wordWrap(std::string, long long int, long long int);
 std::string CentreText(std::string);
 
 class MultimediaEngine {
@@ -94,7 +94,7 @@ public:
 		else wsFilePath = wsInputFilePath;
 
 		// Initialize the COM library
-		HRESULT hr = CoInitializeEx(NULL, COINIT_MULTITHREADED | COINIT_DISABLE_OLE1DDE);
+		HRESULT hr = CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
 		if (FAILED(hr))
 		{
 			VerbosityDisplay("In MultimediaEngine::DShowMultimediaPlayer(): ERROR - Failed to initialise the COM library.");
@@ -173,7 +173,7 @@ public:
 
 				// Audio controls
 				if (bRepeatActivated == false)
-					std::cout << "Press space or 'p' to pause/unpause, 'r' to activate repeating media file, and ESC or 'e' to exit.\nPress the left arrow key to go backwards, and the right arrow key to fast forward.\n\n\n\n";
+					std::cout << wordWrap("Press space or 'p' to pause/unpause, 'r' to activate repeating media file, and ESC or 'e' to exit.\nPress the left arrow key to go backwards, and the right arrow key to fast forward.\n\n\n\n");
 				
 				// Turn off cursor visibility, as it would cause flickering when outputting media time
 				ConfigObjMain.bShowCursor = false;
@@ -440,7 +440,7 @@ public:
 
 			// Media controls
 			if (bRepeatActivated == false)
-				std::cout << "Press space or 'p' to pause/unpause, 'r' to activate repeating media file, and ESC or 'e' to exit.\nPress the left arrow key to seek backwards, and the right arrow key to seek forwards.\n\n\n\n";
+				std::cout << wordWrap("Press space or 'p' to pause/unpause, 'r' to activate repeating media file, and ESC or 'e' to exit.\nPress the left arrow key to seek backwards, and the right arrow key to seek forwards.\n\n\n\n");
 			
 			// Set cursor visibility to false to prevent flickering when showing media time
 			ConfigObjMain.bShowCursor = false;
@@ -667,7 +667,7 @@ public:
 	//
 	bool TTSOutput(std::wstring wsText) {
 
-		if (FAILED(CoInitialize(NULL))) {
+		if (FAILED(CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE))) {
 			VerbosityDisplay("In MultimediaEngine::TTSOutput(): ERROR - Failed to initialise the COM library.\n");
 			UserErrorDisplay("ERROR: The required libraries to run Text-To-Speech failed to load. Please try again later.\n");
 
@@ -709,8 +709,8 @@ public:
 		WAVEFORMATEX wfx;
 		wfx.wFormatTag = WAVE_FORMAT_PCM;
 		wfx.nChannels = 1;
-		wfx.nSamplesPerSec = 44100;
-		wfx.nAvgBytesPerSec = 44100 * 2;
+		wfx.nSamplesPerSec = 48000;
+		wfx.nAvgBytesPerSec = 48000 * 2;
 		wfx.nBlockAlign = 2;
 		wfx.wBitsPerSample = 16;
 		wfx.cbSize = 0;

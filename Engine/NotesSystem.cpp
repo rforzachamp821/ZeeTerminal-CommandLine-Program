@@ -68,16 +68,22 @@ public:
 		// Check if notes text is empty - if so, shift everything behind the option by 1 to the left (deleting a note)
 		if (sNoteText == "") {
 			// Use for loop to shift all elements to the left
-			int nNotesCount = GetCurrentNotesCount();
-			for (int i = nArrayIndex; i < nNotesCount; i++) {
+			unsigned int nNotesCount = GetCurrentNotesCount();
+			for (unsigned int i = nArrayIndex; i < nNotesCount; i++) {
 				if (i < nNotesCount - 1) {
+					// Assign nArrayIndex/i to the note above it
 					sNotes[i] = sNotes[i + 1];
+					// Make the next note empty for the next reiteration
 					sNotes[i + 1] = "";
 				}
 				else {
+					// Just make the last note empty and don't mess with anything else - can be an optimisation
 					sNotes[i] = "";
 				}
 			}
+
+			// To skip line after this if block - prevents accidental NULL ("") termination bug
+			return true;
 		}
 
 		// Add note - Just modify the array index

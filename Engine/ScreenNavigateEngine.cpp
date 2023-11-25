@@ -8,15 +8,23 @@ void cls();
 void colour(std::string, std::string);
 void colourTitle();
 void colourHighlight();
-std::string wordWrap(std::string);
+std::string wordWrap(std::string, long long int, long long int);
+void SetCursorPosition(int, int);
 
 extern ConfigFileSystem ConfigObjMain;
 
 //
 // ZT ScreenNavigateEngine - Class for ScreenNavigate function, allows for easy debugging too.
 //
-class ScreenNavigateEngine {
+class ScreenNavigateEngine 
+{
+protected:
+
+	// Directions text to forward to DirectionsDisplay()
+	std::string sDirectionsText = "Press the 'A' key or left arrow key to move left.\nPress the 'D' key or right arrow key to move right.\nPress ESC to exit.";
+
 public:
+
 	int nSizeOfScreens = 0;
 	std::string* sScreens {};
 
@@ -25,11 +33,25 @@ public:
 		VerbosityDisplay("New ScreenNavigateEngine Object Created.\n");
 		// Set values to default
 		nSizeOfScreens = 0;
+		sDirectionsText = "Press the 'A' key or left arrow key to move left.\nPress the 'D' key or right arrow key to move right.\nPress ESC to exit.";
 	}
 
 	~ScreenNavigateEngine() {
 		// Display destructor verbose message
 		VerbosityDisplay("ScreenNavigateEngine Object has been destroyed.\n");
+	}
+
+	// SetDirectionsText - Sets the direction text to a custom text, and replaces the default text.
+	//                   - Because there is a default directions text, this function is optional to call.
+	// Arguments: sText - The text to replace the default direction text with.
+	// Return values: None
+	//
+	void SetDirectionsText(std::string sText)
+	{
+		// Set directions text
+		sDirectionsText = sText;
+
+		return;
 	}
 
 	// ScreenNavigate - An interactive display UI that allows for quick and easy screen switching in commands, using easy arrow-key OR A/D-key navigation.
@@ -69,10 +91,7 @@ public:
 			// Output title of all combined screens, centred
 			CentreColouredText(sTitle, 1);
 			colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
-			std::cout << std::endl;
-
-			// Output directions of use using DirectionsDisplay()
-			DirectionsDisplay("Press the 'A' key or left arrow key to move left.\nPress the 'D' key or right arrow key to move right.\nPress ESC to exit.\n\n");
+			std::cout << "\n\n";
 
 			// Output screen number out of total screen number
 			std::string sPageNum = "~~PAGE NUMBER: " + std::to_string(nIndex) + "/" + std::to_string(nNumberOfScreens) + "~~\n";
@@ -82,12 +101,19 @@ public:
 			colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
 			std::cout << wordWrap(sScreens[nIndex - 1]) << '\n';
 
+			// Output directions of use using DirectionsDisplay()
+			if (ConfigObjMain.bDisplayDirections) {
+				std::cout << '\n';
+				DirectionsDisplay(sDirectionsText);
+				std::cout << '\n';
+			}
+
 			// Check ending cursor height to see if scroll-up message should be outputted
 			GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbiScreenNavigate);
 			if (csbiScreenNavigate.dwCursorPosition.Y >= csbiScreenNavigate.srWindow.Bottom - csbiScreenNavigate.srWindow.Top) {
 				std::cout << '\n';
 				colourHighlight();
-				std::cout << " ^ ^ ^ SCROLL UP FOR MORE INFO ^ ^ ^ ";
+				std::cout << wordWrap(" /\\ /\\ /\\  SCROLL UP FOR MORE INFO  /\\ /\\ /\\ ");
 				colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
 				std::cout << '\n';
 			}
@@ -112,4 +138,5 @@ public:
 
 		return;
 	}
+	
 };

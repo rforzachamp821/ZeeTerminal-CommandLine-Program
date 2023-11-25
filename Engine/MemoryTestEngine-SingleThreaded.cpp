@@ -3,12 +3,12 @@
 
 long double RandNum(long double, long double);
 std::string wordWrap(std::string, long long int, long long int);
+inline void sleep(long long int);
 void UserErrorDisplay(std::string);
 void VerbosityDisplay(std::string);
 
 
 // MemoryTestEngine - Engine containing components for memory testing and stressing.
-//                  - Contains multithreading support.
 //                  - Contains binary search stress testing, linear search verification and testing algorithms, etc.
 //                  - The test algorithms involved are intended to fill up the host system's memory to its maximum
 //                    WITHOUT restarting it, which can run the risk of memory paging. It is highly recommended to
@@ -25,81 +25,35 @@ private:
 	// KeyboardAbortHandler termination switch
 	std::atomic<bool> bKillKeyboardAbortHandler = false;
 
-	// Thread worker termination switch
-	std::atomic<bool> bKillThreads = false;
-
-	// Number of logical cores to use for multithreading
-	const unsigned int nNumOfThreads = std::thread::hardware_concurrency();
-
-	// Boolean thread completion vector - to indicate thread completion
-	std::vector<bool> vThreadCompletionIndicator;
-
-
-	///////////////////////////////////////
-	/*  PROPRIETARY VARIABLES / MEMBERS  */
-	///////////////////////////////////////
-	
-	// Container for index number result for binary search
-	uint64_t nIndexNum = 0;
-
-	// To communicate to main threadcall that one thread found the correct number (Binary Search proprietary)
-	std::atomic<bool> bNumberFound = false;
-
-	// Vector for all indexes that failed (Linear Searches proprietary)
-	std::vector<uint64_t> vFailedIndexes;
-
-	// Number of current errors found in memory on current pass (Linear Searches proprietary)
-	uint64_t nNumOfCurrentCheckErrors = 0;
-
-	
-	// BinarySearch - A custom multithreaded binary search algorithm with little optimisation (focused on memory stress, not searching specifically)
+	// BinarySearch - A custom binary search algorithm with little optimisation (focused on memory stress, not searching specifically)
 	//              - Binary search requires a sorted list, which is how the memory container is initialised.
 	//              - This custom algorithm looks only at the memory container, and does not accept a memory pointer argument.
 	// Arguments: nSearchNum - The value to search for.
-	//            bMultiThreaded - Use multithreading or not.
-	//            nInitialisationThreadNumber - Thread number out of total thread count, which indicates the part of the array to search through for the thread.
-	//                                          If bMultiThreaded is TRUE, this must be passed with 0 or above, to nNumOfThreads - 1.
 	// Return values: Index of the found number.
 	// 
 	// NOTE: 0 may be returned when an error occurs. This is normal, as it sets nErrorLevel instead. See nErrorLevel for more info about the error codes.
 	//
-	void BinarySearch(const uint64_t nSearchNum, bool bMultiThreaded, unsigned int nInitialisationThreadNumber) {
-
-		unsigned int nThreadCount = nNumOfThreads;
-		if (bMultiThreaded == false) nThreadCount = 1;
-
-		if (bMultiThreaded == true && (nInitialisationThreadNumber < 0 || nInitialisationThreadNumber > nNumOfThreads - 1)) {
-			nErrorLevel = 3;
-			VerbosityDisplay("In MemoryTestEngine::BinarySearch(): ERROR - Bad argument to nInitialisationThreadNumber parameter.\n");
-			vThreadCompletionIndicator[nInitialisationThreadNumber] = true;
-			return;
-		}
+	unsigned long long int BinarySearch(const unsigned long long int nSearchNum) {
 
 		// Firstly, set variables
-		const uint64_t	nArraySize = nMemoryContainer.size();
-		uint64_t		nHighPoint = ((nInitialisationThreadNumber + 1) * (nArraySize / nThreadCount));
-		uint64_t		nLowPoint = (nInitialisationThreadNumber * (nArraySize / nThreadCount));
-		uint64_t		nMidPoint = 0;
+		const unsigned long long int nArraySize = nMemoryContainer.size();
+		unsigned long long int nHighPoint = nArraySize - 1;
+		unsigned long long int nLowPoint = 0;
+		unsigned long long int nMidPoint = 0;
 
 		// Repeat until low and high match
-		while (nLowPoint <= nHighPoint && !bKillThreads && !bNumberFound) {
-			nMidPoint = (uint64_t)(nLowPoint + (nHighPoint - nLowPoint) * 0.5);
+		while (nLowPoint <= nHighPoint) {
+			nMidPoint = nLowPoint + (nHighPoint - nLowPoint) * 0.5;
 
 			if (nMemoryContainer[nMidPoint] == nSearchNum) {
 
 				// Memory Verification
 				if (nMemoryContainer[nMidPoint] == nMidPoint) {
-					nIndexNum = nMidPoint;
-					vThreadCompletionIndicator[nInitialisationThreadNumber] = true;
-					bNumberFound = true;
-					nErrorLevel = 0;
-					return;
+					return nMidPoint;
 				}
 				else {
-					nErrorLevel = 4; // Error found
-					vThreadCompletionIndicator[nInitialisationThreadNumber] = true;
-					nIndexNum = 0;
-					return;
+					nErrorLevel = 3; // Error found
+					return 0;
 				}
 			}
 			else if (nMemoryContainer[nMidPoint] < nSearchNum) {
@@ -109,10 +63,8 @@ private:
 					nLowPoint = nMidPoint + 1;
 				}
 				else {
-					nErrorLevel = 4; // Error found
-					vThreadCompletionIndicator[nInitialisationThreadNumber] = true;
-					nIndexNum = 0;
-					return;
+					nErrorLevel = 3; // Error found
+					return 0;
 				}
 			}
 			else if (nMemoryContainer[nMidPoint] > nSearchNum) {
@@ -122,53 +74,25 @@ private:
 					nHighPoint = nMidPoint - 1;
 				}
 				else {
-					nErrorLevel = 4; // Error found
-					vThreadCompletionIndicator[nInitialisationThreadNumber] = true;
-					nIndexNum = 0;
-					return;
+					nErrorLevel = 3; // Error found
+					return 0;
 				}
 			}
 		}
 
 		// Numbers didn't match as the low point exceeded the high point number or the high point went too low
 		nErrorLevel = 2;
-		vThreadCompletionIndicator[nInitialisationThreadNumber] = true;
-		nIndexNum = 0;
-		return;
+		return 0;
 	}
 
 	// KeyboardAbortHandler - Handler for keyboard abortion
 	void KeyboardAbortHandler() {
 		while (!_kbhit() && !bKillKeyboardAbortHandler) {
-			std::this_thread::sleep_for(std::chrono::nanoseconds(1));
+			sleep(20);
 		}
 
 		bKeyboardTermination = true;
 		ClearKeyboardBuffer();
-		return;
-	}
-
-	// Reset the thread completion vector, thread kill switch
-	void ResetThreads() 
-	{
-		// Reset thread completion vector
-		for (unsigned int i = 0; i < nNumOfThreads; i++) {
-			vThreadCompletionIndicator[i] = false;
-		}
-
-		// Reset failed indexes vector
-		vFailedIndexes.clear();
-
-		// Reset number of check errors
-		nNumOfCurrentCheckErrors = 0;
-
-		// Reset kill switch for threads
-		bKillThreads = false;
-		bKeyboardTermination = false;
-
-		// Reset binary search number found indicator
-		bNumberFound = false;
-
 		return;
 	}
 
@@ -179,7 +103,7 @@ protected:
 	std::vector<uint64_t> nMemoryContainer;
 
 	// nErrorLevel - Error level of error that occured. Error code definitions are below:
-	//             - 0: No error has occured, and all operations should be normal. 
+	//             - 0: No error has occured, and all operations should be normal.
 	//             - 1: An error occured when getting the size of the host system memory.
 	//             - 2: An unknown binary search error has occured, where the random search value wasn't found.
 	//             - 3: A bad initialisation thread number was passed into a thread worker.
@@ -264,157 +188,15 @@ protected:
 
 		return;
 	}
-	
-	//////////////////////////////
-	/* THREADS FOR MEMORY TESTS */
-	//////////////////////////////
-
-	// PerformLinearSearchOnMemoryThread - Thread worker for PerformLinearSearchOnMemory.
-	// Arguments: bMultiThreaded - Use multithreading or not.
-	//            nInitialisationThreadNumber - Thread number out of total thread count, which indicates the part of the array to search through for the thread.
-	//                                          If bMultiThreaded is TRUE, this must be passed with 0 or above, to nNumOfThreads - 1.
-	// Does not return any values.
-	//
-	void PerformLinearSearchOnMemoryThread(bool bMultiThreaded, unsigned int nInitialisationThreadNumber, std::atomic_ullong& nProgressCounter) 
-	{
-		// Single or multi core decider
-		unsigned int nThreadCount = nNumOfThreads;
-		if (bMultiThreaded == false) nThreadCount = 1;
-
-		if (bMultiThreaded == true && (nInitialisationThreadNumber < 0 || nInitialisationThreadNumber > nNumOfThreads - 1)) {
-			nErrorLevel = 3;
-			VerbosityDisplay("In MemoryTestEngine::PerformLinearSearchOnMemoryThread(): ERROR - Bad argument to nInitialisationThreadNumber parameter.\n");
-			vThreadCompletionIndicator[nInitialisationThreadNumber] = true;
-			return;
-		}
-
-		// Search part of memory container for thread number
-		// Optimisation to reduce number of operations made
-		int nLocalProgressCounter = 0;
-		uint64_t nComparisonNumber = ((nInitialisationThreadNumber + 1) * (nMemoryContainer.size() / nThreadCount));
-		for (uint64_t i = nInitialisationThreadNumber * (nMemoryContainer.size() / nThreadCount); i < nComparisonNumber && !bKillThreads; i++, nLocalProgressCounter++) {
-			// Check for correct digit
-			if (nMemoryContainer[i] != i) {
-				nNumOfCurrentCheckErrors++;
-				vFailedIndexes.push_back(i);
-				nErrorLevel = 3;
-			}
-
-			// Increase progress count with 100 reiterations per increment
-			if (nLocalProgressCounter >= 100) {
-				nProgressCounter += 101;
-				nLocalProgressCounter = -1;
-			}
-		}
-
-		// Communicate to threadcall that thread is done
-		vThreadCompletionIndicator[nInitialisationThreadNumber] = true;
-
-		// Return
-		return;
-	}
-
-	// PerformExtendedLinearSearchOnMemoryThread - Thread worker for PerformExtendedLinearSearchOnMemory.
-	// Arguments: bMultiThreaded - Use multithreading or not.
-	//            nInitialisationThreadNumber - Thread number out of total thread count, which indicates the part of the array to search through for the thread.
-	//                                          If bMultiThreaded is TRUE, this must be passed with 0 or above, to nNumOfThreads - 1.
-	// Does not return any values.
-	//
-	void PerformExtendedLinearSearchOnMemoryThread(bool bMultiThreaded, unsigned int nInitialisationThreadNumber, std::atomic_ullong& nProgressCounter) 
-	{
-		// Single or multi core decider
-		unsigned int nThreadCount = nNumOfThreads;
-		if (bMultiThreaded == false) nThreadCount = 1;
-
-		if (bMultiThreaded == true && (nInitialisationThreadNumber < 0 || nInitialisationThreadNumber > nNumOfThreads - 1)) {
-			nErrorLevel = 3;
-			VerbosityDisplay("In MemoryTestEngine::PerformExtendedLinearSearchOnMemoryThread(): ERROR - Bad argument to nInitialisationThreadNumber parameter.\n");
-			vThreadCompletionIndicator[nInitialisationThreadNumber] = true;
-			return;
-		}
-
-		// Search part of memory container for thread number
-		// CPU optimisation to prevent constant division
-		uint64_t nComparisonNumber = ((nInitialisationThreadNumber + 1) * (nMemoryContainer.size() / nThreadCount));
-		// Optimisation to reduce number of operations made
-		int nLocalProgressCounter = 0;
-		for (uint64_t i = nInitialisationThreadNumber * (nMemoryContainer.size() / nThreadCount); i < nComparisonNumber && !bKillThreads; i++, nLocalProgressCounter++) 
-		{
-			// Increase progress count with 100 reiterations per increment
-			if (nLocalProgressCounter >= 100) {
-				nProgressCounter += 101;
-				nLocalProgressCounter = -1;
-			}
-
-			// Check for correct digit
-			if (nMemoryContainer[i] != i) {
-				nNumOfCurrentCheckErrors++;
-				vFailedIndexes.push_back(i);
-				nErrorLevel = 3;
-
-				// Increase progress count
-				continue;
-			}
-
-			// Calculate random number
-			uint64_t nRandomNumber = RandNum(std::numeric_limits<uint64_t>::max(), std::numeric_limits<uint64_t>::min());
-			nMemoryContainer[i] = nRandomNumber;
-
-			// Check for correct digit
-			if (nMemoryContainer[i] != nRandomNumber) {
-				nNumOfCurrentCheckErrors++;
-				vFailedIndexes.push_back(i);
-				nErrorLevel = 3;
-
-				// Increase progress count
-				continue;
-			}
-
-			// Perform operation on memory container index
-			uint64_t nRandomDivNumber = RandNum(std::numeric_limits<unsigned short int>::max(), 1); // 1 for prevention from divide by 0 exception
-			nMemoryContainer[i] /= nRandomDivNumber;
-
-			// Check for correct digit
-			if (nMemoryContainer[i] != (nRandomNumber / nRandomDivNumber)) {
-				nNumOfCurrentCheckErrors++;
-				vFailedIndexes.push_back(i);
-				nErrorLevel = 3;
-
-				// Increase progress count
-				continue;
-			}
-
-			// Reset memory container cell
-			nMemoryContainer[i] = i;
-
-			// Check for correct digit
-			if (nMemoryContainer[i] != i) {
-				nNumOfCurrentCheckErrors++;
-				vFailedIndexes.push_back(i);
-				nErrorLevel = 3;
-
-				// Increase progress count
-				continue;
-			}
-
-			// Increase progress count
-		}
-
-		// Communicate to threadcall that thread is done
-		vThreadCompletionIndicator[nInitialisationThreadNumber] = true;
-
-		// Return
-		return;
-	}
 
 public:
 
 	/* bUseTotalPhysicalCapacity - Adjusts how much memory will be reserved and checked on the host system.
-
-	If this is set to true, the memory container will reserve all the memory available on the host system.
-			 - It may cause slowdowns if there are too many programs running.
-	If this is set to false, the memory container will reserve all the currently unused available memory on the host system.
-			 - This may lead to a less accurate test when too much memory is being used by other programs at test starting time.
+	 
+	If this is set to true, the memory container will reserve all the memory available on the host system. 
+	         - It may cause slowdowns if there are too many programs running.
+	If this is set to false, the memory container will reserve all the currently unused available memory on the host system. 
+	         - This may lead to a less accurate test when too much memory is being used by other programs at test starting time.
 	*/
 	bool bUseTotalPhysicalCapacity = false;
 
@@ -427,12 +209,6 @@ public:
 		// Set keyboard termination to false
 		bKeyboardTermination = false;
 		bKillKeyboardAbortHandler = false;
-
-		// Initialise all containers and variables
-		vThreadCompletionIndicator.assign(nNumOfThreads, false);
-
-		// Reset thread variables to default
-		ResetThreads();
 
 		return;
 	}
@@ -477,7 +253,7 @@ public:
 
 		// Get elapsed seconds
 		std::chrono::duration<long double> ElapsedSeconds = end - start;
-
+		
 		// Output message
 		colour(LGRN, ConfigObjMain.sColourGlobalBack);
 		std::cout << "Memory initialisation complete.\n";
@@ -505,13 +281,10 @@ public:
 	//                               of passes desired, and unloads the memory.
 	//                             - This function very lightly checks for memory integrity both during the binary search and after it, and is more of a memory stress test.
 	// Arguments: nNumOfPasses - Number of binary search passes to perform.
-	//            bMultiThreaded - Use more than 1 thread for the test when this is TRUE.
 	// Return values: TRUE or 1 for success, FALSE or 0 for fail.
 	//
-	bool PerformBinarySearchOnMemory(uint64_t nNumOfPasses, bool bMultiThreaded)
+	bool PerformBinarySearchOnMemory(unsigned long long int nNumOfPasses)
 	{
-		unsigned int nThreadCount = nNumOfThreads;
-
 		// Initialise memory
 		if (!InitialiseMemoryContainer()) {
 			VerbosityDisplay("ERROR: In MemoryTestEngine::PerformBinarySearchOnMemory() - Memory container failed to initialise.\n" + GetLastErrorInfo() + '\n');
@@ -529,18 +302,11 @@ public:
 			return true;
 		}
 
-		if (bMultiThreaded == false) {
-			nThreadCount = 1;
-		}
-
 		// Perform binary searches using random number
 		//
 		// Depending on number of passes
 		std::cout << '\n';
-		for (uint64_t i = 0; i < nNumOfPasses; i++) 
-		{
-			// Reset thread arguments for next pass
-			ResetThreads();
+		for (unsigned long long int i = 0; i < nNumOfPasses; i++) {
 
 			// Get start time point
 			std::chrono::time_point<std::chrono::steady_clock> start = std::chrono::steady_clock::now();
@@ -551,69 +317,7 @@ public:
 			// Perform binary search and get index number
 			std::cout << "Performing binary search " << i + 1 << " on memory...\n";
 
-			// Declare and execute keyboard handler
-			std::thread KeyboardHandlerThread(&MemoryTestEngine::KeyboardAbortHandler, this);
-			
-			// Declare and execute threads
-			std::vector<std::thread> vThreads;
-			for (unsigned int j = 0; j < nThreadCount; j++) {
-				// Execute a thread
-				vThreads.push_back(std::thread(&MemoryTestEngine::BinarySearch, this, nRandNumber, bMultiThreaded, j));
-			}
-
-			// While waiting for thread execution completion
-			while (!bKeyboardTermination) {
-				unsigned int nNumOfCompletedThreads = 0;
-
-				// Check all completion indicators during thread execution
-				for (unsigned int j = 0; j < nThreadCount; j++) {
-					if (vThreadCompletionIndicator[j] == true) nNumOfCompletedThreads++;
-				}
-
-				// Check thread count
-				if (nNumOfCompletedThreads >= nThreadCount) {
-					break;
-				}
-
-				// CPU optimisation
-				std::this_thread::sleep_for(std::chrono::nanoseconds(1));
-			}
-
-			// Kill all threads
-			bKillThreads = true;
-			for (unsigned int j = 0; j < nThreadCount; j++) {
-				vThreads[j].join();
-			}
-			bKillThreads = false;
-
-			// If keyboard key was pressed
-			if (bKeyboardTermination == true) 
-			{
-				// Kill keyboard abort handler
-				bKillKeyboardAbortHandler = true;
-				KeyboardHandlerThread.join();
-				bKillKeyboardAbortHandler = false;
-				bKeyboardTermination = false;
-
-				// Output message and exit
-				colour(YLW, ConfigObjMain.sColourGlobalBack);
-				std::cout << "\n\nKeyboard key has been pressed.\nStopping Binary Search Memory Test...\n";
-				colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
-				break;
-			}
-
-			// Kill keyboard abort handler
-			bKillKeyboardAbortHandler = true;
-			KeyboardHandlerThread.join();
-			bKillKeyboardAbortHandler = false;
-			bKeyboardTermination = false;
-
-			// To prevent a bug where a line of code isn't meant to be executed at the end of MemoryTestEngine::BinarySearch()
-			if (bNumberFound == true) {
-				nErrorLevel = 0;
-				nIndexNum = nRandNumber;
-				bNumberFound = false;
-			}
+			uint64_t nIndexNum = BinarySearch(nRandNumber);
 
 			// Output message if binary search error occured
 			if (nIndexNum == 0 && nErrorLevel == 2)
@@ -630,10 +334,10 @@ public:
 			}
 
 			// Memory error check after binary
-			if (nIndexNum != nRandNumber || nErrorLevel == 4)
+			if (nIndexNum != nRandNumber || nErrorLevel == 3)
 			{
 				// Memory error found
-				nErrorLevel = 4;
+				nErrorLevel = 3;
 
 				// Notify user of memory error
 				VerbosityDisplay("In MemoryTestEngine::PerformBinarySearchOnMemory() - Memory error has been detected.\n");
@@ -665,9 +369,6 @@ public:
 			std::cout << " seconds.\nNo errors have been found throughout this pass.\n\n";
 		}
 
-		// Reset threads before exit
-		ResetThreads();
-
 		// Uninitialise memory
 		UninitialiseMemoryContainer();
 
@@ -681,11 +382,8 @@ public:
 	// Arguments: nNumOfPasses - Number of binary search passes to perform.
 	// Return values: TRUE or 1 for success, FALSE or 0 for fail.
 	//
-	bool PerformLinearSearchOnMemory(uint64_t nNumOfPasses, bool bMultiThreaded)
+	bool PerformLinearSearchOnMemory(unsigned long long int nNumOfPasses)
 	{
-		unsigned int nThreadCount = nNumOfThreads;
-		CONSOLE_SCREEN_BUFFER_INFO csbiMemTest{};
-
 		// Initialise memory
 		if (!InitialiseMemoryContainer()) {
 			VerbosityDisplay("ERROR: In MemoryTestEngine::PerformLinearSearchOnMemory() - Memory container failed to initialise.\n" + GetLastErrorInfo() + '\n');
@@ -703,97 +401,33 @@ public:
 			return true;
 		}
 
-		// Check for single threading
-		if (bMultiThreaded == false) {
-			nThreadCount = 1;
-		}
-
 		// Perform linear check search
 		uint64_t nNumOfErrorsFound = 0;
 		std::vector<uint64_t> vFailedIndexes;
-		for (uint64_t nPassIterator = 0; nPassIterator < nNumOfPasses; nPassIterator++)
+		for (unsigned long long int nPassIterator = 0; nPassIterator < nNumOfPasses; nPassIterator++)
 		{
-			// Reset all thread variables
-			ResetThreads();
-
 			// Record beginning time point
 			std::chrono::time_point<std::chrono::steady_clock> start = std::chrono::steady_clock::now();
 
 			// Notify user of check seatch start
 			std::cout << "\nStarting Linear Check Search " << nPassIterator + 1 << ".\n";
+			colour(LCYN, ConfigObjMain.sColourGlobalBack);
+			std::cout << "Number of errors found: 0";
+			colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
 
-			// Declare and execute keyboard handler
-			std::thread KeyboardHandlerThread(&MemoryTestEngine::KeyboardAbortHandler, this);
-
-
-			// Current search value count for progress meters
-			std::atomic_ullong nCurrentProgressCount = 0;
-
-			// Declare and execute threads
-			std::vector<std::thread> vThreads;
-			for (unsigned int j = 0; j < nThreadCount; j++) {
-				// Execute a thread
-				vThreads.push_back(std::thread(&MemoryTestEngine::PerformLinearSearchOnMemoryThread, this, bMultiThreaded, j, std::ref(nCurrentProgressCount)));
-			}
-
-			uint64_t nContainerSize = nMemoryContainer.size();
-			// While waiting for thread execution completion
-			while (!bKeyboardTermination) {
-				unsigned int nNumOfCompletedThreads = 0;
-
-				// Check all completion indicators during thread execution
-				for (unsigned int j = 0; j < nThreadCount; j++) {
-					if (vThreadCompletionIndicator[j] == true) nNumOfCompletedThreads++;
-				}
-
-				// Check thread count
-				if (nNumOfCompletedThreads >= nThreadCount) {
-					// Reset progress counter to 100%
-					std::cout << "Progress: ";
-					colour(LCYN, ConfigObjMain.sColourGlobalBack);
-					std::cout << "100%\r";
-					colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
-
-					break;
-				}
-
-				std::cout << "Progress: ";
-				colour(LCYN, ConfigObjMain.sColourGlobalBack);
-				std::cout << ((nCurrentProgressCount * 100) / nContainerSize) << "%\nNumber of errors found: " << nNumOfCurrentCheckErrors << "\033[1A\r";
-				colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
-
-				// CPU optimisation
-				std::this_thread::sleep_for(std::chrono::nanoseconds(1));
-			}
-
-			// Kill all threads
-			bKillThreads = true;
-			for (unsigned int j = 0; j < nThreadCount; j++) {
-				vThreads[j].join();
-			}
-			bKillThreads = false;
-
-			// If keyboard key was pressed
-			if (bKeyboardTermination == true)
+			uint64_t nNumOfCurrentCheckErrors = 0;
+			for (uint64_t i = 0; i < nMemoryContainer.size(); i++)
 			{
-				// Kill keyboard abort handler
-				bKillKeyboardAbortHandler = true;
-				KeyboardHandlerThread.join();
-				bKillKeyboardAbortHandler = false;
-				bKeyboardTermination = false;
-
-				// Output message and exit
-				colour(YLW, ConfigObjMain.sColourGlobalBack);
-				std::cout << "\n\nKeyboard key has been pressed.\nStopping Linear Search Memory Test...\n";
-				colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
-				break;
+				// Check for correct digit
+				if (nMemoryContainer[i] != i) {
+					nNumOfCurrentCheckErrors++;
+					colour(LCYN, ConfigObjMain.sColourGlobalBack);
+					std::cout << "\rNumber of errors found: " << nNumOfCurrentCheckErrors << ".";
+					colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
+					vFailedIndexes.push_back(i);
+					nErrorLevel = 3;
+				}
 			}
-
-			// Kill keyboard abort handler
-			bKillKeyboardAbortHandler = true;
-			KeyboardHandlerThread.join();
-			bKillKeyboardAbortHandler = false;
-			bKeyboardTermination = false;
 
 			// Record final time point
 			std::chrono::time_point<std::chrono::steady_clock> end = std::chrono::steady_clock::now();
@@ -846,9 +480,6 @@ public:
 			// Uninitialise memory
 			UninitialiseMemoryContainer();
 
-			// Reset all thread variables
-			ResetThreads();
-
 			return false;
 		}
 		else {
@@ -860,9 +491,6 @@ public:
 		// Uninitialise memory
 		UninitialiseMemoryContainer();
 
-		// Reset all thread variables
-		ResetThreads();
-
 		// All went well- return true
 		return true;
 	}
@@ -873,10 +501,8 @@ public:
 	// Arguments: nNumOfPasses - Number of extended linear check search passes to perform.
 	// Return values: TRUE or 1 for success, FALSE or 0 for fail.
 	//
-	bool PerformExtendedLinearSearchOnMemory(uint64_t nNumOfPasses, bool bMultiThreaded)
+	bool PerformExtendedLinearSearchOnMemory(unsigned long long int nNumOfPasses) 
 	{
-		unsigned int nThreadCount = nNumOfThreads;
-
 		// Initialise memory
 		if (!InitialiseMemoryContainer()) {
 			VerbosityDisplay("ERROR: In MemoryTestEngine::PerformExtendedLinearSearchOnMemory() - Memory container failed to initialise.\n" + GetLastErrorInfo() + '\n');
@@ -894,102 +520,87 @@ public:
 			return true;
 		}
 
-		// Check for single threading
-		if (bMultiThreaded == false) {
-			nThreadCount = 1;
-		}
-
 		// Perform linear check search
 		uint64_t nNumOfErrorsFound = 0;
 		std::vector<uint64_t> vFailedIndexes;
-		for (uint64_t nPassIterator = 0; nPassIterator < nNumOfPasses; nPassIterator++)
+		for (unsigned long long int nPassIterator = 0; nPassIterator < nNumOfPasses; nPassIterator++)
 		{
-			// Reset all thread counts
-			ResetThreads();
-
 			std::chrono::time_point<std::chrono::steady_clock> start = std::chrono::steady_clock::now();
 
 			// Notify user of check seatch start
 			std::cout << "\nStarting Extended Linear Check Search " << nPassIterator + 1 << ".\n";
+			colour(LCYN, ConfigObjMain.sColourGlobalBack);
+			std::cout << "Number of errors found: 0";
+			colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
 
-			// Declare and execute keyboard handler
-			std::thread KeyboardHandlerThread(&MemoryTestEngine::KeyboardAbortHandler, this);
-
-			// Current search value count for progress meters
-			std::atomic_ullong nCurrentProgressCount = 0;
-
-			// Declare and execute threads
-			std::vector<std::thread> vThreads;
-			for (unsigned int j = 0; j < nThreadCount; j++) {
-				// Execute a thread
-				vThreads.push_back(std::thread(&MemoryTestEngine::PerformExtendedLinearSearchOnMemoryThread, this, bMultiThreaded, j, std::ref(nCurrentProgressCount)));
-			}
-
-			uint64_t nContainerSize = nMemoryContainer.size();
-
-			// While waiting for thread execution completion
-			while (!bKeyboardTermination) {
-				unsigned int nNumOfCompletedThreads = 0;
-
-				// Check all completion indicators during thread execution
-				for (unsigned int j = 0; j < nThreadCount; j++) {
-					if (vThreadCompletionIndicator[j] == true) nNumOfCompletedThreads++;
-				}
-
-				// Check thread count
-				if (nNumOfCompletedThreads >= nThreadCount) {
-					// Reset progress counter to 100%
-					std::cout << "Progress: ";
-					colour(LCYN, ConfigObjMain.sColourGlobalBack);
-					std::cout << "100%\r";
-					colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
-
-					break;
-				}
-
-				std::cout << "Progress: ";
-				colour(LCYN, ConfigObjMain.sColourGlobalBack);
-				std::cout << ((nCurrentProgressCount * 100) / nContainerSize) << "%\nNumber of errors found: " << nNumOfCurrentCheckErrors << "\033[1A\r";
-				colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
-
-				// CPU optimisation
-				std::this_thread::sleep_for(std::chrono::nanoseconds(1));
-			}
-
-			// Kill all threads
-			bKillThreads = true;
-			for (unsigned int j = 0; j < nThreadCount; j++) {
-				vThreads[j].join();
-			}
-			bKillThreads = false;
-
-			// If keyboard key was pressed
-			if (bKeyboardTermination == true)
+			uint64_t nNumOfCurrentCheckErrors = 0;
+			for (uint64_t i = 0; i < nMemoryContainer.size(); i++)
 			{
-				// Kill keyboard abort handler
-				bKillKeyboardAbortHandler = true;
-				KeyboardHandlerThread.join();
-				bKillKeyboardAbortHandler = false;
-				bKeyboardTermination = false;
+				// Check for correct digit
+				if (nMemoryContainer[i] != i) {
+					nNumOfCurrentCheckErrors++;
+					colour(LCYN, ConfigObjMain.sColourGlobalBack);
+					std::cout << "\rNumber of errors found: " << nNumOfCurrentCheckErrors << ".";
+					colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
+					vFailedIndexes.push_back(i);
+					nErrorLevel = 3;
 
-				// Output message and exit
-				colour(YLW, ConfigObjMain.sColourGlobalBack);
-				std::cout << "\n\nKeyboard key has been pressed.\nStopping Extended Linear Search Memory Test...\n";
-				colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
-				break;
+					continue;
+				}
+
+				// Calculate random number
+				uint64_t nRandomNumber = RandNum(std::numeric_limits<uint64_t>::max(), std::numeric_limits<uint64_t>::min());
+				nMemoryContainer[i] = nRandomNumber;
+
+				// Check for correct digit
+				if (nMemoryContainer[i] != nRandomNumber) {
+					nNumOfCurrentCheckErrors++;
+					colour(LCYN, ConfigObjMain.sColourGlobalBack);
+					std::cout << "\rNumber of errors found: " << nNumOfCurrentCheckErrors << ".";
+					colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
+					vFailedIndexes.push_back(i);
+					nErrorLevel = 3;
+
+					continue;
+				}
+
+				// Perform operation on memory container index
+				uint64_t nRandomDivNumber = RandNum(std::numeric_limits<unsigned short int>::max(), 1); // 1 for prevention from divide by 0 exception
+				nMemoryContainer[i] /= nRandomDivNumber;
+
+				// Check for correct digit
+				if (nMemoryContainer[i] != (nRandomNumber / nRandomDivNumber)) {
+					nNumOfCurrentCheckErrors++;
+					colour(LCYN, ConfigObjMain.sColourGlobalBack);
+					std::cout << "\rNumber of errors found: " << nNumOfCurrentCheckErrors << ".";
+					colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
+					vFailedIndexes.push_back(i);
+					nErrorLevel = 3;
+
+					continue;
+				}
+
+				// Reset memory container cell
+				nMemoryContainer[i] = i;
+
+				// Check for correct digit
+				if (nMemoryContainer[i] != i) {
+					nNumOfCurrentCheckErrors++;
+					colour(LCYN, ConfigObjMain.sColourGlobalBack);
+					std::cout << "\rNumber of errors found: " << nNumOfCurrentCheckErrors << ".";
+					colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
+					vFailedIndexes.push_back(i);
+					nErrorLevel = 3;
+
+					continue;
+				}
 			}
-
-			// Kill keyboard abort handler
-			bKillKeyboardAbortHandler = true;
-			KeyboardHandlerThread.join();
-			bKillKeyboardAbortHandler = false;
-			bKeyboardTermination = false;
 
 			// Record final time point
 			std::chrono::time_point<std::chrono::steady_clock> end = std::chrono::steady_clock::now();
 
 			// Get elapsed seconds
-			std::chrono::duration<long double> ElapsedSeconds = end - start;
+			std::chrono::duration<long double, std::nano> ElapsedSeconds = end - start;
 
 			colour(LGRN, ConfigObjMain.sColourGlobalBack);
 			std::cout << "\n\nExtended Linear Check Search " << nPassIterator + 1 << " complete.";
@@ -1033,9 +644,6 @@ public:
 			// Memory error found
 			nErrorLevel = 3;
 
-			// Reset all thread counts
-			ResetThreads();
-
 			// Uninitialise memory
 			UninitialiseMemoryContainer();
 
@@ -1050,12 +658,10 @@ public:
 		// Uninitialise memory
 		UninitialiseMemoryContainer();
 
-		// Reset all thread counts
-		ResetThreads();
-
 		// All went well- return true
 		return true;
 	}
+
 
 	/* Error functions */
 
@@ -1085,9 +691,6 @@ public:
 			return "An unknown binary search error occured, where the random search value wasn't found.";
 			break;
 		case 3:
-			return "A bad initialisation thread number was passed into a thread worker.";
-			break;
-		case 4:
 			return "One or more memory errors were detected.";
 			break;
 		default:

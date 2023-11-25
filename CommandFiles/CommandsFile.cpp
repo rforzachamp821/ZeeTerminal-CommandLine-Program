@@ -1,57 +1,95 @@
+// External function definitions
+void					ResetColour();
+std::string				wordWrap(std::string, long long int, long long int);
+void					CentreColouredText(std::string, short int);
+void					colourSubheading();
+bool					isNumberld(const std::string);
+bool					isNumberll(const std::string);
+bool					isNumberl(const std::string);
+bool					isNumberi(const std::string);
+bool					isNumberull(const std::string);
+bool					isNumberul(const std::string);
+long double				NumInputld(std::string);
+long long int			NumInputll(std::string);
+long int				NumInputl(std::string);
+int						NumInputi(std::string);
+bool					SetWindowTitle(std::string);
+void					slowcharCentredFn(bool, std::string);
+void					slowcharfn(bool, std::string);
+void					SlowCharColourful(std::string, bool);
+std::string				CentreText(std::string);
+void					SetCursorAttributes();
+void					RandomColourOutput(std::string);
+long double				RandNum(long double, long double);
+void					UserErrorDisplay(std::string);
+uint64_t				PositiveNumInputull(std::string);
+unsigned long int		PositiveNumInputul(std::string);
+
 #include "Settings.cpp"
 #include "CPUStress.cpp"
 #include "CommandFileAssets.cpp"
 #include "CalculationAlgorithm.cpp"
 
-// External function definitions
-void		ResetColour();
-std::string wordWrap(std::string);
-void		CentreColouredText(std::string, short int);
-void		colourSubheading();
-bool		isNumber(const std::string);
-bool		SetWindowTitle(std::string);
-void		slowcharCentredFn(bool, std::string);
-void		slowcharfn(bool, std::string);
-void		SlowCharColourful(std::string, bool);
-std::string CentreText(std::string);
-void		SetCursorAttributes();
-void		RandomColourOutput(std::string);
-long double RandNum(long double, long double);
-void		UserErrorDisplay(std::string);
 
 // External variable definitions
 extern std::string				sCommandInputRAW;
-extern std::string				sStringCommandArgs[128]; // Made global because you can't pass an std::string array into a function, therefore Commands() wouldn't work properly
-									                     // on multi-argument commands.
+extern std::string				sStringOptionCommandArgs[nArgArraySize]; // Made global because you can't pass an std::string array into a function, therefore Commands() wouldn't work properly
+                                                                         // on multi-argument commands.
+extern std::string				sStringDataCommandArgs[nArgArraySize]; // Made global because you can't pass an std::string array into a function, therefore Commands() wouldn't work properly
+                                                                       // on multi-argument commands.
 extern RGBColourPresetSystem	RGBPreset[3];
 extern ConfigFileSystem			ConfigObjMain;
 extern NotesSystem				NotesMain;
 extern bool						bAnsiVTSequences;
-extern const int				nArgArraySize;
-extern unsigned long long int	nNumOfInputtedCommands;
-extern unsigned long long int	nNumOfSuccessfulInputtedCommands;
+
+extern uint64_t					nNumOfInputtedCommands;
+extern uint64_t					nNumOfSuccessfulInputtedCommands;
 
 void Commands(const std::string, char*, const std::string);
-void help();
+void help(bool);
 
 
 // Tutorial function
 void Tutorial() {
 	std::string sInput;
 	cls();
+
+	CentreColouredText(" ___TUTORIAL___ ", 1);
+	std::cout << '\n';
+	CentreColouredText(" Understand how this terminal operates with this tutorial. ", 2);
+	std::cout << "\n\n";
+
+	sleep(750);
 	slowcolourfn(LBLU, ConfigObjMain.sColourGlobalBack, "Using this terminal is very straightforward, and all terminals are similar in some way.");
-	slowcolourfn(GRN, ConfigObjMain.sColourGlobalBack, "\nFirstly, let's begin with the normal terminal screen:\n\n");
-	slowcolourfn(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack, "Command: > \n\n");
-	slowcolourfn("255;165;0", ConfigObjMain.sColourGlobalBack, "The 'Help' command tells us what commands are in this terminal.\n");
+	sleep(500);
+	slowcolourfn(GRN, ConfigObjMain.sColourGlobalBack, "\nFirstly, let's begin with the normal terminal screen. This is what it would look like before typing a command:\n\n");
+	sleep(150);
+	std::cout << "Command: > \n\n";
+	sleep(1000);
+	slowcolourfn(YLW, ConfigObjMain.sColourGlobalBack, "The 'Help' command tells us what commands are in this terminal.\n");
+	sleep(150);
 	
 	// Input 'help' to continue
 	while (true) {
-		slowcolourfn(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack, "Type in \"Help\" to see what happens: > ");
+		slowcolourfn(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack, "Type in \"Help\" to execute this command: > ");
 		sInput = StrInput("");
-		if (sInput == "Help" || sInput == "help") {
+
+		// Change all input characters to lowercase and remove spaces
+		for (int i = 0; i < sInput.length(); i++) {
+			if (sInput[i] == ' ') {
+				std::cout << sInput.erase(i, 1) << '\n';
+				if (i == 0) i = -1; // as counting from start of string shouldn't start on the spaces, and -1 to counteract i++
+				else i--;
+
+				continue;
+			}
+			else sInput[i] = std::tolower(sInput[i]);
+		}
+
+		if (sInput == "help") {
 			bool bPreviousHelpMsg = ConfigObjMain.bDisplayDirections;
 			ConfigObjMain.bDisplayDirections = true; // only temporary; gets put back to normal next 2 lines
-			help();
+			help(true);
 			ConfigObjMain.bDisplayDirections = bPreviousHelpMsg;
 			break;
 		}
@@ -60,10 +98,22 @@ void Tutorial() {
 			std::cout << "Please try again.\n";
 		}
 	}
-	slowcharfn(true, "\nThat previous command also taught you how to use the ScreenNavigate engine.\nYou can move left and right between 'screens' to scroll through information that is in the command.\n");
+	slowcharfn(false, "\nThat previous command also taught you how to use the ScreenNavigate engine.\nYou can move left and right between 'screens' using the the ");
+	slowcolourfn(LCYN, ConfigObjMain.sColourGlobalBack, "A, D and left/right arrow keys");
+	slowcharfn(true, ", to look through any information provided.\n");
 	
 	// OptionSelect Engine Tutorial
+	sleep(1000);
 	slowcolourfn(GRN, ConfigObjMain.sColourGlobalBack, "\nNow is the next step, the OptionSelect engine.\nThis will teach you how to select options in this terminal.\n");
+	sleep(500);
+	slowcharfn(true, "\nYou will be given a set of options each time this engine is used.");
+	sleep(500);
+	slowcolourfn(LCYN, ConfigObjMain.sColourGlobalBack, "To select an option, you will have to use the ");
+	slowcolourfn(GRN, ConfigObjMain.sColourGlobalBack, "W key/up-arrow key");
+	slowcolourfn(LCYN, ConfigObjMain.sColourGlobalBack, " to move the index up, or the ");
+	slowcolourfn(GRN, ConfigObjMain.sColourGlobalBack, "S key/down-arrow key");
+	slowcolourfn(LCYN, ConfigObjMain.sColourGlobalBack, " to move the index down.\n");
+	sleep(700);
 	OptionSelectEngine oseTutorial;
 	oseTutorial.nSizeOfOptions = 3;
 	std::string sOptions[] = {
@@ -72,6 +122,7 @@ void Tutorial() {
 		"Option 3"
 	};
 	oseTutorial.sOptions = sOptions;
+	oseTutorial.SetDirectionsText("Press the 'W' key or up arrow key to move up.\nPress the 'S' key or down arrow key to move down.\nPress ENTER to continue with selection, or ESC to exit the whole tutorial completely.");
 
 	bool bPreviousHelpMsg = ConfigObjMain.bDisplayDirections;
 	ConfigObjMain.bDisplayDirections = true; // only temporary; gets put back to normal afterwards
@@ -82,20 +133,56 @@ void Tutorial() {
 		nOption1 = oseTutorial.OptionSelect("Please select Option 1 from the set of options:", "___OPTIONSELECT TUTORIAL___");
 		switch (nOption1) {
 		case 1:
-			colour(LGRN, ConfigObjMain.sColourGlobalBack);
-			std::cout << "That is correct!\n";
-			colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
+			slowcolourfn(LGRN, ConfigObjMain.sColourGlobalBack, "\nThat is correct!\n\n");
 			break;
 		case 2:
 			colour(RED, ConfigObjMain.sColourGlobalBack);
-			std::cout << "Incorrect. Please try again.\n";
+			std::cout << "\nIncorrect. Look carefully for Option 1, and try again.\n";
 			colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
+			sleep(500);
 			break;
 		case 3:
 			colour(RED, ConfigObjMain.sColourGlobalBack);
-			std::cout << "Incorrect. Please try again.\n";
+			std::cout << "\nIncorrect. Look carefully for Option 1, and try again.\n";
+			colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
+			sleep(500);
+			break;
+		case -1:
+			// Put help messages setting back to original value
+			ConfigObjMain.bDisplayDirections = bPreviousHelpMsg;
+			Exiting();
+
+			return;
+		default:
+			colour(RED, ConfigObjMain.sColourGlobalBack);
+			std::cout << "An unknown error occured. Please try again.\n";
 			colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
 			break;
+		}
+	}
+
+	sleep(780);
+	// Start option 2
+	int nOption2 = 0;
+	while (nOption2 != 2) {
+		nOption2 = oseTutorial.OptionSelect("Please select Option 2 from the set of options:", "___OPTIONSELECT TUTORIAL___");
+		switch (nOption2) {
+		case 1:
+			colour(RED, ConfigObjMain.sColourGlobalBack);
+			std::cout << "\nIncorrect. Look carefully for Option 2, and try again.\n";
+			colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
+			sleep(500);
+			break;
+		case 2:
+			slowcolourfn(LGRN, ConfigObjMain.sColourGlobalBack, "\nThat is correct!!\n\n");
+			break;
+		case 3:
+			colour(RED, ConfigObjMain.sColourGlobalBack);
+			std::cout << "\nIncorrect. Look carefully for Option 2, and try again.\n";
+			colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
+			sleep(500);
+			break;
+
 		case -1:
 			// Put help messages setting back to original value
 			ConfigObjMain.bDisplayDirections = bPreviousHelpMsg;
@@ -111,58 +198,25 @@ void Tutorial() {
 	}
 
 	// Start option 3
+	sleep(780);
 	int nOption3 = 0;
 	while (nOption3 != 3) {
 		nOption3 = oseTutorial.OptionSelect("Please select Option 3 from the set of options:", "___OPTIONSELECT TUTORIAL___");
 		switch (nOption3) {
 		case 1:
 			colour(RED, ConfigObjMain.sColourGlobalBack);
-			std::cout << "Incorrect. Please try again.\n";
+			std::cout << "\nIncorrect. Look carefully for Option 3, and try again.\n";
 			colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
+			sleep(500);
 			break;
 		case 2:
 			colour(RED, ConfigObjMain.sColourGlobalBack);
-			std::cout << "Incorrect. Please try again.\n";
+			std::cout << "\nIncorrect. Look carefully for Option 3, and try again.\n";
 			colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
+			sleep(500);
 			break;
 		case 3:
-			colour(LGRN, ConfigObjMain.sColourGlobalBack);
-			std::cout << "That is correct!!\n";
-			colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
-			break;
-		case -1:
-			// Put help messages setting back to original value
-			ConfigObjMain.bDisplayDirections = bPreviousHelpMsg;
-			Exiting();
-
-			return;
-		default:
-			colour(RED, ConfigObjMain.sColourGlobalBack);
-			std::cout << "An unknown error occured. Please try again.\n";
-			colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
-			break;
-		}
-	}
-
-	// Start option 2
-	int nOption2 = 0;
-	while (nOption2 != 2) {
-		nOption2 = oseTutorial.OptionSelect("Please select Option 2 from the set of options:", "___OPTIONSELECT TUTORIAL___");
-		switch (nOption2) {
-		case 1:
-			colour(RED, ConfigObjMain.sColourGlobalBack);
-			std::cout << "Incorrect. Please try again.\n";
-			colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
-			break;
-		case 2:
-			colour(LGRN, ConfigObjMain.sColourGlobalBack);
-			std::cout << "That is correct!!!\n";
-			colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
-			break;
-		case 3:
-			colour(RED, ConfigObjMain.sColourGlobalBack);
-			std::cout << "Incorrect. Please try again.\n";
-			colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
+			slowcolourfn(LGRN, ConfigObjMain.sColourGlobalBack, "\nThat is correct!!!\n\n");
 			break;
 		case -1:
 			// Put help messages setting back to original value
@@ -181,41 +235,45 @@ void Tutorial() {
 	ConfigObjMain.bDisplayDirections = bPreviousHelpMsg;
 
 	// Yes/No prompt tutorial
-	slowcolourfn(GRN, ConfigObjMain.sColourGlobalBack, "OptionSelectEngine tutorial finished, now for the final tutorial: the Yes/No prompt.\n\n");
-	slowcharfn(true, "Yes/No prompts are really important, as they manage the most important terminal functions.");
-	slowcolourfn("255;165;0", ConfigObjMain.sColourGlobalBack, "\nThey require you to input the letter 'y' (for yes) or the letter 'n' (for no).\n");
-	slowcharfn(true, "\nHere is a yes/no prompt. Answer 'y' for this:\n");
+	sleep(750);
+	slowcolourfn(GRN, ConfigObjMain.sColourGlobalBack, "\nNow for the final tutorial: the Yes/No prompt.\n\n");
+	sleep(500);
+	slowcharfn(true, "Yes/No prompts are incredibly important, as they manage the most important terminal functions.");
+	sleep(500);
+	slowcolourfn(LCYN, ConfigObjMain.sColourGlobalBack, "\nThey require you to input the letter 'y' (for yes) or the letter 'n' (for no).\n");
+	sleep(500);
+	slowcolourfn(YLW, ConfigObjMain.sColourGlobalBack, "\nHere is a yes/no prompt. Answer 'y' for this:\n\n");
 
 	// The yes prompt
 	bool bInput = false;
 	while (bInput != true) {
 		bInput = YesNo("Is this program called ZeeTerminal? [y/n] > ");
 		if (bInput == true) {
-			colour(LGRN, ConfigObjMain.sColourGlobalBack);
-			std::cout << "Well done!\n";
-			colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
+			slowcolourfn(LGRN, ConfigObjMain.sColourGlobalBack, "Well done!\n\n");
 			break;
 		}
 		else {
 			colour(RED, ConfigObjMain.sColourGlobalBack);
-			std::cout << "Incorrect input. Please try again.\n";
+			std::cout << "Incorrect input. Try again by inputting 'y' (for yes).\n\n";
 			colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
 		}
 	}
 
 	// The no prompt
-	slowcharfn(true, "Here is another yes/no prompt. Answer 'n' for this:\n");
+	slowcolourfn(YLW, ConfigObjMain.sColourGlobalBack, "Here is another yes/no prompt. Answer 'n' for this:\n\n");
 	while (bInput != false) {
-		bInput = YesNo("Is this program called ZeeTerminal? [y/n] > ");
+		bInput = YesNo("Are you asleep right now? [y/n] > ");
 		if (bInput == false) {
+			slowcolourfn(LGRN, ConfigObjMain.sColourGlobalBack, "Well done!\n");
+			sleep(500);
 			colour(LGRN, ConfigObjMain.sColourGlobalBack);
-			std::cout << "Well done!\nCongratulations, you have finished the tutorial!\n";
+			std::cout << "\nCongratulations, you have finished the tutorial!\n";
 			colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
 			break;
 		}
 		else {
 			colour(RED, ConfigObjMain.sColourGlobalBack);
-			std::cout << "Incorrect input. Please try again.\n";
+			std::cout << "Incorrect input. Try again by inputting 'n' (for no).\n\n";
 			colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
 		}
 	}
@@ -275,7 +333,7 @@ void ColourForeground(int nChoice = 0) {
 		}
 
 		colour(YLW, ConfigObjMain.sColourGlobalBack);
-		std::cout << '\n' << wordWrap("Warning: Although supported program-wide, RGB is still a new and possibly unstable colour method for ZeeTerminal. Be prepared for bugs and issues.")
+		std::cout << wordWrap("\nWarning: Although supported program-wide, RGB is still a new and possibly unstable colour method for ZeeTerminal. Be prepared for bugs and issues.")
 			<< std::endl;
 		colour(LCYN, ConfigObjMain.sColourGlobalBack);
 		std::cout << wordWrap("Type in a negative number to exit.") << "\n\n";
@@ -284,7 +342,7 @@ void ColourForeground(int nChoice = 0) {
 
 		// Red value
 		while (true) {
-			nRGBForegroundColour[0] = NumInput("Please type in Red value: > ");
+			nRGBForegroundColour[0] = NumInputi("Please type in Red value: > ");
 			if (nRGBForegroundColour[0] > 255) {
 				colour(YLW, ConfigObjMain.sColourGlobalBack);
 				std::cout << "You cannot use numbers above 255.\nPlease try again.\n";
@@ -301,7 +359,7 @@ void ColourForeground(int nChoice = 0) {
 
 		// Green value
 		while (true) {
-			nRGBForegroundColour[1] = NumInput("Please type in Green value: > ");
+			nRGBForegroundColour[1] = NumInputi("Please type in Green value: > ");
 			if (nRGBForegroundColour[1] > 255) {
 				colour(YLW, ConfigObjMain.sColourGlobalBack);
 				std::cout << "You cannot use numbers above 255.\nPlease try again.\n";
@@ -317,7 +375,7 @@ void ColourForeground(int nChoice = 0) {
 
 		// Blue value
 		while (true) {
-			nRGBForegroundColour[2] = NumInput("Please type in Blue value: > ");
+			nRGBForegroundColour[2] = NumInputi("Please type in Blue value: > ");
 			if (nRGBForegroundColour[2] > 255) {
 				colour(YLW, ConfigObjMain.sColourGlobalBack);
 				std::cout << "You cannot use numbers above 255.\nPlease try again.\n";
@@ -421,7 +479,7 @@ void ColourBackground(int nChoice = 0) {
 		}
 
 		colour(YLW, ConfigObjMain.sColourGlobalBack);
-		std::cout << '\n' << wordWrap("Warning: Although supported program-wide, RGB is still a new and possibly unstable colour method for ZeeTerminal. Be prepared for bugs and issues.")
+		std::cout << wordWrap("\nWarning: Although supported program-wide, RGB is still a new and possibly unstable colour method for ZeeTerminal. Be prepared for bugs and issues.")
 			<< std::endl;
 		colour(LCYN, ConfigObjMain.sColourGlobalBack);
 		std::cout << wordWrap("Type in a negative number to exit.") << "\n\n";
@@ -430,7 +488,7 @@ void ColourBackground(int nChoice = 0) {
 
 		// Red value
 		while (true) {
-			nRGBBackgroundColour[0] = NumInput("Please type in Red value: > ");
+			nRGBBackgroundColour[0] = NumInputi("Please type in Red value: > ");
 			if (nRGBBackgroundColour[0] > 255) {
 				colour(YLW, ConfigObjMain.sColourGlobalBack);
 				std::cout << "You cannot use numbers above 255.\nPlease try again.\n";
@@ -446,7 +504,7 @@ void ColourBackground(int nChoice = 0) {
 
 		// Green value
 		while (true) {
-			nRGBBackgroundColour[1] = NumInput("Please type in Green value: > ");
+			nRGBBackgroundColour[1] = NumInputi("Please type in Green value: > ");
 			if (nRGBBackgroundColour[1] > 255) {
 				colour(YLW, ConfigObjMain.sColourGlobalBack);
 				std::cout << "You cannot use numbers above 255.\nPlease try again.\n";
@@ -462,7 +520,7 @@ void ColourBackground(int nChoice = 0) {
 
 		// Blue value
 		while (true) {
-			nRGBBackgroundColour[2] = NumInput("Please type in Blue value: > ");
+			nRGBBackgroundColour[2] = NumInputi("Please type in Blue value: > ");
 			if (nRGBBackgroundColour[2] > 255) {
 				colour(YLW, ConfigObjMain.sColourGlobalBack);
 				std::cout << "You cannot use numbers above 255.\nPlease try again.\n";
@@ -533,7 +591,7 @@ void RGBColourPresets() {
 		int nOption = oseRGBPresets.OptionSelect("Please select what you want to do with Custom RGB Presets:", " ___CUSTOM RGB PRESETS___ ");
 
 		// Load presets
-		if (nOption == 1) 
+		if (nOption == 1)
 		{
 			std::string sOptions[] = {
 				"Preset Slot 1 (" + RGBPreset[0].sPresetName + ")",
@@ -546,6 +604,22 @@ void RGBColourPresets() {
 			nOption = oseRGBPresets.OptionSelect("Please select which option you want to load:", " ___LOAD CUSTOM PRESET___ ");
 			if (nOption == -1) {
 				Exiting();
+				continue;
+			}
+
+			if (RGBPreset[nOption - 1].CheckIfAnsiPreset() != bAnsiVTSequences)
+			{
+				if (RGBPreset[nOption - 1].CheckIfAnsiPreset() == true) {
+					colour(YLW, ConfigObjMain.sColourGlobalBack);
+					std::cout << wordWrap("Warning: You cannot set ANSI RGB colour presets to an environment using WIN32 colours. Setting preset terminated.\n");
+					colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
+				}
+				else if (RGBPreset[nOption - 1].CheckIfAnsiPreset() == false) {
+					colour(YLW, ConfigObjMain.sColourGlobalBack);
+					std::cout << wordWrap("Warning: You cannot set WIN32 colour presets to an environment using ANSI RGB colours. Setting preset terminated.\n");
+					colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
+				}
+
 				continue;
 			}
 
@@ -668,23 +742,32 @@ void RGBColourPresets() {
 }
 
 // A function that displays all help info for the terminal.
-void help() {
+// Also has tutorial directions text support.
+//
+void help(bool bFromTutorial) {
 	ScreenNavigateEngine sneHelp;
 
 	sneHelp.nSizeOfScreens = 4;
 	std::string sScreens[] =
 	{
-		"___LIST OF COMMANDS___\n\n[1] Help\n[2] Exit\n[3] Tutorial\n[4] DevTools\n[5] CPUStress\n[6] Colour\n[7] Settings\n[8] Title\n[9] Date\n[10] ColourNumbers\n[11] MediaPlayer\n[12] AudioPlayer\n[13] TTS\n[14] Stopwatch\n[15] Read\n[16] Timer\n[17] Beep\n[18] Copy\n[19] MessageBox\n[20] TextInfo\n[21] ConfigAction\n[22] BeepSounds\n[23] RickRoll\n[24] ShellExecute\n[25] Hacker\n[26] Calculator\n[27] Logoff\n[28] Shutdown\n[29] Reboot (or Restart)\n[30] Hibernate\n[31] ResetExpl\n[32] MemTest\n[33] RandCol\n[34] Pause\n[35] CommandNum\n[36] SlowChar\n[37] ReverseText\n[38] Notes\n\nMore will be added soon!\n",
+		"___LIST OF COMMANDS___\n\nTo see more about a command, type in \"<command> -h\". This will work for all commands, except: echo and title.\n\n[1] Help\n[2] Exit\n[3] Tutorial\n[4] Echo\n[5] CLS\n[6] DevTools\n[7] CPUStress\n[8] Colour\n[9] Settings\n[10] Title\n[11] Date\n[12] ColourNumbers\n[13] MediaPlayer\n[14] AudioPlayer\n[15] TTS\n[16] Stopwatch\n[17] Read\n[18] Timer\n[19] Beep\n[20] Copy\n[21] MessageBox\n[22] TextInfo\n[23] ConfigAction\n[24] BeepSounds\n[25] RickRoll\n[26] ShellExecute\n[27] Hacker\n[28] Calculator\n[29] Logoff\n[30] Shutdown\n[31] Reboot (or Restart)\n[32] Hibernate\n[33] ResetExpl\n[34] MemTest\n[35] RandCol\n[36] Pause\n[37] CommandNum\n[38] SlowChar\n[39] ReverseText\n[40] Notes\n\nMore will be added soon!\n",
 
 		"___FREQUENTLY ASKED QUESTIONS___\n\n"
 		"1) I can't see the terminal text. How can I zoom in?\n  1a) You can zoom in, of course. Press and hold the Ctrl button and scroll with the mouse to your desired text size.\n"
-		"\n\n2) The error messages shown aren't detailed enough. How do I get better-quality error messages?\n  2a) To get better quality error messages, just enable the Verbosity Messages setting in the Settings command.\n",
+		"\n\n2) The error messages shown aren't detailed enough. How do I get better-quality error messages?\n  2a) To get better quality error messages, just enable the Verbosity Messages setting in the Settings command.\n"
+		"\n\n3) I'm using the Windows 7 terminal. How do I scroll up and down in the terminal without using the mouse?\n  3a) To scroll up and down with the mouse, press Alt + Space and then the keys 'E' and 'L', and then scroll with the up/down arrow keys. Use the PageUp/PageDown keys to scroll full pages in the terminal.\n",
 
-		"___ABOUT THIS PROGRAM___\n\nThis is the ZeeTerminal Program, Build " + std::string(ZT_VERSION) + ".\n" +
+		"___ABOUT THIS PROGRAM___\n\nThis is the ZeeTerminal Commandline Program, Build " + std::string(ZT_VERSION) + ".\n" +
 		"This is an early alpha build of ZeeTerminal, with an entirely new engine and components.\nThis program is made in C++, with a few very small parts of C." +
 		"\n\nThis program uses the DirectShow API in the MediaPlayer command, which is licensed by Microsoft Corporation. (c) Microsoft Corporation.\n\n" +
 		"This program uses the BASS API in the AudioPlayer command, which is licensed by Un4Seen Developments. (c) Un4seen Developments.\n\n" +
-		"\n(c) Ryan Zorkot, 2023. ZeeTerminal is licensed under the MIT License.\n\n",
+		"\n(c) Ryan Zorkot, 2023. ZeeTerminal is licensed under the MIT License. The license and credits can be viewed on Page 4.\n\n"
+		"  _____        _____                   _             _ \n"
+		" |__  /___  __|_   _|__ _ __ _ __ ___ (_)_ __   __ _| |\n"
+		"   / // _ \\/ _ \\| |/ _ \\ '__| '_ \\` _ \\| | '_ \\ / _\\` |\n"
+		"  / /|  __/  __/| |  __/ |  | | | | | | | | | | (_| | |\n"
+		" /____\\___|\\___||_|\\___|_|  |_| |_| |_|_|_| |_|\\__,_|_|\n"
+		"                                                       ",
 
 		"___LICENSE AND CREDITS___\n\n"
 		"Massive thank-you to my dad, Hazem Zorkot, for assisting with this project, including with the logo design, name, high-level component ideas, and lots of heads-up messages along the way.\n\n"
@@ -699,6 +782,11 @@ void help() {
 	};
 
 	sneHelp.sScreens = sScreens;
+
+	if (bFromTutorial) {
+		// Set custom direction text when coming from tutorial
+		sneHelp.SetDirectionsText("Press the 'A' key or left arrow key to move left.\nPress the 'D' key or right arrow key to move right.\nPress ESC to exit the Help command and continue with the tutorial.");
+	}
 
 	// Call sneHelp.ScreenNavigate for screen strings set.
 	sneHelp.ScreenNavigate(" ___HELP___ ");
@@ -757,11 +845,12 @@ void DevTools(short int nToolNum) {
 		colourSubheading();
 		slowcharCentredFn(false, "This is a tester for the 'Beep' function in Windows.");
 		colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
-		std::cout << NOULINE_STR << std::endl << wordWrap("ZeeTerminal will output a pitch of sound that increases by 100hz every second, until 22000hz.") << "\n\n";
+		std::cout << NOULINE_STR << std::endl;
+		std::cout << wordWrap("ZeeTerminal will output a pitch of sound that increases by 100hz every second, until 22000hz.") << "\n\n";
 		colour(MAG, LYLW);
 		std::cout << wordWrap("You can press any key to exit in the middle of the test.");
 		colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
-		std::cout << '\n' << wordWrap("Press any key to begin the test, or ESC to exit...\n");
+		std::cout << wordWrap("\nPress any key to begin the test, or ESC to exit...\n");
 		char cKey = _getch();
 		if (cKey == 27) {
 			Exiting();
@@ -836,6 +925,10 @@ void DevTools(short int nToolNum) {
 			return;
 		}
 
+		colour(YLW, ConfigObjMain.sColourGlobalBack);
+		std::cout << "\nStarting custom OptionSelect session...\n";
+		colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
+
 		// Create an OptionSelectEngine object and assign accumulated data to members
 		OptionSelectEngine oseTester;
 		oseTester.nSizeOfOptions = sOptions.size();
@@ -887,6 +980,10 @@ void DevTools(short int nToolNum) {
 			return;
 		}
 
+		colour(YLW, ConfigObjMain.sColourGlobalBack);
+		std::cout << "\nStarting custom ScreenNavigate session...\n";
+		colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
+
 		// Create a ScreenNavigateEngine object and assign accumulated data to members
 		ScreenNavigateEngine sneTester;
 		sneTester.nSizeOfScreens = sScreens.size();
@@ -910,14 +1007,14 @@ void DevTools(short int nToolNum) {
 		slowcharCentredFn(false, "This allows you to test the Table Engine that is in this program.");
 		colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
 
-		std::cout << NOULINE_STR << "\n\n" << wordWrap("This engine's main purpose is for making tables.") << "\n";
+		std::cout << NOULINE_STR << wordWrap("\n\nThis engine's main purpose is for making tables.") << "\n";
 		// Get rows and columns from user for next for loop
-		int nNumOfRows = NumInput("\nPlease input how many rows you would like to create (0 to exit): > ");
+		uint64_t nNumOfRows = PositiveNumInputull("\nPlease input how many rows you would like to create (0 to exit): > ");
 		if (nNumOfRows <= 0) {
 			Exiting();
 			return;
 		}
-		int nNumOfColumns = NumInput("\nPlease input now many columns you would like to create (0 to exit): > ");
+		uint64_t nNumOfColumns = PositiveNumInputull("\nPlease input now many columns you would like to create (0 to exit): > ");
 		if (nNumOfColumns <= 0) {
 			Exiting();
 			return;
@@ -925,10 +1022,10 @@ void DevTools(short int nToolNum) {
 
 		// Input rows
 		TableEngine teTester;
-		for (int i = 0; i < nNumOfRows; i++) {
+		for (uint64_t i = 0; i < nNumOfRows; i++) {
 			std::vector<std::string> nRow;
 			// Take all members of 1 row from user
-			for (int j = 0; j < nNumOfColumns; j++) {
+			for (uint64_t j = 0; j < nNumOfColumns; j++) {
 				nRow.push_back(StrInput("Please input table member " + std::to_string(j + 1) + "/" + std::to_string(nNumOfColumns) + " for row " + std::to_string(i + 1) + "/" + std::to_string(nNumOfRows) + " (input 0 to exit): > "));
 				if (nRow[j] == "0") {
 					Exiting();
@@ -949,6 +1046,10 @@ void DevTools(short int nToolNum) {
 			// Send in another row using TableEngine::addRow()
 			teTester.addRow(nRow);
 		}
+
+		colour(YLW, ConfigObjMain.sColourGlobalBack);
+		std::cout << "\nStarting custom OptionSelect session...\n";
+		colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
 
 		// Finally, output table using TableEngine::OutputTable()
 		teTester.OutputTable();
@@ -973,7 +1074,7 @@ void DevTools(short int nToolNum) {
 		colour(MAG, LYLW);
 		std::cout << wordWrap("You can press any key in the middle of the stopwatch run to stop it.");
 		colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
-		std::cout << "\n\n" << wordWrap("Press any key to start the stopwatch, or ESC to exit...");
+		std::cout << wordWrap("\n\nPress any key to start the stopwatch, or ESC to exit...");
 		char cKey = _getch();
 		if (cKey == 27) {
 			Exiting();
@@ -1021,9 +1122,9 @@ void DevTools(short int nToolNum) {
 		slowcharCentredFn(false, "This is a sandbox-style testing enviroment for ANSI (VT) escape codes.");
 		colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
 
-		std::cout << NOULINE_STR << "\n\n" << wordWrap("You can test any ANSI escape code here. Everything will be reset after exiting the sandbox (by typing in 0 or \"zero\").");
+		std::cout << NOULINE_STR << wordWrap("\n\nYou can test any ANSI escape code here. Everything will be reset after exiting the sandbox (by typing in 0 or \"zero\").");
 		colour(LBLU, ConfigObjMain.sColourGlobalBack);
-		std::cout << '\n' << wordWrap("You can get a list of ANSI VT escape codes here: https://learn.microsoft.com/en-us/windows/console/console-virtual-terminal-sequences") << "\n\n";
+		std::cout << wordWrap("\nYou can get a list of ANSI VT escape codes here: https://learn.microsoft.com/en-us/windows/console/console-virtual-terminal-sequences") << "\n\n";
 		colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
 
 		while (true) {
@@ -1049,11 +1150,11 @@ void DevTools(short int nToolNum) {
 		colourSubheading();
 		slowcharCentredFn(false, "This is a sound test similar to the Beep Sound Test, but by interacting directly with drivers.");
 		colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
-		std::cout << NOULINE_STR << "\n\n" << wordWrap("ZeeTerminal will output a pitch of sound that starts at 20hz and increases by 100hz every second, until 22000hz.") << "\n\n";
+		std::cout << NOULINE_STR << wordWrap("\n\nZeeTerminal will output a pitch of sound that starts at 20hz and increases by 100hz every second, until 22000hz.") << "\n\n";
 		colour(MAG, LYLW);
 		std::cout << wordWrap("You can press any key to exit in the middle of the test.");
 		colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
-		std::cout << '\n' << wordWrap("Press any key to begin the test, or ESC to exit now...") << '\n';
+		std::cout << wordWrap("\nPress any key to begin the test, or ESC to exit now...") << '\n';
 		char cKey = _getch();
 		if (cKey == 27) {
 			Exiting();
@@ -1098,7 +1199,7 @@ void DevTools(short int nToolNum) {
 void Commands(const std::string sCommand, char* cCommandArgs, const std::string sCommandArgsBuffer = "") {
 
 	// Help
-	if (sCommand == "help") {
+	if (sCommand == "help" || sCommand == "1") {
 		
 		// Arguments Interface
 		for (int i = 0; i < nArgArraySize; i++) {
@@ -1110,26 +1211,26 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 				colourSubheading();
 				std::cout << "What this command does:" << NOULINE_STR;
 				colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
-				std::cout << '\n' << wordWrap("- Lists all possible commands in ZeeTerminal.") << '\n'
-					<< wordWrap("- Displays some frequently asked questions with answers.") << '\n'
-					<< wordWrap("- Displays information about the program, such as copyright information, credits and basic program information.") << "\n\n";
+				std::cout << wordWrap("\n- Lists all possible commands in ZeeTerminal.")
+					<< wordWrap("\n- Displays some frequently asked questions with answers.")
+					<< wordWrap("\n- Displays information about the program, such as copyright information, credits and basic program information.") << "\n\n";
 
 				colourSubheading();
 				std::cout << "Possible arguments for this command:" << NOULINE_STR;
 				colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
 
-				std::cout << '\n' << wordWrap("-h\tDisplays this help message.") << "\n\nExample: help -h\n\n";
+				std::cout << wordWrap("\n -h\tDisplays this help message.\n\nExample: help -h\n\n");
 
 				return;
 			}
 		}
 
-		help();
+		help(false);
 		return;
 	}
 
 	// Tutorial
-	else if (sCommand == "tutorial") {
+	else if (sCommand == "tutorial" || sCommand == "3") {
 
 		// Arguments Interface
 		for (int i = 0; i < nArgArraySize; i++) {
@@ -1140,13 +1241,12 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 				colourSubheading();
 				std::cout << "What this command does:" << NOULINE_STR;
 				colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
-				std::cout << '\n' << wordWrap("- This command starts a short tutorial on how to use ZeeTerminal.") << "\n\n";
+				std::cout << wordWrap("\n- This command starts a short tutorial on how to use ZeeTerminal.\n\n");
 
 				colourSubheading();
 				std::cout << "Possible arguments for this command:" << NOULINE_STR;
 				colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
-				std::cout << '\n' << wordWrap(" -h\tDisplays this help message.") << "\n\n"
-					<< wordWrap("Example: tutorial -h") << "\n\n";
+				std::cout << wordWrap("\n -h\tDisplays this help message.\n\nExample: tutorial -h\n\n");
 				
 				return;
 			}
@@ -1165,7 +1265,7 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 	}
 
 	// Echo
-	else if (sCommand == "echo") {
+	else if (sCommand == "echo" || sCommand == "4") {
 
 		// Output what is after echo
 		if (sCommandArgsBuffer != " ") {
@@ -1184,7 +1284,7 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 	}
 
 	// CLS
-	else if (sCommand == "cls") {
+	else if (sCommand == "cls" || sCommand == "5") {
 
 		// Arguments Interface
 		for (int i = 0; i < nArgArraySize; i++) {
@@ -1195,12 +1295,12 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 				colourSubheading();
 				std::cout << "What this command does:" << NOULINE_STR;
 				colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
-				std::cout << '\n' << wordWrap("This command clears the terminal window. Nothing more, nothing less.") << "\n\n";
+				std::cout << wordWrap("\n- This command clears the terminal window. Nothing more, nothing less.\n\n");
 
 				colourSubheading();
 				std::cout << "Possible arguments for this command:" << NOULINE_STR;
 				colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
-				std::cout << '\n' << wordWrap("-h\tDisplays this help message.") << "\n\n";
+				std::cout << wordWrap("\n -h\tDisplays this help message.\n\nExample: cls -h\n\n");
 
 				return;
 			}
@@ -1211,7 +1311,7 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 	}
 
 	// DevTools
-	else if (sCommand == "devtools") {
+	else if (sCommand == "devtools" || sCommand == "6") {
 
 		// Arguments
 		for (int i = 0; i < nArgArraySize; i++) {
@@ -1222,22 +1322,22 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 				colourSubheading();
 				std::cout << "What this command does:" << NOULINE_STR;
 				colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
-				std::cout << '\n' << wordWrap("- Provides an interface to access a set of developer tools that are designed to test the features of ZeeTerminal.") << "\n\n";
+				std::cout << wordWrap("\n- Provides an interface to access a set of developer tools that are designed to test the features of ZeeTerminal.") << "\n\n";
 
 				colourSubheading();
 				std::cout << "Possible arguments for this command:" << NOULINE_STR;
 				colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
-				std::cout << '\n' << wordWrap(" -h\tDisplays this help message.") << '\n'
-					<< wordWrap(" -1\tAutomatically starts Colour Tester.") << '\n'
-					<< wordWrap(" -2\tAutomatically starts Beep Sound Test.") << '\n'
-					<< wordWrap(" -3\tAutomatically starts Colour Numbers.") << '\n'
-					<< wordWrap(" -4\tAutomatically starts OptionSelectEngine Tester.") << '\n'
-					<< wordWrap(" -5\tAutomatically starts ScreenNavigateEngine Tester.") << '\n'
-					<< wordWrap(" -6\tAutomatically starts TableEngine Tester.") << '\n'
-					<< wordWrap(" -7\tAutomatically starts High-Res Nanosecond Stopwatch.") << '\n'
-					<< wordWrap(" -8\tAutomatically starts ANSI VT Testing Environment.") << '\n'
-					<< wordWrap(" -9\tAutomatically starts MMSYSTEM API Sound Test.") << "\n\n"
-					<< wordWrap("Example: devtools -6") << "\n\n";
+				std::cout << wordWrap("\n -h\tDisplays this help message.")
+					<< wordWrap("\n -1\tAutomatically starts Colour Tester.")
+					<< wordWrap("\n -2\tAutomatically starts Beep Sound Test.")
+					<< wordWrap("\n -3\tAutomatically starts Colour Numbers.")
+					<< wordWrap("\n -4\tAutomatically starts OptionSelectEngine Tester.")
+					<< wordWrap("\n -5\tAutomatically starts ScreenNavigateEngine Tester.")
+					<< wordWrap("\n -6\tAutomatically starts TableEngine Tester.")
+					<< wordWrap("\n -7\tAutomatically starts High-Res Nanosecond Stopwatch.")
+					<< wordWrap("\n -8\tAutomatically starts ANSI VT Testing Environment.")
+					<< wordWrap("\n -9\tAutomatically starts MMSYSTEM API Sound Test.")
+					<< wordWrap("\n\nExample: devtools -6") << "\n\n";
 
 				return;
 			}
@@ -1344,37 +1444,40 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 	}
 
 	// CPUStress
-	else if (sCommand == "cpustress") {
+	else if (sCommand == "cpustress" || sCommand == "7") {
+
+		CentreColouredText(" ___CPUSTRESS___ ", 1);
+		std::cout << '\n';
+		CentreColouredText("CPUStress can stress or benchmark your CPU in multiple different ways.", 2);
+		std::cout << '\n';
 
 		// Arguments Interface
 		for (int i = 0; i < nArgArraySize; i++) {
 			if (cCommandArgs[i] == 'h') {
-				CentreColouredText(" ___CPUSTRESS___ ", 1);
-				
-				std::cout << '\n';
 				colourSubheading();
 				std::cout << "What this command does:" << NOULINE_STR;
 				colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
-				std::cout << '\n' << wordWrap("- Stresses your CPU and can be used for stability checks and throttling tests.") << '\n'
-					<< wordWrap("- Can benchmark your CPU to see performance metrics.") << "\n\n";
+				std::cout << wordWrap("\n- Stresses your CPU and can be used for stability checks and throttling tests.")
+					<< wordWrap("\n- Can benchmark your CPU to see performance metrics.") << "\n\n";
 
 				colourSubheading();
 				std::cout << "Possible arguments for this command:" << NOULINE_STR;
 				colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
-				std::cout << '\n' << wordWrap(" -h\t\tDisplays this help message.") << '\n'
-					<< wordWrap(" -1 <rnum>\tStarts the Single Core benchmarker. You can optionally set your reiterations in place of <rnum>.") << '\n'
-					<< wordWrap(" -2 <rnum>\tStarts the Multi Core benchmarker. You can optionally set your reiterations in place of <rnum>.") << '\n'
-					<< wordWrap(" -3\t\tStarts the Single Core stress test.") << '\n'
-					<< wordWrap(" -4\t\tStarts the Multi Core stress test.") << "\n\n"
-					<< wordWrap("Example: cpustress -1 120000") << "\n\n";
+				std::cout << wordWrap("\n -h\t\tDisplays this help message.")
+					<< wordWrap("\n -1 <rnum>\tStarts the Single Core benchmarker. You can optionally set your reiterations in place of <rnum>.")
+					<< wordWrap("\n -2 <rnum>\tStarts the Multi Core benchmarker. You can optionally set your reiterations in place of <rnum>.")
+					<< wordWrap("\n -3\t\tStarts the Single Core stress test.")
+					<< wordWrap("\n -4\t\tStarts the Multi Core stress test.")
+					<< wordWrap("\n\nExample: cpustress -1 120000") << "\n\n";
 
 				return;
 
 			}
 			else if (cCommandArgs[i] == '1') {
+				std::cout << '\n';
 				// First, check if it's a number
-				if (isNumber(sStringCommandArgs[0]) == true) {
-					CpuBenchmark(1, std::stoll(sStringCommandArgs[0]));
+				if (isNumberll(sStringDataCommandArgs[0]) == true) {
+					CpuBenchmark(1, std::stoll(sStringDataCommandArgs[0]));
 				}
 				else {
 					CpuBenchmark(1, -1);
@@ -1383,8 +1486,9 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 				return;
 			}
 			else if (cCommandArgs[i] == '2') {
-				if (isNumber(sStringCommandArgs[0]) == true) {
-					CpuBenchmark(2, std::stoll(sStringCommandArgs[0]));
+				std::cout << '\n';
+				if (isNumberll(sStringDataCommandArgs[0]) == true) {
+					CpuBenchmark(2, std::stoll(sStringDataCommandArgs[0]));
 				}
 				else {
 					CpuBenchmark(2, -1);
@@ -1393,10 +1497,12 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 				return;
 			}
 			else if (cCommandArgs[i] == '3') {
+				std::cout << '\n';
 				CpuStressTest(1, true);
 				return;
 			}
 			else if (cCommandArgs[i] == '4') {
+				std::cout << '\n';
 				CpuStressTest(2, true);
 				return;
 			}
@@ -1404,14 +1510,9 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 
 		OptionSelectEngine CpuStress;
 
-		// Starting page
-		CentreColouredText(" ___CPUSTRESS___ ", 1);
-		std::cout << '\n';
-		CentreColouredText("CPUStress can stress or benchmark your CPU in multiple different ways.", 2);
-
 		while (true) {
 
-			std::cout << "\n\n";
+			std::cout << "\n";
 			colour(LCYN, ConfigObjMain.sColourGlobalBack);
 			std::cout << wordWrap("You can stop a test at any time by pressing a key on the keyboard.");
 			colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
@@ -1428,15 +1529,19 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 			int nChoice = CpuStress.OptionSelect("Please select your desired option (single core is less intensive, multi core is more intensive):", "");
 
 			if (nChoice == 1) {
+				std::cout << '\n';
 				CpuBenchmark(1);
 			}
 			else if (nChoice == 2) {
+				std::cout << '\n';
 				CpuBenchmark(2);
 			}
 			else if (nChoice == 3) {
+				std::cout << '\n';
 				CpuStressTest(1);
 			}
 			else if (nChoice == 4) {
+				std::cout << '\n';
 				CpuStressTest(2);
 			}
 			else if (nChoice == -1) {
@@ -1455,7 +1560,7 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 	}
 
 	// Colour
-	else if (sCommand == "colour") {
+	else if (sCommand == "colour" || sCommand == "8") {
 		bool bArgExecuted = false;
 		bool bForeExecuted = false;
 		bool bBackExecuted = false;
@@ -1469,19 +1574,19 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 				colourSubheading();
 				std::cout << "What it does:" << NOULINE_STR;
 				colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
-				std::cout << '\n' << wordWrap("- Adjusts the foreground colour of the terminal (text).") << '\n'
-					<< wordWrap("- Adjusts the background colour of the terminal.") << '\n'
-					<< wordWrap("- Edit and apply custom RGB colour presets.") << '\n'
-					<< wordWrap("- Resets colours to default at request.") << "\n\n";
+				std::cout << wordWrap("\n- Adjusts the foreground colour of the terminal (text).")
+					<< wordWrap("\n- Adjusts the background colour of the terminal.")
+					<< wordWrap("\n- Edit and apply custom RGB colour presets.")
+					<< wordWrap("\n- Resets colours to default at request.") << "\n\n";
 
 				colourSubheading();
 				std::cout << "Possible arguments for this command:" << NOULINE_STR;
 				colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
-				std::cout << '\n' << wordWrap(" -h\t\tDisplays this help message.") << '\n'
-					<< wordWrap(" -f <colournum>\tAdjusts foreground colour. Put colour number in place of <colournum>.") << '\n'
-					<< wordWrap(" -b <colournum>\tAdjusts background colour. Put desired colour number in place of <colournum>.") << '\n'
-					<< wordWrap(" -r\t\tResets colours to default values (excluding RGB colour profiles).") << "\n\n"
-					<< wordWrap("Example: colour -f 3 -b 7 ") << "\n\n";
+				std::cout << wordWrap("\n\n -h\t\tDisplays this help message.")
+					<< wordWrap("\n -f <colournum>\tAdjusts foreground colour. Put colour number in place of <colournum>.")
+					<< wordWrap("\n -b <colournum>\tAdjusts background colour. Put desired colour number in place of <colournum>.")
+					<< wordWrap("\n -r\t\tResets colours to default values (excluding RGB colour profiles).")
+					<< wordWrap("\n\nExample: colour -f 3 -b 7 ") << "\n\n";
 				std::cout << wordWrap("NOTE: You can get the colour numbers by executing the \"ColourNumbers\" command.") << "\n\n";
 
 				return;
@@ -1491,8 +1596,8 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 				// Can't run background editing twice in the same command
 				if (bForeExecuted == true) continue;
 
-				if (isNumber(sStringCommandArgs[i]) == true) {
-					ColourForeground(std::stoll(sStringCommandArgs[i]));
+				if (isNumberi(sStringDataCommandArgs[i]) == true) {
+					ColourForeground(std::stoi(sStringDataCommandArgs[i]));
 				}
 				else {
 					// Can't process a non-number
@@ -1511,8 +1616,8 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 				if (bBackExecuted == true) continue;
 
 				// Check if argument is a number
-				if (isNumber(sStringCommandArgs[i]) == true) {
-					ColourBackground(std::stoll(sStringCommandArgs[i]));
+				if (isNumberi(sStringDataCommandArgs[i]) == true) {
+					ColourBackground(std::stoi(sStringDataCommandArgs[i]));
 				}
 				else {
 					// Can't process a non-number
@@ -1528,14 +1633,13 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 			else if (cCommandArgs[i] == 'r') {
 				// Reset colours prompt
 				colour(YLW, ConfigObjMain.sColourGlobalBack);
-				std::cout << "\nTHIS WILL RESET ALL SET COLOURS TO DEFAULT VALUES.\n";
+				std::cout << "\nTHIS WILL RESET ALL SET COLOURS TO DEFAULT VALUES.\nRGB Colour presets will NOT be affected.\n";
 				colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
 				if (YesNo(wordWrap("Are you sure you would like to proceed? [y/n] > "))) {
-					// Only reset colours when VT sequences are available- non-VT terminals remain white on black.
-					if (bAnsiVTSequences == true) {
-						ResetColour();
-					}
-					else std::cout << "\nColours are already defaulted for your terminal.\n";
+					// Reset colours and update the config file with new colours
+					ResetColour();
+					ConfigObjMain.WriteConfigFile();
+					cls(); // To apply default colours to whole terminal screen
 				}
 
 				return;
@@ -1575,11 +1679,10 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 				std::cout << "\nTHIS WILL RESET ALL SET COLOURS TO DEFAULT VALUES.\n";
 				colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
 				if (YesNo(wordWrap("Are you sure you would like to proceed? [y/n] > "))) {
-					// Only reset colours when VT sequences are available- non-VT terminals remain white on black.
-					if (bAnsiVTSequences == true) {
-						ResetColour();
-					}
-					else std::cout << "\nColours are already defaulted for your terminal.\n";
+					// Reset colours and update config file with new colours
+					ResetColour();
+					ConfigObjMain.WriteConfigFile();
+					cls(); // To apply default colours to whole terminal screen
 				}
 				else {
 					colour(YLW, ConfigObjMain.sColourGlobalBack);
@@ -1602,7 +1705,7 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 	}
 
 	// Settings
-	else if (sCommand == "settings") {
+	else if (sCommand == "settings" || sCommand == "9") {
 
 		// Arguments Interface
 		for (int i = 0; i < nArgArraySize; i++) {
@@ -1613,39 +1716,39 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 				colourSubheading();
 				std::cout << "What it does:" << NOULINE_STR;
 				colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
-				std::cout << '\n' << wordWrap("- The Settings command allows you to adjust common settings in the terminal, such as colour settings, verbosity and direction messages, and ANSI settings.") << "\n\n";
+				std::cout << wordWrap("\n- The Settings command allows you to adjust common settings in the terminal, such as colour settings, verbosity and direction messages, and ANSI settings.") << "\n\n";
 
 				colourSubheading();
 				std::cout << "Possible arguments for the Settings command:" << NOULINE_STR;
 				colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
-				std::cout << '\n' << wordWrap(" highlightfore <num>\tModifies the highlight foreground colour. Set your colour number in place of <num>.") << '\n'
-					<< wordWrap(" highlightback <num>\tModifies the highlight background colour. Set your colour number in place of <num>.") << '\n'
-					<< wordWrap(" titlefore <num>\tModifies the title foreground colour. Set your colour number in place of <num>.") << '\n'
-					<< wordWrap(" titleback <num>\tModifies the title background colour. Set your colour number in place of <num>.") << '\n'
-					<< wordWrap(" subheadingfore <num>\tModifies the subheading foreground colour. Set your colour number in place of <num>.") << '\n'
-					<< wordWrap(" subheadingback <num>\tModifies the subheading background colour. Set your colour number in place of <num>.") << '\n'
-					<< wordWrap(" verbose t/f\t\tToggles verbose messages. Set either true (-t) or false (-f) in place of -t/f.") << '\n'
-					<< wordWrap(" directions t/f\t\tToggles direction messages. Set either true (-t) or false (-f) in place of -t/f.") << '\n'
-					<< wordWrap(" ansi t/f\t\tToggles ANSI VT sequences. Set either true (-t) or false (-f) in place of -t/f.") << '\n'
-					<< wordWrap(" wordwrap t/f\t\tToggles word wrapping. Set either true (-t) or false (-f) in place of -t/f.") << '\n'
-					<< wordWrap(" cursorblink t/f\tToggles cursor blinking. Set either true (-t) or false (-f) in place of -t/f.") << '\n'
-					<< wordWrap(" showcursor t/f\t\tToggles cursor visibility. Set either true (-t) or false (-f) in place of -t/f.") << '\n'
-					<< wordWrap(" cursorstyle <style>\tSets the style of the cursor. Set the style (block, underline, bar) in place of <style>.") << '\n'
-					<< wordWrap(" slowcharspeed <num>\tSets the speed of SlowChar. Set the speed in place of <num>.") << '\n'
-					<< wordWrap(" randcolstartup t/f\tToggles random colours on startup. Set either true (-t) or false (-f) in place of -t/f.") << '\n'
-					<< wordWrap(" customtheme t/f\tToggles terminal custom theme support. Set either true (-t) or false (-f) where t/f is.") << '\n'
-					<< wordWrap(" autocontrast t/f\tToggles auto-readable colour contrast. Set either true (-t) or false (-f) where t/f is.") << '\n'
-					<< wordWrap(" tempconfigdir <dir>\tSets a temporary custom configuration file directory. Pass the directory in place of <dir>.") << "\n\n"
-					<< wordWrap("Example: settings titlefore 1") << "\n\n"
-					<< wordWrap("Note: You can get colour numbers by executing the \"ColourNumbers\" command.") << "\n\n";
+				std::cout << wordWrap("\n --highlightfore <num>\t\tModifies the highlight foreground colour. Set your colour number in place of <num>.")
+					<< wordWrap("\n --highlightback <num>\t\tModifies the highlight background colour. Set your colour number in place of <num>.")
+					<< wordWrap("\n --titlefore <num>\t\tModifies the title foreground colour. Set your colour number in place of <num>.")
+					<< wordWrap("\n --titleback <num>\t\tModifies the title background colour. Set your colour number in place of <num>.")
+					<< wordWrap("\n --subheadingfore <num>\t\tModifies the subheading foreground colour. Set your colour number in place of <num>.")
+					<< wordWrap("\n --subheadingback <num>\t\tModifies the subheading background colour. Set your colour number in place of <num>.")
+					<< wordWrap("\n --verbose <toggle>\t\tToggles verbose messages. Set either true/t or false/f in place of <toggle>.")
+					<< wordWrap("\n --directions <toggle>\t\tToggles direction messages. Set either true/t or false/f in place of <toggle>.")
+					<< wordWrap("\n --ansi <toggle>\t\tToggles ANSI VT sequences. Set either true/t or false/f in place of <toggle>.")
+					<< wordWrap("\n --wordwrap <toggle>\t\tToggles word wrapping. Set either true/t or false/f in place of <toggle>.")
+					<< wordWrap("\n --cursorblink <toggle>\t\tToggles cursor blinking. Set either true/t or false/f in place of <toggle>.")
+					<< wordWrap("\n --showcursor <toggle>\t\tToggles cursor visibility. Set either true/t or false/f in place of <toggle>.")
+					<< wordWrap("\n --cursorstyle <style>\t\tSets the style of the cursor. Set the style (block, underline, bar) in place of <style>.")
+					<< wordWrap("\n --slowcharspeed <num>\t\tSets the speed of SlowChar. Set the speed in place of <num>.")
+					<< wordWrap("\n --randcolstartup <toggle>\tToggles random colours on startup. Set either true/t or false/f in place of <toggle>.")
+					<< wordWrap("\n --customtheme <toggle>\t\tToggles terminal custom theme support. Set either true/t or false/f in place of <toggle>.")
+					<< wordWrap("\n --autocontrast <toggle>\tToggles auto-readable colour contrast. Set either true/t or false/f in place of <toggle>.")
+					<< wordWrap("\n --tempconfigdir <dir>\t\tSets a temporary custom configuration file directory. Pass the directory in place of <dir>.")
+					<< wordWrap("\n\nExample: settings --titlefore 1")
+					<< wordWrap("\n\nNote: You can get colour numbers by executing the \"ColourNumbers\" command.") << "\n\n";
 				 
 				return;
 			}
-			else if (sStringCommandArgs[0] == "highlightfore") {
+			else if (sStringOptionCommandArgs[0] == "highlightfore") {
 
 				// Check if argument is a number, post error message if not and call function if yes
-				if (isNumber(sStringCommandArgs[1])) {
-					HighlightColourSettings(1, std::stoll(sStringCommandArgs[1]));
+				if (isNumberi(sStringDataCommandArgs[0])) {
+					HighlightColourSettings(1, std::stoi(sStringDataCommandArgs[0]));
 				}
 				else {
 					VerbosityDisplay("In Commands() - ERROR: Could not detect numerical value in string-based number argument.\n");
@@ -1655,9 +1758,9 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 
 				return;
 			}
-			else if (sStringCommandArgs[0] == "highlightback") {
-					if (isNumber(sStringCommandArgs[1])) {
-						HighlightColourSettings(2, std::stoll(sStringCommandArgs[1]));
+			else if (sStringOptionCommandArgs[0] == "highlightback") {
+					if (isNumberi(sStringDataCommandArgs[0])) {
+						HighlightColourSettings(2, std::stoi(sStringDataCommandArgs[0]));
 					}
 					else {
 						VerbosityDisplay("In Commands() - ERROR: Could not detect numerical value in string-based number argument.\n");
@@ -1667,9 +1770,9 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 				
 				return;
 			}
-			else if (sStringCommandArgs[0] == "titlefore") {
-					if (isNumber(sStringCommandArgs[1])) {
-						TitleColourSettings(1, std::stoll(sStringCommandArgs[1]));
+			else if (sStringOptionCommandArgs[0] == "titlefore") {
+					if (isNumberi(sStringDataCommandArgs[0])) {
+						TitleColourSettings(1, std::stoi(sStringDataCommandArgs[0]));
 					}
 					else {
 						VerbosityDisplay("In Commands() - ERROR: Could not detect numerical value in string-based number argument.\n");
@@ -1678,9 +1781,9 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 					}
 				return;
 			}
-			else if (sStringCommandArgs[0] == "titleback") {
-					if (isNumber(sStringCommandArgs[1])) {
-						TitleColourSettings(2, std::stoll(sStringCommandArgs[1]));
+			else if (sStringOptionCommandArgs[0] == "titleback") {
+					if (isNumberi(sStringDataCommandArgs[0])) {
+						TitleColourSettings(2, std::stoi(sStringDataCommandArgs[0]));
 					}
 					else {
 						VerbosityDisplay("In Commands() - ERROR: Could not detect numerical value in string-based number argument.\n");
@@ -1689,9 +1792,9 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 					}
 				return;
 			}
-			else if (sStringCommandArgs[0] == "subheadingfore") {
-					if (isNumber(sStringCommandArgs[1])) {
-						SubheadingColourSettings(1, std::stoll(sStringCommandArgs[1]));
+			else if (sStringOptionCommandArgs[0] == "subheadingfore") {
+					if (isNumberi(sStringDataCommandArgs[0])) {
+						SubheadingColourSettings(1, std::stoi(sStringDataCommandArgs[0]));
 					}
 					else {
 						VerbosityDisplay("In Commands() - ERROR: Could not detect numerical value in string-based number argument.\n");
@@ -1700,9 +1803,9 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 					}
 				return;
 			}
-			else if (sStringCommandArgs[0] == "subheadingback") {
-					if (isNumber(sStringCommandArgs[1])) {
-						SubheadingColourSettings(2, std::stoll(sStringCommandArgs[1]));
+			else if (sStringOptionCommandArgs[0] == "subheadingback") {
+					if (isNumberi(sStringDataCommandArgs[0])) {
+						SubheadingColourSettings(2, std::stoi(sStringDataCommandArgs[0]));
 					}
 					else {
 						VerbosityDisplay("In Commands() - ERROR: Could not detect numerical value in string-based number argument.\n");
@@ -1712,11 +1815,11 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 
 				return;
 			}
-			else if (sStringCommandArgs[0] == "verbose") {
-				if (sStringCommandArgs[1] == "t" || sStringCommandArgs[1] == "true") {
+			else if (sStringOptionCommandArgs[0] == "verbose") {
+				if (sStringDataCommandArgs[0] == "t" || sStringDataCommandArgs[0] == "true") {
 					VerboseMessagesSettings(1);
 				}
-				else if (sStringCommandArgs[1] == "f" || sStringCommandArgs[1] == "false") {
+				else if (sStringDataCommandArgs[0] == "f" || sStringDataCommandArgs[0] == "false") {
 					VerboseMessagesSettings(2);
 				}
 				else {
@@ -1727,11 +1830,11 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 
 				return;
 			}
-			else if (sStringCommandArgs[0] == "directions") {
-					if (sStringCommandArgs[1] == "t" || sStringCommandArgs[1] == "true") {
+			else if (sStringOptionCommandArgs[0] == "directions") {
+					if (sStringDataCommandArgs[0] == "t" || sStringDataCommandArgs[0] == "true") {
 						DirectionMessagesSettings(1);
 					}
-					else if (sStringCommandArgs[1] == "f" || sStringCommandArgs[1] == "false") {
+					else if (sStringDataCommandArgs[0] == "f" || sStringDataCommandArgs[0] == "false") {
 						DirectionMessagesSettings(2);
 					}
 					else {
@@ -1742,11 +1845,11 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 
 				return;
 			}
-			else if (sStringCommandArgs[0] == "ansi") {
-					if (sStringCommandArgs[1] == "t" || sStringCommandArgs[1] == "true") {
+			else if (sStringOptionCommandArgs[0] == "ansi") {
+					if (sStringDataCommandArgs[0] == "t" || sStringDataCommandArgs[0] == "true") {
 						AnsiSettings(1);
 					}
-					else if (sStringCommandArgs[1] == "f" || sStringCommandArgs[1] == "false") {
+					else if (sStringDataCommandArgs[0] == "f" || sStringDataCommandArgs[0] == "false") {
 						AnsiSettings(2);
 					}
 					else {
@@ -1757,11 +1860,11 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 
 				return;
 			}
-			else if (sStringCommandArgs[0] == "wordwrap") {
-					if (sStringCommandArgs[1] == "t" || sStringCommandArgs[1] == "true") {
+			else if (sStringOptionCommandArgs[0] == "wordwrap") {
+					if (sStringDataCommandArgs[0] == "t" || sStringDataCommandArgs[0] == "true") {
 						WordWrapSettings(1);
 					}
-					else if (sStringCommandArgs[1] == "f" || sStringCommandArgs[1] == "false") {
+					else if (sStringDataCommandArgs[0] == "f" || sStringDataCommandArgs[0] == "false") {
 						WordWrapSettings(2);
 					}
 					else {
@@ -1772,11 +1875,11 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 
 				return;
 			}
-			else if (sStringCommandArgs[0] == "cursorblink") {
-					if (sStringCommandArgs[1] == "t" || sStringCommandArgs[1] == "true") {
+			else if (sStringOptionCommandArgs[0] == "cursorblink") {
+					if (sStringDataCommandArgs[0] == "t" || sStringDataCommandArgs[0] == "true") {
 						CursorSettings(1, 1);
 					}
-					else if (sStringCommandArgs[1] == "f" || sStringCommandArgs[1] == "false") {
+					else if (sStringDataCommandArgs[0] == "f" || sStringDataCommandArgs[0] == "false") {
 						CursorSettings(1, 2);
 					}
 					else {
@@ -1787,11 +1890,11 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 
 				return;
 			}
-			else if (sStringCommandArgs[0] == "showcursor") {
-					if (sStringCommandArgs[1] == "t" || sStringCommandArgs[1] == "true") {
+			else if (sStringOptionCommandArgs[0] == "showcursor") {
+					if (sStringDataCommandArgs[0] == "t" || sStringDataCommandArgs[0] == "true") {
 						CursorSettings(2, 0, 1);
 					}
-					else if (sStringCommandArgs[1] == "f" || sStringCommandArgs[1] == "false") {
+					else if (sStringDataCommandArgs[0] == "f" || sStringDataCommandArgs[0] == "false") {
 						CursorSettings(2, 0, 2);
 					}
 					else {
@@ -1802,14 +1905,14 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 
 				return;
 			}
-			else if (sStringCommandArgs[0] == "cursorstyle") {
-					if (sStringCommandArgs[1] == "block") {
+			else if (sStringOptionCommandArgs[0] == "cursorstyle") {
+					if (sStringDataCommandArgs[0] == "block") {
 						CursorSettings(3, 0, 0, 1);
 					}
-					else if (sStringCommandArgs[1] == "underline") {
+					else if (sStringDataCommandArgs[0] == "underline") {
 						CursorSettings(3, 0, 0, 2);
 					}
-					else if (sStringCommandArgs[1] == "bar") {
+					else if (sStringDataCommandArgs[0] == "bar") {
 						CursorSettings(3, 0, 0, 3);
 					}
 					else {
@@ -1820,9 +1923,9 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 
 				return;
 			}
-			else if (sStringCommandArgs[0] == "slowcharspeed") {
-					if (isNumber(sStringCommandArgs[1])) {
-						OtherSettings(1, std::stoll(sStringCommandArgs[1]), true);
+			else if (sStringOptionCommandArgs[0] == "slowcharspeed") {
+					if (isNumberll(sStringDataCommandArgs[0])) {
+						OtherSettings(1, std::stoll(sStringDataCommandArgs[0]), true);
 					}
 					else {
 						VerbosityDisplay("In Commands() - ERROR: Could not detect numerical value in string-based number argument.\n");
@@ -1832,11 +1935,11 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 
 				return;
 			}
-			else if (sStringCommandArgs[0] == "randcolstartup") {
-					if (sStringCommandArgs[1] == "t" || sStringCommandArgs[1] == "true") {
+			else if (sStringOptionCommandArgs[0] == "randcolstartup") {
+					if (sStringDataCommandArgs[0] == "t" || sStringDataCommandArgs[0] == "true") {
 						OtherSettings(2, 0, true, 1);
 					}
-					else if (sStringCommandArgs[1] == "f" || sStringCommandArgs[1] == "false") {
+					else if (sStringDataCommandArgs[0] == "f" || sStringDataCommandArgs[0] == "false") {
 						OtherSettings(2, 0, true, 2);
 					}
 					else {
@@ -1847,11 +1950,11 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 
 				return;
 			}
-			else if (sStringCommandArgs[0] == "customtheme") {
-					if (sStringCommandArgs[1] == "t" || sStringCommandArgs[1] == "true") {
+			else if (sStringOptionCommandArgs[0] == "customtheme") {
+					if (sStringDataCommandArgs[0] == "t" || sStringDataCommandArgs[0] == "true") {
 						OtherSettings(3, 0, true, 0, 1);
 					}
-					else if (sStringCommandArgs[1] == "f" || sStringCommandArgs[1] == "false") {
+					else if (sStringDataCommandArgs[0] == "f" || sStringDataCommandArgs[0] == "false") {
 						OtherSettings(3, 0, true, 0, 2);
 					}
 					else {
@@ -1862,11 +1965,11 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 
 				return;
 			}
-			else if (sStringCommandArgs[0] == "autocontrast") {
-					if (sStringCommandArgs[1] == "t" || sStringCommandArgs[1] == "true") {
+			else if (sStringOptionCommandArgs[0] == "autocontrast") {
+					if (sStringDataCommandArgs[0] == "t" || sStringDataCommandArgs[0] == "true") {
 						OtherSettings(4, 0, true, 0, 0, 1);
 					}
-					else if (sStringCommandArgs[1] == "f" || sStringCommandArgs[1] == "false") {
+					else if (sStringDataCommandArgs[0] == "f" || sStringDataCommandArgs[0] == "false") {
 						OtherSettings(4, 0, true, 0, 0, 2);
 					}
 					else {
@@ -1877,9 +1980,9 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 				
 				return;
 			}
-			else if (sStringCommandArgs[0] == "tempconfigdir") {
-				if (sStringCommandArgs[1] != "") {
-					OtherSettings(5, 0, true, 0, 0, 0, sStringCommandArgs[1]);
+			else if (sStringOptionCommandArgs[0] == "tempconfigdir") {
+				if (sStringDataCommandArgs[0] != "") {
+					OtherSettings(5, 0, true, 0, 0, 0, sStringDataCommandArgs[0]);
 				}
 				else {
 					VerbosityDisplay("ERROR: In Commands() - Could not detect any argument string after option.\n");
@@ -1955,7 +2058,7 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 	}
 
 	// Title
-	else if (sCommand == "title") {
+	else if (sCommand == "title" || sCommand == "10") {
 
 		if (sCommandArgsBuffer == " ") {
 			// Take title input
@@ -1985,7 +2088,7 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 	}
 
 	// Date
-	else if (sCommand == "date") {
+	else if (sCommand == "date" || sCommand == "11") {
 
 		// Arguments interface
 		for (int i = 0; i < nArgArraySize; i++) {
@@ -1996,13 +2099,13 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 				colourSubheading();
 				std::cout << "What this command does:" << NOULINE_STR;
 				colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
-				std::cout << '\n' << wordWrap("- This command displays the time and date in 24 hour time. Nothing more, nothing less.") << "\n\n";
+				std::cout << wordWrap("\n- This command displays the time and date in 24 hour time. Nothing more, nothing less.\n\n");
 
 				colourSubheading();
 				std::cout << "Possible arguments for this command:" << NOULINE_STR;
 				colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
-				std::cout << '\n' << wordWrap(" -h\tDisplays this help message.") << "\n\n"
-					<< wordWrap("Example: date -h") << "\n\n";
+				std::cout << wordWrap("\n -h\tDisplays this help message.\n\n")
+					<< wordWrap("Example: date -h\n\n");
 
 				return;
 
@@ -2032,7 +2135,7 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 	}
 
 	// ColourNumbers
-	else if (sCommand == "colournumbers") {
+	else if (sCommand == "colournumbers" || sCommand == "12") {
 		CentreColouredText(" ___COLOURNUMBERS___ ", 1);
 		std::cout << '\n';
 
@@ -2043,13 +2146,13 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 				colourSubheading();
 				std::cout << "What this command does:" << NOULINE_STR;
 				colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
-				std::cout << '\n' << wordWrap("- This command displays the colour numbers for all default colours. Nothing more, nothing less.") << "\n\n";
+				std::cout << wordWrap("\n- This command displays the colour numbers for all default colours. Nothing more, nothing less.\n\n");
 				
 				colourSubheading();
 				std::cout << "Possible arguments for this command:" << NOULINE_STR;
 				colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
-				std::cout << '\n' << wordWrap(" -h\tDisplays this help message.") << "\n\n"
-					<< wordWrap("Example: colournumbers -h") << "\n\n";
+				std::cout << wordWrap("\n -h\tDisplays this help message.\n\n")
+					<< wordWrap("Example: colournumbers -h\n\n");
 				
 				return;
 			}
@@ -2065,13 +2168,13 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 		for (int i = 0; i < 16; i++) {
 			std::cout << '[' << (i + 1) << "] "<< sOptionsColour[i] << "\n";
 		}
-		std::cout << '\n' << wordWrap("The colour number for each colour is in between the square brackets.") << '\n';
+		std::cout << wordWrap("\nThe colour number for each colour is in between the square brackets.") << '\n';
 
 		return;
 	}
 
 	// MediaPlayer
-	else if (sCommand == "mediaplayer") {
+	else if (sCommand == "mediaplayer" || sCommand == "13") {
 
 		std::wstring wsFilePath;
 
@@ -2079,30 +2182,27 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 		for (int i = 0; i < nArgArraySize; i++) {
 			if (cCommandArgs[i] == 'h') {
 				CentreColouredText(" ___MEDIA PLAYER___ ", 1);
-
 				std::cout << '\n';
+
 				colourSubheading();
 				std::cout << "What this command does: " << NOULINE_STR;
 				colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
-				std::cout << '\n';
-				std::cout << wordWrap("- Can play media and audio of specific types.") << '\n'
-					<< wordWrap("- Can view images of specific types.") << '\n'
-					<< wordWrap("- Supported file formats: WMA, WMV, AIFF, AU, AVI, MIDI, SND, WAV, MP3 (Only MPEG Audio Layer-3 codec), JPG and BMP.") << "\n\n";
+				std::cout << wordWrap("\n- Can play media and audio of specific types.")
+					<< wordWrap("\n- Can view images of specific types.\n")
+					<< wordWrap("\n- Supported file formats: WMA, WMV, AIFF, AU, AVI, MIDI, SND, WAV, MP3 (Only MPEG Audio Layer-3 codec), JPG and BMP.\n\n");
 
-				std::cout << '\n';
 				colourSubheading();
 				std::cout << "Possible arguments for this command: " << NOULINE_STR;
 				colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
-				std::cout << '\n';
-				std::cout << wordWrap(" -h\tDisplays this help message.") << '\n'
-					<< wordWrap(" <FILE>\tOpens a file for playback/viewing. Put the exact filepath in place of <FILE>.\n\nExample: mediaplayer \"C:\\Media\\media test.mp3\"\n\n")
-					<< wordWrap("NOTE: You need to use quotes like shown in the example to use a filename with ANY spaces.\nNOTE: Type in \"*open\" without quotes in place of the file argument to use the Windows File Dialogue to open a file.\n\n");
+				std::cout << wordWrap("\n -h\tDisplays this help message.")
+					<< wordWrap("\n <FILE>\tOpens a file for playback/viewing. Put the exact filepath in place of <FILE>.\n\nExample: mediaplayer \"C:\\Media\\media test.mp3\"\n\n")
+					<< wordWrap("\nNOTE: You need to use quotes like shown in the example to use a filename with ANY spaces.\nNOTE: Type in \"*open\" without quotes in place of the file argument to use the Windows File Dialogue to open a file.\n\n");
 
 				return;
 			}
-			else if (sStringCommandArgs[0] != "") {
+			else if (sStringDataCommandArgs[0] != "") {
 
-				std::string sFilePath = sStringCommandArgs[0];
+				std::string sFilePath = sStringDataCommandArgs[0];
 
 				std::cout << '\n';
 				CentreColouredText(" ___MEDIA PLAYER___ ", 1);
@@ -2110,7 +2210,7 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 
 				// Check if the start of the first argument has a speechmark; 
 				// if there is one, use filepath from the start to the ending speechmark (if there is one)
-				if (sStringCommandArgs[0] == "*open") {
+				if (sStringDataCommandArgs[0] == "*open") {
 					std::cout << "Opening with the Windows File Dialogue...\n\n";
 					FileOpenGUIEngine MediaPlayer;
 					MediaPlayer.FileOpenDialogue("Open a Media File to Play");
@@ -2121,7 +2221,7 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 						return;
 					}
 				}
-				else sFilePath = sStringCommandArgs[0];
+				else sFilePath = sStringDataCommandArgs[0];
 
 				VerbosityDisplay("Executing media file using MediaPlayer: \"" + sFilePath + "\"...\n");
 
@@ -2175,7 +2275,7 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 	}
 
 	// AudioPlayer
-	else if (sCommand == "audioplayer") {
+	else if (sCommand == "audioplayer" || sCommand == "14") {
 
 		CentreColouredText("___AUDIO PLAYER___", 1);
 		std::cout << '\n';
@@ -2197,8 +2297,8 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 
 				return;
 			}
-			else if (sStringCommandArgs[0] != "") {
-				if (sStringCommandArgs[0] == "*open") {
+			else if (sStringDataCommandArgs[0] != "") {
+				if (sStringDataCommandArgs[0] == "*open") {
 					std::cout << "Opening with the Windows File Dialogue...\n\n";
 					// Open with the FileOpen GUI Engine
 					FileOpenGUIEngine AudioPlayer;
@@ -2217,11 +2317,11 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 
 				std::cout << '\n';
 
-				VerbosityDisplay("Executing audio file using AudioPlayer: \"" + sStringCommandArgs[0] + "\"...\n");
+				VerbosityDisplay("Executing audio file using AudioPlayer: \"" + sStringDataCommandArgs[0] + "\"...\n");
 
 				MultimediaEngine meArgInterface;
 
-				meArgInterface.BASSAudioPlayer(sStringCommandArgs[0]);
+				meArgInterface.BASSAudioPlayer(sStringDataCommandArgs[0]);
 
 				return;
 			}
@@ -2266,7 +2366,7 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 	}
 
 	// TTS
-	else if (sCommand == "tts") {
+	else if (sCommand == "tts" || sCommand == "15") {
 		
 		// Arguments interface
 		for (int i = 0; i < nArgArraySize; i++) {
@@ -2288,15 +2388,15 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 
 				return;
 			}
-			else if (sStringCommandArgs[0] != "") {
+			else if (sStringDataCommandArgs[0] != "") {
 
-				std::string sText = sStringCommandArgs[0];
+				std::string sText = sStringDataCommandArgs[0];
 
 				// Check for speechmarks; if so, remove them so they don't get pronounced
-				if (sStringCommandArgs[0][0] == '"' && sStringCommandArgs[0][sStringCommandArgs[0].length() - 1] == '"') {
-					sText = sStringCommandArgs[0].substr(1, (sStringCommandArgs[0].length() - 2));
+				if (sStringDataCommandArgs[0][0] == '"' && sStringDataCommandArgs[0][sStringDataCommandArgs[0].length() - 1] == '"') {
+					sText = sStringDataCommandArgs[0].substr(1, (sStringDataCommandArgs[0].length() - 2));
 				}
-				else sText = sStringCommandArgs[0];
+				else sText = sStringDataCommandArgs[0];
 
 				VerbosityDisplay("TTS starting with text \"" + sText + "\"...\n");
 
@@ -2348,7 +2448,7 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 	}
 
 	// Stopwatch
-	else if (sCommand == "stopwatch") {
+	else if (sCommand == "stopwatch" || sCommand == "16") {
 
 		bool bSkipStartScreen = false;
 
@@ -2427,7 +2527,7 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 	}
 
 	// Read
-	else if (sCommand == "read") {
+	else if (sCommand == "read" || sCommand == "17") {
 
 		CentreColouredText(" ___READ___ ", 1);
 		std::cout << '\n';
@@ -2438,25 +2538,25 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 				colourSubheading();
 				std::cout << "What this command does:" << NOULINE_STR;
 				colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
-				std::cout << '\n' << wordWrap("- Reads the contents and characters of a file and outputs them to the screen.\n\n");
+				std::cout << wordWrap("\n- Reads the contents and characters of a file and outputs them to the screen.\n\n");
 
 				colourSubheading();
 				std::cout << "Possible arguments for this command:" << NOULINE_STR;
 				colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
-				std::cout << '\n' << wordWrap(" -h\tDisplays this help message.\n <file>\tThe file that will be used to read from. Put file directory in place of <file>.\n\nNOTE: You can use \"*open\" without quotes as the filename argument to use the Windows File Dialogue to get a file.\n\n")
+				std::cout << wordWrap("\n -h\tDisplays this help message.\n <file>\tThe file that will be used to read from. Put file directory in place of <file>.\n\nNOTE: You can use \"*open\" without quotes as the filename argument to use the Windows File Dialogue to get a file.\n\n")
 					<< wordWrap("Example: read \"C:\\Users\\Public\\file.txt\"\n\n");
 
 				return;
 			}
-			else if (sStringCommandArgs[0] != "") {
+			else if (sStringDataCommandArgs[0] != "") {
 
 				// Firstly, test if file is actually real
 				std::ifstream fileTestIn;
 
-				std::string sText = sStringCommandArgs[0];
+				std::string sText = sStringDataCommandArgs[0];
 				// Check if the start of the first argument has a speechmark and if File Dialogue was requested; 
 				// if there is one, use text from the start to the ending speechmark (if there is one)
-				if (sStringCommandArgs[0] == "*open") {
+				if (sStringDataCommandArgs[0] == "*open") {
 					// Open with the FileOpen GUI Engine
 					std::cout << "Opening with the Windows File Dialogue...\n\n";
 					FileOpenGUIEngine ReadCommand;
@@ -2472,7 +2572,7 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 					size_t nFinalMarkPos = sText.find('\"', 1);
 					sText = sText.substr(1, nFinalMarkPos - 1);
 				}
-				else sText = sStringCommandArgs[0];
+				else sText = sStringDataCommandArgs[0];
 
 				fileTestIn.open(sText);
 				if (fileTestIn.fail()) {
@@ -2592,10 +2692,9 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 	}
 
 	// Timer
-	else if (sCommand == "timer") {
+	else if (sCommand == "timer" || sCommand == "18") {
 
 		long double dInput = 0;
-
 
 		CentreColouredText(" ___TIMER___ ", 1);
 		std::cout << '\n';
@@ -2614,9 +2713,9 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 
 				return;
 			}
-			else if (sStringCommandArgs[0] != "") {
+			else if (sStringDataCommandArgs[0] != "") {
 				// Firstly, check if argument is a real and usable number
-				if (isNumber(sStringCommandArgs[0]) == false) {
+				if (isNumberld(sStringDataCommandArgs[0]) == false) {
 					VerbosityDisplay("In Commands() - ERROR: Could not detect numerical value in string-based number argument.\n");
 					UserErrorDisplay("ERROR - Number argument is either too big or not a number.\nPlease try again with a number between 0 and 2 billion.\n");
 
@@ -2624,7 +2723,7 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 				}
 
 				// Convert string to integral value
-				dInput = std::stold(sStringCommandArgs[0]);
+				dInput = std::stold(sStringDataCommandArgs[0]);
 				break;
 			}
 		}
@@ -2633,7 +2732,7 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 		if (dInput == 0) {
 			CentreColouredText("This is a highly accurate countdown timer that takes time in seconds.", 2);
 			std::cout << "\n\n";
-			dInput = NumInput("Please input the number of seconds for the timer (0 to exit): > ");
+			dInput = NumInputld("Please input the number of seconds for the timer (0 to exit): > ");
 			// Exit on 0 input
 			if (dInput <= 0.0) {
 				Exiting();
@@ -2695,7 +2794,7 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 	}
 
 	// Beep
-	else if (sCommand == "beep") {
+	else if (sCommand == "beep" || sCommand == "19") {
 
 		long double dFrequency = 0;
 		long double dDuration = 0;
@@ -2718,9 +2817,9 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 
 				return;
 			} 
-			if (sStringCommandArgs[0] != "") {
+			if (sStringDataCommandArgs[0] != "") {
 				// Firstly, check if argument is a real and usable number
-				if (isNumber(sStringCommandArgs[0]) == false) {
+				if (isNumberld(sStringDataCommandArgs[0]) == false) {
 					VerbosityDisplay("In Commands() - ERROR: Could not detect numerical value in string-based number argument.\n");
 					UserErrorDisplay("ERROR - Your frequency argument is either too big or not a number.\nPlease try again with a number between 0 and 2 billion.\n");
 
@@ -2728,7 +2827,7 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 				}
 
 				// Use the specified number in the BeepSound call.
-				dFrequency = std::stod(sStringCommandArgs[0]);
+				dFrequency = std::stold(sStringDataCommandArgs[0]);
 
 				if (dFrequency < 0) {
 					VerbosityDisplay("ERROR: In Commands() - Numerical value argument incorrect (negative number).\n");
@@ -2739,9 +2838,9 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 
 				dDuration = 1; // just in case no time argument was passed, use the default 1 second beep
 			}
-			if (sStringCommandArgs[1] != "") {
+			if (sStringDataCommandArgs[1] != "") {
 				// Firstly, check if argument is a real and usable number
-				if (isNumber(sStringCommandArgs[1]) == false) {
+				if (isNumberld(sStringDataCommandArgs[1]) == false) {
 					VerbosityDisplay("In Commands() - ERROR: Could not detect numerical value in string-based number argument.\n");
 					UserErrorDisplay("ERROR - Your time argument is either too big or not a number.\nPlease try again with a number between 0 and 2 billion.\n");
 
@@ -2749,7 +2848,7 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 				}
 
 				// Use the specified number in the BeepSound call.
-				dDuration = std::stod(sStringCommandArgs[1]);
+				dDuration = std::stold(sStringDataCommandArgs[1]);
 
 				// Negative numbers are not allowed.
 				if (dDuration < 0) {
@@ -2765,12 +2864,12 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 		if (dFrequency <= 0 && dDuration <= 0) {
 			CentreColouredText("This allows for outputting a sound at a specified frequency for a specified amount of time.", 2);
 			std::cout << "\n\n";
-			dFrequency = NumInput("Please input frequency in Hertz (0 to exit): > ");
+			dFrequency = NumInputld("Please input frequency in Hertz (0 to exit): > ");
 			if (dFrequency <= 0) {
 				Exiting();
 				return;
 			}
-			dDuration = NumInput("Please input duration in seconds (0 to exit): > ");
+			dDuration = NumInputld("Please input duration in seconds (0 to exit): > ");
 			if (dDuration <= 0) {
 				Exiting();
 				return;
@@ -2794,7 +2893,7 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 	}
 
 	// MessageBox
-	else if (sCommand == "messagebox") {
+	else if (sCommand == "messagebox" || sCommand == "20") {
 		std::string sCaption = "";
 		std::string sText = "";
 		int nButton = 0;
@@ -2816,14 +2915,14 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 				colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
 				std::cout << wordWrap("\n -h\t\tDisplays this help message.\n -t <text>\tText for the message box. Set the text in place of <text>.")
 					<< wordWrap("\n -c <caption>\tCaption for the message box. Set the caption in place of <caption>.\n -i <icon>\tIcon for the message box. Set either: info, warning, error, or question, in place of <icon>.")
-					<< wordWrap("\n -b <button>\tButtons for the message box. Set either: ok, okcancel, abortretryignore, yesnocancel, yesno, retrycancel, or canceltrycontinue, in place of <button>.\n\nExample: messagebox -t \"Test Text\" -c \"Test Caption\" -b ok\n\n")
-					<< wordWrap("NOTE: Use speechmarks like the example when using text that contains spaces.\n\n");
+					<< wordWrap("\n -b <button>\tButtons for the message box. Set either: ok, okcancel, abortretryignore, yesnocancel, yesno, retrycancel, or canceltrycontinue, in place of <button>.\n\nExample: messagebox -t \"Test Text\" -c \"Test Caption\" -b ok")
+					<< wordWrap("\n\nNOTE: Use speechmarks like the example when using text that contains spaces.\n\n");
 
 				return;
 			}
 			else if (cCommandArgs[i] == 't') {
-				if (sStringCommandArgs[i] != "") {
-					sText = sStringCommandArgs[i];
+				if (sStringDataCommandArgs[i] != "") {
+					sText = sStringDataCommandArgs[i];
 				}
 				else {
 					VerbosityDisplay("ERROR: In Commands() - Vital argument not found.\n");
@@ -2834,8 +2933,8 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 
 			}
 			else if (cCommandArgs[i] == 'c') { 
-				if (sStringCommandArgs[i] != "") {
-					sCaption = sStringCommandArgs[i];
+				if (sStringDataCommandArgs[i] != "") {
+					sCaption = sStringDataCommandArgs[i];
 				}
 				else {
 					VerbosityDisplay("ERROR: In Commands() - Vital argument not found.\n");
@@ -2846,8 +2945,8 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 			}
 			else if (cCommandArgs[i] == 'i') {
 				// Uses sStringCommandArgs because the only arguments in this function are string-based
-				if (sStringCommandArgs[i] != "") {
-					nIcon = MessageBoxIconSwitch(sStringCommandArgs[i]);
+				if (sStringDataCommandArgs[i] != "") {
+					nIcon = MessageBoxIconSwitch(sStringDataCommandArgs[i]);
 					if (nIcon == 1) return;
 				}
 				else {
@@ -2858,8 +2957,8 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 				}
 			}
 			else if (cCommandArgs[i] == 'b') {
-				if (sStringCommandArgs[i] != "") {
-					nButton = MessageBoxButtonSwitch(sStringCommandArgs[i]);
+				if (sStringDataCommandArgs[i] != "") {
+					nButton = MessageBoxButtonSwitch(sStringDataCommandArgs[i]);
 				}
 				else {
 					VerbosityDisplay("ERROR: In Commands() - Vital argument not found.\n");
@@ -2963,7 +3062,7 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 	}
 
 	// Copy
-	else if (sCommand == "copy") {
+	else if (sCommand == "copy" || sCommand == "21") {
 		CentreColouredText(" ___COPY___ ", 1);
 		std::cout << '\n';
 
@@ -2978,23 +3077,27 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 				colourSubheading();
 				std::cout << "Possible arguments for this command:" << NOULINE_STR;
 				colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
-				std::cout << wordWrap("\n -h\t\tDisplays this help message.\n <source>\tThe original file to be copied to another file. Put the file directory in place of <source>.\n <dest>\t\tThe file directory of the new file. Put the file directory in place of <dest>.\n\n")
-					<< wordWrap("Example: copy \"C:\\test\\a file.txt\" C:\\Users\\newfile.txt\n\n")
-					<< wordWrap("NOTE: For any directory with spaces, use quotes like in the example.\nNOTE: You must have both the source and the destination directories when using them as arguments.\n\n");
+				std::cout << wordWrap("\n -h\t\tDisplays this help message.\n <source>\tThe original file to be copied to another file. Put the file directory in place of <source>.\n <dest>\t\tThe file directory of the new file. Put the file directory in place of <dest>.")
+					<< wordWrap("\n\nExample: copy \"C:\\test\\a file.txt\" C:\\Users\\newfile.txt")
+					<< wordWrap("\n\nNOTE: For any directory with spaces, use quotes like in the example.\nNOTE: You must have both the source and the destination directories when using them as arguments.\nNOTE: Read this article for information on the different forms of filepaths: ");
+				
+				colour(LBLU, ConfigObjMain.sColourGlobalBack);
+				std::cout << "https://learn.microsoft.com/en-us/windows/win32/fileio/naming-a-file#fully-qualified-vs-relative-paths" << '\n';
+				colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
 
 				return;
 
 			}
-			else if (sStringCommandArgs[0] != "") {
-				if (sStringCommandArgs[1] != "") {
-					std::string sOriginalFilePath = sStringCommandArgs[0];
-					std::string sDestinationFilePath = sStringCommandArgs[1];
+			else if (sStringDataCommandArgs[0] != "") {
+				if (sStringDataCommandArgs[1] != "") {
+					std::string sOriginalFilePath = sStringDataCommandArgs[0];
+					std::string sDestinationFilePath = sStringDataCommandArgs[1];
 
 					// Copy file
 					VerbosityDisplay("Copying file " + sOriginalFilePath + " to " + sDestinationFilePath + "...");
 					std::cout << "Copying file...\n";
 
-					if (CopyFileA(sOriginalFilePath.c_str(), sDestinationFilePath.c_str(), true) == false) {
+					if (!CopyFileA(sOriginalFilePath.c_str(), sDestinationFilePath.c_str(), true)) {
 						// Output existing file message
 						VerbosityDisplay("In Commands() - ERROR: Existing file when copying to file directory detected. Copy operation has failed.\n");
 						colour(RED, ConfigObjMain.sColourGlobalBack);
@@ -3051,7 +3154,7 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 		// Copy file
 		VerbosityDisplay("Copying file " + sOrigPath + " to " + sDestPath + "...");
 		std::cout << "Copying file...\n";
-		if (CopyFileA(sOrigPath.c_str(), sDestPath.c_str(), true) == false) {
+		if (!CopyFileA(sOrigPath.c_str(), sDestPath.c_str(), true)) {
 			VerbosityDisplay("In Commands() - ERROR: Existing file when copying to file directory detected. Copy operation has failed.\n");
 			UserErrorDisplay("An error occured while copying the file.\nPossibly either the original file is nonexistent or the file already exists in the destination location.\n");
 		}
@@ -3065,7 +3168,7 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 	}
 
 	// TextInfo
-	else if (sCommand == "textinfo") {
+	else if (sCommand == "textinfo" || sCommand == "22") {
 		std::string sText = "";
 
 		CentreColouredText(" ___TEXTINFO___ ", 1);
@@ -3082,14 +3185,14 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 				colourSubheading();
 				std::cout << "Possible arguments for this command:" << NOULINE_STR;
 				colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
-				std::cout << wordWrap("\n -h\tDisplays this help message.\n <text>\tThe text to be used for the command. Put the text in place of <text>.\n\n")
-					<< wordWrap("Example: textinfo \"The quick brown fox jumps over the lazy dog.\"\n\nNOTE: Use quotes for text with any spaces in it like the example, or the text may not be read properly.\n\n");
+				std::cout << wordWrap("\n -h\tDisplays this help message.\n <text>\tThe text to be used for the command. Put the text in place of <text>.")
+					<< wordWrap("\n\nExample: textinfo \"The quick brown fox jumps over the lazy dog.\"\n\nNOTE: Use quotes for text with any spaces in it like the example, or the text may not be read properly.\n\n");
 
 				return;
 			}
-			else if (sStringCommandArgs[0] != "") {
-				// Assign sText to sStringCommandArgs[0] to be used after the argument checking
-				sText = sStringCommandArgs[0];
+			else if (sStringDataCommandArgs[0] != "") {
+				// Assign sText to sStringDataCommandArgs[0] to be used after the argument checking
+				sText = sStringDataCommandArgs[0];
 			}
 		}
 
@@ -3157,7 +3260,7 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 	}
 
 	// ConfigAction
-	else if (sCommand == "configaction") {
+	else if (sCommand == "configaction" || sCommand == "23") {
 		int nOption = 0;
 
 		// Arguments Interface
@@ -3177,25 +3280,25 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 				colourSubheading();
 				std::cout << "Possible arguments for this command:" << NOULINE_STR;
 				colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
-				std::cout << wordWrap("\n -h\t\t\tDisplays this help message.\n readconfigfile\t\tReads from the currently-pointed configuration file\n writeconfigfile\tWrites to the currently-pointed-to configuration file.\n")
-					<< wordWrap(" createconfigfile\tCreates a configuration file to the same file directory as user-set location, or default location as fallback.\n displayconfigobj\tDisplays contents of the main configuration object in memory.\n")
-					<< wordWrap(" displayconfigfile\tDisplays contents of currently-pointed-to configuration file.\n\nExample: configaction readconfigfile\n\n");
+				std::cout << wordWrap("\n -h\t\t\tDisplays this help message.\n --readconfigfile\tReads from the currently-pointed configuration file\n --writeconfigfile\tWrites to the currently-pointed-to configuration file.")
+					<< wordWrap("\n --createconfigfile\tCreates a configuration file to the same file directory as user-set location, or default location as fallback.\n --displayconfigobj\tDisplays contents of the main configuration object in memory.")
+					<< wordWrap("\n --displayconfigfile\tDisplays contents of currently-pointed-to configuration file.\n\nExample: configaction --readconfigfile\n\n");
 
 				return;
 			}
-			else if (sStringCommandArgs[0] == "readconfigfile") {
+			else if (sStringOptionCommandArgs[0] == "readconfigfile") {
 				nOption = 1;
 			}
-			else if (sStringCommandArgs[0] == "writeconfigfile") {
+			else if (sStringOptionCommandArgs[0] == "writeconfigfile") {
 				nOption = 2;
 			}
-			else if (sStringCommandArgs[0] == "createconfigfile") {
+			else if (sStringOptionCommandArgs[0] == "createconfigfile") {
 				nOption = 3;
 			}
-			else if (sStringCommandArgs[0] == "displayconfigobj") {
+			else if (sStringOptionCommandArgs[0] == "displayconfigobj") {
 				nOption = 4;
 			}
-			else if (sStringCommandArgs[0] == "displayconfigfile") {
+			else if (sStringOptionCommandArgs[0] == "displayconfigfile") {
 				nOption = 5;
 			}
 		}
@@ -3264,7 +3367,7 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 			colourSubheading();
 			std::cout << "Contents of Main Configuration Object:" << NOULINE_STR;
 			colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
-			std::cout << "\n\n" << ConfigObjMain.GetConfigObjectContents();
+			std::cout << "\n\n" << ConfigObjMain.GetConfigObjectContents() << '\n';
 
 			colour(LGRN, ConfigObjMain.sColourGlobalBack);
 			std::cout << CentreText("Main configuration object contents output complete!") << '\n';
@@ -3299,13 +3402,12 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 	}
 
 	// BeepSounds
-	else if (sCommand == "beepsounds") {
+	else if (sCommand == "beepsounds" || sCommand == "24") {
 		bool bArgumentExecuted = false;
 
 		// Arguments Interface
 		for (int i = 0; i < nArgArraySize; i++) {
 			if (cCommandArgs[i] == 'h') {
-				std::cout << '\n';
 				CentreColouredText(" ___BEEPSOUNDS___ ", 1);
 				std::cout << '\n';
 
@@ -3317,37 +3419,37 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 				colourSubheading();
 				std::cout << "Possible arguments for this command:" << NOULINE_STR;
 				colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
-				std::cout << wordWrap("\n -h\t\t\tDisplays this help message.\n misssionimpossible\tPlays a small snippet of the Mission Impossible theme song.\n")
-					<< wordWrap(" happybirthday\t\tPlays the Happy Birthday song.\n supermario\t\tPlays the Super Mario Theme Song.\n dundundun\t\tPlays a 'dun dun dun dun' sound.\n")
-					<< wordWrap(" imperialmarch\t\tPlays the Star Wars Imperial March song.\n\nExample: beepsounds missionimpossible\n\n");
+				std::cout << wordWrap("\n -h\t\t\tDisplays this help message.\n --misssionimpossible\tPlays a small snippet of the Mission Impossible theme song.")
+					<< wordWrap("\n --happybirthday\tPlays the Happy Birthday song.\n --supermario\t\tPlays the Super Mario Theme Song.\n --dundundun\t\tPlays a 'dun dun dun dun' sound.")
+					<< wordWrap("\n --imperialmarch\tPlays the Star Wars Imperial March song.\n\nExample: beepsounds --missionimpossible\n\n");
 
 				return;
 			}
-			else if (sStringCommandArgs[i] == "missionimpossible") {
+			else if (sStringOptionCommandArgs[i] == "missionimpossible") {
 				RandomColourOutput("Playing Mission Impossible Theme...");
 				std::cout << '\n';
 				MissionImpossibleTheme();
 				bArgumentExecuted = true;
 			}
-			else if (sStringCommandArgs[i] == "happybirthday") {
+			else if (sStringOptionCommandArgs[i] == "happybirthday") {
 				RandomColourOutput("Playing Happy Birthday Song...");
 				std::cout << '\n';
 				HappyBirthdaySong();
 				bArgumentExecuted = true;
 			}
-			else if (sStringCommandArgs[i] == "supermario") {
+			else if (sStringOptionCommandArgs[i] == "supermario") {
 				RandomColourOutput("Playing Super Mario Theme...");
 				std::cout << '\n';
 				SuperMarioTheme();
 				bArgumentExecuted = true;
 			}
-			else if (sStringCommandArgs[i] == "dundundun") {
+			else if (sStringOptionCommandArgs[i] == "dundundun") {
 				RandomColourOutput("Playing DunDunDun Sound...");
 				std::cout << '\n';
 				DunDunDunSound();
 				bArgumentExecuted = true;
 			}
-			else if (sStringCommandArgs[i] == "imperialmarch") {
+			else if (sStringOptionCommandArgs[i] == "imperialmarch") {
 				RandomColourOutput("Playing Star Wars Imperial March Song...");
 				std::cout << '\n';
 				StarWarsImperialMarch();
@@ -3414,7 +3516,7 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 	}
 
 	// RickRoll
-	else if (sCommand == "rickroll") {
+	else if (sCommand == "rickroll" || sCommand == "25") {
 
 		// Arguments Interface
 		for (int i = 0; i < nArgArraySize; i++) {
@@ -3445,7 +3547,7 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 	}
 
 	// ShellExecute
-	else if (sCommand == "shellexecute") {
+	else if (sCommand == "shellexecute" || sCommand == "26") {
 
 		// Arguments Interface
 		for (int i = 0; i < nArgArraySize; i++) {
@@ -3461,12 +3563,12 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 				colourSubheading();
 				std::cout << "Possible arguments for this command:" << NOULINE_STR;
 				colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
-				std::cout << wordWrap(" -h\t\tDisplays this help message.\n <command>\tCommand to execute. Put the desired command in place of <command>.\n\nExample: ShellExecute \"ipconfig -a\"\n\n")
-					<< wordWrap("NOTE: Use quotes whenever there are spaces in the command, like the example.");
+				std::cout << wordWrap("\n -h\t\tDisplays this help message.\n <command>\tCommand to execute. Put the desired command in place of <command>.\n\nExample: ShellExecute \"ipconfig -a\"")
+					<< wordWrap("\n\nNOTE: Use quotes whenever there are spaces in the command, like the example.\n\n");
 
 				return;
 			}
-			else if (sStringCommandArgs[0] != "") {
+			else if (sStringDataCommandArgs[0] != "") {
 				CentreColouredText("___SHELLEXECUTE___", 1);
 				std::cout << '\n';
 
@@ -3476,7 +3578,7 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 				colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
 
 				// Execute command
-				system(sStringCommandArgs[0].c_str());
+				system(sStringDataCommandArgs[0].c_str());
 
 				colour(LGRN, ConfigObjMain.sColourGlobalBack);
 				std::cout << "\nCommand execution successful!\n";
@@ -3505,7 +3607,7 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 		colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
 
 		// Execute command
-		system(sStringCommandArgs[0].c_str());
+		system(sStringDataCommandArgs[0].c_str());
 
 		colour(LGRN, ConfigObjMain.sColourGlobalBack);
 		std::cout << "\nCommand execution successful!\n";
@@ -3515,14 +3617,14 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 	}
 
 	// Hacker
-	else if (sCommand == "hacker") {
+	else if (sCommand == "hacker" || sCommand == "27") {
 
 		// 1 for display, 2 for typing
 		int nChoice = 0;
 		// For custom file hacker type
 		std::string sFileName = "";
 		// Speed of characters
-		unsigned long long int nOutputSpeed = 0;
+		uint64_t nOutputSpeed = 0;
 		// Start immediately and skip messages
 		bool bStartImmediately = false;
 
@@ -3541,9 +3643,9 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 				colourSubheading();
 				std::cout << "Possible arguments for this command:" << NOULINE_STR;
 				colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
-				std::cout << wordWrap("\n -h\t\tDisplays this help message.\n -i\t\tStart immediately, with default settings when no argument is given.\n display\tStarts the hacking text part of this command.\n type\t\tStarts the hacker typing part of this command.\n typecustom\tStarts the hacker typing part of this command, with custom file output abilities.\n <speed>\tSpeed of output characters for 'type' and 'typecustom' arguments. Must be a number.\n <filepath>\tCustom filepath argument for 'typecustom' argument. Must be a valid filepath.")
-					<< wordWrap("\n\nSyntax for 'type' argument:\t\t type <speed>\nSyntax for 'typecustom' argument:\t typecustom <filepath> <speed> (In order)")
-					<< wordWrap("\n\nExample: hacker type\n\n");
+				std::cout << wordWrap("\n -h\t\tDisplays this help message.\n -i\t\tStart immediately, with default settings when no argument is given.\n --display\tStarts the hacking text part of this command.\n --type\t\tStarts the hacker typing part of this command.\n --typecustom\tStarts the hacker typing part of this command, with custom file output abilities.\n <speed>\tSpeed of output characters for 'type' and 'typecustom' arguments. Must be a number.\n <filepath>\tCustom filepath argument for 'typecustom' argument. Must be a valid filepath.")
+					<< wordWrap("\n\nSyntax for '--type' argument:\t\t type <speed>\nSyntax for '--typecustom' argument:\t typecustom <filepath> <speed> (In order)")
+					<< wordWrap("\n\nExample: hacker --type\n\n");
 
 				return;
 			}
@@ -3552,46 +3654,43 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 				bStartImmediately = true;
 			}
 			
-			if (sStringCommandArgs[i] == "display") {
+			if (sStringOptionCommandArgs[i] == "display") {
 				nChoice = 1;
 			}
-			else if (sStringCommandArgs[i] == "type") {
-				if (i + 1 < 128) {
-					// Firstly, validate string to be a number
-					// Don't check empty strings
-					if (sStringCommandArgs[i + 1] != "")
-					{
-						if (isNumber(sStringCommandArgs[i + 1]) == false) {
-							colour(RED, ConfigObjMain.sColourGlobalBack);
-							VerbosityDisplay("In Commands() - ERROR: Could not detect numerical value in string-based number argument.\n");
-							UserErrorDisplay("ERROR: The speed argument given is not a number.\nPlease try again later, or see 'hacker -h' for more details.\n");
-							colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
-							return;
-						}
-						else nOutputSpeed = std::stoll(sStringCommandArgs[i + 1]);
+			else if (sStringOptionCommandArgs[i] == "type") {
+				// Firstly, validate string to be a number
+				// Don't check empty strings
+				if (sStringDataCommandArgs[i] != "")
+				{
+					if (isNumberull(sStringDataCommandArgs[i]) == false) {
+						colour(RED, ConfigObjMain.sColourGlobalBack);
+						VerbosityDisplay("In Commands() - ERROR: Could not detect numerical value in string-based number argument.\n");
+						UserErrorDisplay("ERROR: The speed argument given is not a number.\nPlease try again later, or see 'hacker -h' for more details.\n");
+						colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
+						return;
 					}
+					else nOutputSpeed = std::stoull(sStringDataCommandArgs[i]);
 				}
 
 				nChoice = 2;
 			}
-			else if (sStringCommandArgs[i] == "typecustom") {
+			else if (sStringOptionCommandArgs[i] == "typecustom") {
+				sFileName = sStringDataCommandArgs[i];
+
 				// If statements for safety
 				if (i + 1 < 128) {
-					sFileName = sStringCommandArgs[i + 1];
-				}
-				if (i + 2 < 128) {
 					// Firstly, validate string to be a number
 					// Don't check empty strings
-					if (sStringCommandArgs[i + 2] != "") 
+					if (sStringDataCommandArgs[i + 1] != "") 
 					{
-						if (isNumber(sStringCommandArgs[i + 2]) == false) {
+						if (isNumberull(sStringDataCommandArgs[i + 1]) == false) {
 							colour(RED, ConfigObjMain.sColourGlobalBack);
 							VerbosityDisplay("In Commands() - ERROR: Could not detect numerical value in string-based number argument.\n");
 							UserErrorDisplay("ERROR: The speed argument given is not a number.\nPlease try again later, or see 'hacker -h' for more details.\n");
 							colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
 							return;
 						}
-						else nOutputSpeed = std::stoll(sStringCommandArgs[i + 2]);
+						else nOutputSpeed = std::stoull(sStringDataCommandArgs[i + 1]);
 					}
 				}
 
@@ -3661,8 +3760,8 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 				std::cout << wordWrap("\nWelcome to Hacker Type!\nThis will allow you to type like a hacker and impress your friends.\nThe idea was taken from https://www.hackertyper.net/. Type with any random keys to output text, and ESC to exit.\n\n");
 
 				if (nOutputSpeed == 0) {
-					nOutputSpeed = NumInput("Please input desired character output speed (default is 3) (0 to exit): > ");
-					if (nOutputSpeed == 0) {
+					nOutputSpeed = PositiveNumInputull("Please input desired character output speed (default is 3) (0 to exit): > ");
+					if (nOutputSpeed <= 0) {
 						Exiting();
 						return;
 					}
@@ -3696,8 +3795,8 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 				std::cout << '\n';
 
 				if (nOutputSpeed == 0) {
-					nOutputSpeed = NumInput("Please input desired character output speed (default is 3) (0 to exit): > ");
-					if (nOutputSpeed == 0) {
+					nOutputSpeed = PositiveNumInputull("Please input desired character output speed (default is 3) (0 to exit): > ");
+					if (nOutputSpeed <= 0) {
 						Exiting();
 						return;
 					}
@@ -3722,7 +3821,7 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 	}
 
 	// Calculator
-	else if (sCommand == "calculator") {
+	else if (sCommand == "calculator" || sCommand == "28") {
 
 		// Declare variables
 		bool bWorkingOut = false;
@@ -3771,8 +3870,8 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 				colourSubheading();
 				std::cout << "Possible arguments for this command:" << NOULINE_STR;
 				colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
-				std::cout << wordWrap("\n -h\tDisplays this help message.\n -w\tMakes calculator display working out steps.\n -n\tMakes calculator NOT display working out steps.\n <calc>\tCalculation as an argument. Input your calculation in place of <calc>.\n\n")
-					<< wordWrap("Example: calculator (10+5^2)((5*-2)+9-3^3)/2\n\n");
+				std::cout << wordWrap("\n -h\tDisplays this help message.\n -w\tMakes calculator display working out steps.\n -n\tMakes calculator NOT display working out steps.\n <calc>\tCalculation as an argument. Input your calculation in place of <calc>.")
+					<< wordWrap("\n\nExample: calculator (10+5^2)((5*-2)+9-3^3)/2\n\n");
 
 				return;
 			}
@@ -3789,8 +3888,8 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 				bWorkingOutArgumentSet = true;
 			}
 			
-			if (sStringCommandArgs[i] != "") {
-				sCalculationInput = sStringCommandArgs[i];
+			if (sStringDataCommandArgs[i] != "") {
+				sCalculationInput = sStringDataCommandArgs[i];
 			}
 		}
 
@@ -3826,7 +3925,7 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 			else {
 				std::cout << " Calculated Answer: ";
 				colour(LCYN, ConfigObjMain.sColourGlobalBack);
-				std::cout << std::to_string(dCalculatedVal) << "\n";
+				std::cout << std::setprecision(16) << dCalculatedVal << "\n";
 				colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
 			}
 
@@ -3857,7 +3956,7 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 			else {
 				std::cout << " Calculated Answer: ";
 				colour(LCYN, ConfigObjMain.sColourGlobalBack);
-				std::cout << std::to_string(dCalculatedVal) << "\n\n";
+				std::cout << std::setprecision(16) << dCalculatedVal << "\n\n";
 				colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
 			}
 		}
@@ -3866,7 +3965,7 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 	}
 
 	// Logoff
-	else if (sCommand == "logoff") {
+	else if (sCommand == "logoff" || sCommand == "29") {
 		
 		CentreColouredText(" ___LOGOFF___ ", 1);
 		std::cout << '\n';
@@ -3904,7 +4003,7 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 	}
 
 	// Shutdown
-	else if (sCommand == "shutdown") {
+	else if (sCommand == "shutdown" || sCommand == "30") {
 		unsigned long int nTimeBeforeShutdown = 10;
 
 		CentreColouredText(" ___SHUTDOWN___ ", 1);
@@ -3922,8 +4021,8 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 				colourSubheading();
 				std::cout << "Possible arguments for this command:" << NOULINE_STR;
 				colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
-				std::cout << wordWrap("\n -h\t\tDisplays this help message.\n -t <time>\tA time argument for shutdown in seconds. Put time argument in place of <time>. Must be a number.\n -c\t\tCancel any pending shutdown operations.\n\n")
-					<< wordWrap("Example: shutdown -t 5\n\n");
+				std::cout << wordWrap("\n -h\t\tDisplays this help message.\n -t <time>\tA time argument for shutdown in seconds. Put time argument in place of <time>. Must be a number.\n -c\t\tCancel any pending shutdown operations.")
+					<< wordWrap("\n\nExample: shutdown -t 5\n\n");
 
 				return;
 			}
@@ -3940,13 +4039,13 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 			}
 			else if (cCommandArgs[i] == 't') {
 				// Check if argument is a number
-				if (sStringCommandArgs[0] != "") {
-					if (isNumber(sStringCommandArgs[0]) == false) {
+				if (sStringDataCommandArgs[0] != "") {
+					if (isNumberul(sStringDataCommandArgs[0]) == false) {
 						UserErrorDisplay("ERROR - Time argument is not a number.\nPlease try again later, or see 'shutdown -h' for more details.\n");
 
 						return;
 					}
-					else nTimeBeforeShutdown = std::stoul(sStringCommandArgs[0]);
+					else nTimeBeforeShutdown = std::stoul(sStringDataCommandArgs[0]);
 				}
 				else {
 					UserErrorDisplay("ERROR - No time argument found.\nPlease try again later, or see 'shutdown -h' for more details.\n");
@@ -3965,7 +4064,7 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 	}
 
 	// Reboot
-	else if (sCommand == "reboot" || sCommand == "restart") {
+	else if (sCommand == "reboot" || sCommand == "restart" || sCommand == "31") {
 		unsigned long int nTimeBeforeReboot = 10;
 
 		CentreColouredText(" ___REBOOT___ ", 1);
@@ -3983,8 +4082,8 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 				colourSubheading();
 				std::cout << "Possible arguments for this command:" << NOULINE_STR;
 				colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
-				std::cout << wordWrap("\n -h\t\tDisplays this help message.\n -t <time>\tA time argument for reboot in seconds. Put time argument in place of <time>. Must be a number.\n -c\t\tCancel any pending reboot operations.\n\n")
-					<< wordWrap("Example: reboot -t 5\n\n");
+				std::cout << wordWrap("\n -h\t\tDisplays this help message.\n -t <time>\tA time argument for reboot in seconds. Put time argument in place of <time>. Must be a number.\n -c\t\tCancel any pending reboot operations.")
+					<< wordWrap("\n\nExample: reboot -t 5\n\n");
 
 				return;
 			}
@@ -4001,13 +4100,13 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 			}
 			else if (cCommandArgs[i] == 't') {
 				// Check if argument is a number
-				if (sStringCommandArgs[0] != "") {
-					if (isNumber(sStringCommandArgs[0]) == false) {
+				if (sStringDataCommandArgs[0] != "") {
+					if (isNumberul(sStringDataCommandArgs[0]) == false) {
 						UserErrorDisplay("ERROR - Time argument is not a number.\nPlease try again later, or see 'reboot -h' for more details.\n");
 
 						return;
 					}
-					else nTimeBeforeReboot = std::stoul(sStringCommandArgs[0]);
+					else nTimeBeforeReboot = std::stoul(sStringDataCommandArgs[0]);
 				}
 				else {
 					UserErrorDisplay("ERROR - No time argument found.\nPlease try again later, or see 'reboot -h' for more details.\n");
@@ -4026,7 +4125,7 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 	}
 
 	// Hibernate
-	else if (sCommand == "hibernate") {
+	else if (sCommand == "hibernate" || sCommand == "32") {
 
 		CentreColouredText(" ___HIBERNATE___ ", 1);
 		std::cout << '\n';
@@ -4065,7 +4164,7 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 	}
 
 	// ResetExpl
-	else if (sCommand == "resetexpl") {
+	else if (sCommand == "resetexpl" || sCommand == "33") {
 
 		CentreColouredText(" ___RESETEXPL___ ", 1);
 		std::cout << '\n';
@@ -4106,13 +4205,14 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 	}
 
 	// MemTest
-	else if (sCommand == "memtest") {
+	else if (sCommand == "memtest" || sCommand == "34") {
 
 		int nChoice = 0;
-		unsigned long long int nNumOfPasses = 0; // -b: 100, -l: 10, -e: 2
+		uint64_t nNumOfPasses = 0; // -b: 100, -l: 10, -e: 2
 		bool bKeypressBeforeDeallocation = false;
 		bool bUseFullMemory = false;
 		bool bSuccess = true;
+		bool bMultiThreaded = false;
 
 		// Arguments Interface
 		for (int i = 0; i < nArgArraySize; i++) {
@@ -4125,16 +4225,16 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 				colourSubheading();
 				std::cout << "What this command does:" << NOULINE_STR;
 				colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
-				std::cout << wordWrap("\n- Checks your computer's memory to see if any issues arise with it.\n- The way this is done is by filling up the computer's memory and assigning each byte of memory with a specific value.\n")
-					<< wordWrap("- There are 2 methods of checking: A quick round of x binary searches using randomly calculated numbers, and a slower x-pass linear search that checks every cell of assigned memory for the correct value (x being no. of passes).\n")
-					<< wordWrap("- Any program/system crash or completely unexpected behaviour in this test probably means that the memory is faulty.\n- It is recommended that all programs and background tasks are closed before any memory tests are run.\n\n");
+				std::cout << wordWrap("\n- Checks your computer's memory to see if any issues arise with it.\n- The way this is done is by filling up the computer's memory and assigning each byte of memory with a specific value.")
+					<< wordWrap("\n- There are 2 methods of checking: A quick round of x binary searches using randomly calculated numbers, and a slower x-pass linear search that checks every cell of assigned memory for the correct value (x being no. of passes).")
+					<< wordWrap("\n- Any program/system crash or completely unexpected behaviour in this test probably means that the memory is faulty.\n- It is recommended that all programs and background tasks are closed before any memory tests are run.\n\n");
 
 				colourSubheading();
 				std::cout << "Possible arguments for this command:" << NOULINE_STR;
 				colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
-				std::cout << wordWrap("\n -h\t\tDisplays this help message.\n -f\t\tSimply fill up and allocate the system memory, and then deallocate.\n -b <passes>\tPerform binary searches on allocated memory. Put number of passes in place of <passes>.\n")
-					<< wordWrap(" -l <passes>\tPerform linear check searches on allocated memory. Put number of passes in place of <passes>.\n -e <passes>\tPerform extended linear check searches on allocated memory. Put number of passes in place of <passes>.\n -k\t\tRequire a keypress before memory deallocation, with the -f option. Default is false.\n")
-					<< wordWrap(" -a\t\tUse all the memory available on the host system, rather than just the default available memory. May not work with systems that have paging disabled.\n\nExample: memtest -k -l 6\n\n");
+				std::cout << wordWrap("\n -h\t\tDisplays this help message.\n -f\t\tSimply fill up and allocate the system memory, and then deallocate.\n -b <passes>\tPerform binary searches on allocated memory. Put number of passes in place of <passes>.")
+					<< wordWrap("\n -l <passes>\tPerform linear check searches on allocated memory. Put number of passes in place of <passes>.\n -e <passes>\tPerform extended linear check searches on allocated memory. Put number of passes in place of <passes>.\n -k\t\tRequire a keypress before memory deallocation, with the -f option. Default is false.")
+					<< wordWrap("\n -m\t\tUse multithreading. May increase performance but can increase CPU temperatures.\n -a\t\tUse all the memory available on the host system, rather than just the default available memory. May not work with systems that have paging disabled.\n\nExample: memtest -k -l 6\n\n");
 
 				return;
 			}
@@ -4147,17 +4247,20 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 			else if (cCommandArgs[i] == 'a') {
 				bUseFullMemory = true;
 			}
+			else if (cCommandArgs[i] == 'm') {
+				bMultiThreaded = true;
+			}
 			else if (cCommandArgs[i] == 'b') {
 
 				// Check if argument is a number
-				if (sStringCommandArgs[0] != "") {
-					if (isNumber(sStringCommandArgs[0]) == false) {
+				if (sStringDataCommandArgs[0] != "") {
+					if (isNumberull(sStringDataCommandArgs[0]) == false) {
 						VerbosityDisplay("In Commands() - ERROR: Could not detect numerical value in string-based number argument.\n");
 						UserErrorDisplay("ERROR - Passes argument is not a number.\nPlease try again later, or see 'memtest -h' for more details.\n");
 
 						return;
 					}
-					else nNumOfPasses = std::stoull(sStringCommandArgs[0]);
+					else nNumOfPasses = std::stoull(sStringDataCommandArgs[0]);
 				}
 
 				nChoice = 2;
@@ -4166,44 +4269,47 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 			else if (cCommandArgs[i] == 'l') {
 
 				// Check if argument is a number
-				if (sStringCommandArgs[0] != "") {
-					if (isNumber(sStringCommandArgs[0]) == false) {
+				if (sStringDataCommandArgs[0] != "") {
+					if (isNumberull(sStringDataCommandArgs[0]) == false) {
 						VerbosityDisplay("In Commands() - ERROR: Could not detect numerical value in string-based number argument.\n");
 						UserErrorDisplay("ERROR - Passes argument is not a number.\nPlease try again later, or see 'memtest -h' for more details.\n");
 
 						return;
 					}
-					else nNumOfPasses = std::stoull(sStringCommandArgs[0]);
+					else nNumOfPasses = std::stoull(sStringDataCommandArgs[0]);
 				}
 
-				nChoice = 3;
+				nChoice = 4;
 			}
 			else if (cCommandArgs[i] == 'e') {
 
 				// Check if argument is a number
-				if (sStringCommandArgs[0] != "") {
-					if (isNumber(sStringCommandArgs[0]) == false) {
+				if (sStringDataCommandArgs[0] != "") {
+					if (isNumberull(sStringDataCommandArgs[0]) == false) {
 						VerbosityDisplay("In Commands() - ERROR: Could not detect numerical value in string-based number argument.\n");
 						UserErrorDisplay("ERROR - Passes argument is not a number.\nPlease try again later, or see 'memtest -h' for more details.\n");
 
 						return;
 					}
-					else nNumOfPasses = std::stoull(sStringCommandArgs[0]);
+					else nNumOfPasses = std::stoull(sStringDataCommandArgs[0]);
 				}
 
-				nChoice = 4;
+				nChoice = 6;
 			}
 		}
 
 		// User Interface
 		if (nChoice == 0) {
 			OptionSelectEngine oseMemtest;
-			oseMemtest.nSizeOfOptions = 4;
+			oseMemtest.nSizeOfOptions = 7;
 			std::string sOptions[] = {
 				"Simple fill up and deallocate memory",
 				"Fill up memory and perform binary search",
+				"Fill up memory and perform binary search (Multithreaded)",
 				"Fill up memory and perform linear check search",
-				"Fill up memory and perform extended linear check search"
+				"Fill up memory and perform linear check search (Multithreaded)",
+				"Fill up memory and perform extended linear check search",
+				"Fill up memory and perform extended linear check search (Multithreaded)",
 			};
 			oseMemtest.sOptions = sOptions;
 
@@ -4216,9 +4322,23 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 			}
 		}
 
+		// Multithreaded options setter
+		if (nChoice == 3) {
+			bMultiThreaded = true;
+			nChoice = 2;
+		}
+		else if (nChoice == 5) {
+			bMultiThreaded = true;
+			nChoice = 4;
+		}
+		else if (nChoice == 7) {
+			bMultiThreaded = true;
+			nChoice = 6;
+		}
+
 		// Simple fill up and deallocate memory
 		if (nChoice == 1) {
-			CentreColouredText(" ___SIMPLE ALLOCATE & DEALLOCATE___ ", 1);
+			CentreColouredText(" ___MEMTEST SIMPLE ALLOCATE & DEALLOCATE___ ", 1);
 
 			colour(GRN, ConfigObjMain.sColourGlobalBack);
 			std::cout << wordWrap("\n\nStarting a simple fill-up and memory deallocation process...\n");
@@ -4232,7 +4352,7 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 		// Fill up memory and perform x binary searches
 		else if (nChoice == 2) 
 		{
-			CentreColouredText(" ___ALLOCATE & BINARY SEARCH___ ", 1);
+			CentreColouredText(" ___MEMTEST BINARY SEARCH___ ", 1);
 
 			// When not inputted as an argument
 			if (nNumOfPasses == 0) {
@@ -4241,10 +4361,19 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 				std::cout << wordWrap("Welcome to the Binary Search Memory Test!");
 				colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
 
-				std::cout << wordWrap("\n\nThis will fill up the memory on your computer and perform binary search tests on it.\n\n");
-				nNumOfPasses = NumInput("Please input the number of binary search passes (100 is default, 0 to exit): > ");
+				std::cout << wordWrap("\n\nThis will fill up the memory on your computer and perform binary search tests on it.\n");
+				colour(LCYN, ConfigObjMain.sColourGlobalBack);
+				std::cout << wordWrap("NOTE: You can stop the test at any time by pressing any key in the duration of the test.\n");
+				colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
+				if (bMultiThreaded == true) {
+					colour(LCYN, ConfigObjMain.sColourGlobalBack);
+					std::cout << wordWrap("NOTE: This test will run with multithreading. Beware of CPU throttling and temperatures.\n");
+					colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
+				}
+				std::cout << '\n';
+				nNumOfPasses = PositiveNumInputull("Please input the number of binary search passes (100 is default, 0 to exit): > ");
 
-				if (nNumOfPasses == 0) {
+				if (nNumOfPasses <= 0) {
 					Exiting();
 					return;
 				}
@@ -4256,13 +4385,13 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 
 			MemoryTestEngine mteBinarySearch;
 			mteBinarySearch.bUseTotalPhysicalCapacity = bUseFullMemory;
-			bSuccess = mteBinarySearch.PerformBinarySearchOnMemory(nNumOfPasses);
+			bSuccess = mteBinarySearch.PerformBinarySearchOnMemory(nNumOfPasses, bMultiThreaded);
 		}
 
 		// Fill up memory and perform x linear check searches
-		else if (nChoice == 3) 
+		else if (nChoice == 4) 
 		{
-			CentreColouredText(" ___ALLOCATE & LINEAR CHECK SEARCH___ ", 1);
+			CentreColouredText(" ___MEMTEST LINEAR CHECK SEARCH___ ", 1);
 
 			// When not inputted as an argument
 			if (nNumOfPasses == 0) {
@@ -4273,11 +4402,18 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 
 				std::cout << wordWrap("\n\nThis will fill up the memory on your computer and perform linear check search tests on it.\n");
 				colour(LCYN, ConfigObjMain.sColourGlobalBack);
-				std::cout << wordWrap("NOTE: This test may take some time.\n\n");
+				std::cout << wordWrap("NOTE: This test may take some time.\nNOTE: You can stop the test at any time by pressing any key during the test.\n");
 				colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
-				nNumOfPasses = NumInput("Please input the number of linear check search passes (10 is default, 0 to exit): > ");
+				if (bMultiThreaded == true) {
+					colour(LCYN, ConfigObjMain.sColourGlobalBack);
+					std::cout << wordWrap("NOTE: This test will run with multithreading. Beware of CPU throttling and temperatures.\n");
+					colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
+				}
+				std::cout << '\n';
+				
+				nNumOfPasses = PositiveNumInputull("Please input the number of linear check search passes (10 is default, 0 to exit): > ");
 
-				if (nNumOfPasses == 0) {
+				if (nNumOfPasses <= 0) {
 					Exiting();
 					return;
 				}
@@ -4289,13 +4425,13 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 
 			MemoryTestEngine mteLinearSearch;
 			mteLinearSearch.bUseTotalPhysicalCapacity = bUseFullMemory;
-			bSuccess = mteLinearSearch.PerformLinearSearchOnMemory(nNumOfPasses);
+			bSuccess = mteLinearSearch.PerformLinearSearchOnMemory(nNumOfPasses, bMultiThreaded);
 		}
 
 		// Fill up memory and perform x extended linear check searches
-		else if (nChoice == 4) 
+		else if (nChoice == 6) 
 		{
-			CentreColouredText(" ___ALLOCATE & EXTENDED LINEAR CHECK SEARCH___ ", 1);
+			CentreColouredText(" ___MEMTEST EXTENDED LINEAR CHECK SEARCH___ ", 1);
 
 			// When not inputted as an argument
 			if (nNumOfPasses == 0) {
@@ -4304,14 +4440,20 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 				std::cout << wordWrap("Welcome to the Extended Linear Check Search Memory Test!");
 				colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
 
-				std::cout << wordWrap("\n\nThis will fill up the memory on your computer and perform extended linear check search tests on it.\n")
-					<< wordWrap("This won't only comprise of checking digits only (like the non-extended test), but also performing operations on memory, before reiterating to the next memory block.\n");
+				std::cout << wordWrap("\n\nThis will fill up the memory on your computer and perform extended linear check search tests on it.")
+					<< wordWrap("\nThis won't only comprise of checking digits only (like the non-extended test), but also performing operations on memory, before reiterating to the next memory block.\n");
 				colour(LCYN, ConfigObjMain.sColourGlobalBack);
-				std::cout << wordWrap("NOTE: This test may take a lot of time.\n\n");
+				std::cout << wordWrap("NOTE: This test may take a lot of time.\nNOTE: You can stop the test at any time by pressing any key during the test.\n");
 				colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
-				nNumOfPasses = NumInput("Please input the number of extended linear check search passes (2 is default, 0 to exit): > ");
+				if (bMultiThreaded == true) {
+					colour(LCYN, ConfigObjMain.sColourGlobalBack);
+					std::cout << wordWrap("NOTE: This test will run with multithreading. Beware of CPU throttling and temperatures.\n");
+					colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
+				}
+				std::cout << '\n';
+				nNumOfPasses = PositiveNumInputull("Please input the number of extended linear check search passes (2 is default, 0 to exit): > ");
 
-				if (nNumOfPasses == 0) {
+				if (nNumOfPasses <= 0) {
 					Exiting();
 					return;
 				}
@@ -4323,7 +4465,7 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 
 			MemoryTestEngine mteLinearSearch;
 			mteLinearSearch.bUseTotalPhysicalCapacity = bUseFullMemory;
-			bSuccess = mteLinearSearch.PerformExtendedLinearSearchOnMemory(nNumOfPasses);
+			bSuccess = mteLinearSearch.PerformExtendedLinearSearchOnMemory(nNumOfPasses, bMultiThreaded);
 		}
 
 		// Failed, unknown return value
@@ -4344,7 +4486,7 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 	}
 
 	// RandCol
-	else if (sCommand == "randcol") {
+	else if (sCommand == "randcol" || sCommand == "35") {
 
 		CentreColouredText(" ___RANDCOL___ ", 1);
 		std::cout << '\n';
@@ -4383,7 +4525,7 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 	}
 
 	// Pause
-	else if (sCommand == "pause") {
+	else if (sCommand == "pause" || sCommand == "36") {
 
 		bool bEnterKeypressLimit = false;
 
@@ -4424,7 +4566,7 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 	}
 
 	// CommandNum
-	else if (sCommand == "commandnum") {
+	else if (sCommand == "commandnum" || sCommand == "37") {
 
 		CentreColouredText(" ___COMMANDNUM___ ", 1);
 		std::cout << '\n';
@@ -4460,7 +4602,7 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 	}
 
 	// SlowChar
-	else if (sCommand == "slowchar") {
+	else if (sCommand == "slowchar" || sCommand == "38") {
 
 		bool bUseRandomColours = false;
 		std::string sText = "";
@@ -4479,16 +4621,16 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 				colourSubheading();
 				std::cout << "Possible arguments for this command:" << NOULINE_STR;
 				colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
-				std::cout << wordWrap("\n -h\tDisplays this help message.\n -r\tOutput slow character text in random colours.\n <text>\tThe text to be used for the command. Put text in place of <text>.\n\n")
-					<< wordWrap("Example: slowchar -r \"The quick brown fox jumps over the lazy dog.\"\n\nNOTE: Use quotes, like in the example, for any text that contains spaces.\n\n");
+				std::cout << wordWrap("\n -h\tDisplays this help message.\n -r\tOutput slow character text in random colours.\n <text>\tThe text to be used for the command. Put text in place of <text>.")
+					<< wordWrap("\n\nExample: slowchar -r \"The quick brown fox jumps over the lazy dog.\"\n\nNOTE: Use quotes, like in the example, for any text that contains spaces.\n\n");
 
 				return;
 			}
 			else if (cCommandArgs[i] == 'r') {
 				bUseRandomColours = true;
 			}
-			else if (sStringCommandArgs[0] != "") {
-				sText = sStringCommandArgs[0];
+			else if (sStringDataCommandArgs[0] != "") {
+				sText = sStringDataCommandArgs[0];
 			}
 		}
 
@@ -4519,7 +4661,7 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 	}
 
 	// ReverseText
-	else if (sCommand == "reversetext") {
+	else if (sCommand == "reversetext" || sCommand == "39") {
 
 		bool bUseSlowChar = false;
 		std::string sText = "";
@@ -4539,16 +4681,16 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 				colourSubheading();
 				std::cout << "Possible arguments for this command:" << NOULINE_STR;
 				colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
-				std::cout << wordWrap("\n -h\tDisplays this help message.\n -s\tOutputs reverse text with a slow character effect.\n <text>\tThe text to be outputted in reverse. Put the desired text in place of <text>.\n\n")
-					<< wordWrap("Example: reversetext -s \"The quick brown fox jumps over the lazy dog.\"\n\nNOTE: Use quotes, like in the example, for any text argument that contains spaces.\n\n");
+				std::cout << wordWrap("\n -h\tDisplays this help message.\n -s\tOutputs reverse text with a slow character effect.\n <text>\tThe text to be outputted in reverse. Put the desired text in place of <text>.")
+					<< wordWrap("\n\nExample: reversetext -s \"The quick brown fox jumps over the lazy dog.\"\n\nNOTE: Use quotes, like in the example, for any text argument that contains spaces.\n\n");
 
 				return;
 			}
 			else if (cCommandArgs[i] == 's') {
 				bUseSlowChar = true;
 			}
-			else if (sStringCommandArgs[0] != "") {
-				sText = sStringCommandArgs[0];
+			else if (sStringDataCommandArgs[0] != "") {
+				sText = sStringDataCommandArgs[0];
 			}
 		}
 
@@ -4578,12 +4720,12 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 	}
 
 	// Notes
-	else if (sCommand == "notes") {
+	else if (sCommand == "notes" || sCommand == "40") {
 
 		// Declare necessary variables
 		int nChoice = 0;
 		std::string sNotesText = "";
-		unsigned long long int nNotesLine = 0;
+		uint64_t nNotesLine = 0;
 
 		CentreColouredText(" ___NOTES___ ", 1);
 		std::cout << '\n';
@@ -4601,15 +4743,15 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 				colourSubheading();
 				std::cout << "Possible arguments for this command:" << NOULINE_STR;
 				colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
-				std::cout << wordWrap("\n -h\t\t\tDisplays this help message.\n -a <note>\t\tAdd a note. Put the desired note in place of <note>.\n -r <linenum>\t\tRemove a note indicated by <linenum> from the notes array. Put the line number in place of <linenum>. Cannot be less than 1 or more than the number of saved notes. If there is no line number argument, the last line will be removed.")
-					<< wordWrap("\n -e\t\t\tEdit all notes in notes array.\n -m <linenum> <text>\tModify a note indicated by the line number. Put the line number in place of <linenum>, or leave it blank to modify the last line. Put the desired note text in place of <text>.\n -o\t\t\tOutput all notes that are saved.\n -c\t\t\tClear all notes, permanently.\n -u\t\t\tUpdate the Notes array (memory notes) with the Notes file. This will take effect immediately.\n -f\t\t\tUpdate the Notes file with the Notes array (memory notes). This will take effect immediately.\n\n")
-					<< wordWrap("Example: notes -a \"The quick brown fox jumps over the lazy dog.\"\n\nNOTE: Use quotes, like the example, for any text that contains spaces.\n\n");
+				std::cout << wordWrap("\n -h\t\t\tDisplays this help message.\n -a <note>\t\tAdd a note. Put the desired note in place of <note>.\n -r <linenum>\t\tRemove a note indicated by <linenum> from the notes. Put the line number in place of <linenum>. Cannot be less than 1 or more than the number of saved notes. If there is no line number argument, the last line will be removed.")
+					<< wordWrap("\n -e\t\t\tEdit all notes in notes array.\n -m <linenum> <text>\tModify a note indicated by the line number. Put the line number in place of <linenum>, or leave it blank to modify the last line. Put the desired note text in place of <text>.\n -o\t\t\tOutput all notes that are saved.\n -c\t\t\tClear all notes, permanently.\n -u\t\t\tUpdate the Notes array (memory notes) with the Notes file. This will take effect immediately.\n -f\t\t\tUpdate the Notes file with the Notes array (memory notes). This will take effect immediately.")
+					<< wordWrap("\n\nExample: notes -a \"The quick brown fox jumps over the lazy dog.\"\n\nNOTE: Use quotes, like the example, for any text that contains spaces.\n\n");
 
 				return;
 			}
 			else if (cCommandArgs[i] == 'a') {
-				if (sStringCommandArgs[0] != "") {
-					sNotesText = sStringCommandArgs[0];
+				if (sStringDataCommandArgs[0] != "") {
+					sNotesText = sStringDataCommandArgs[0];
 				}
 				else {
 					VerbosityDisplay("ERROR: In Commands() - Vital argument not found.\n");
@@ -4621,9 +4763,9 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 				nChoice = 6;
 			}
 			else if (cCommandArgs[i] == 'r') {
-				if (sStringCommandArgs[0] != "") {
-					if (isNumber(sStringCommandArgs[0]) == true) {
-						nNotesLine = std::stoull(sStringCommandArgs[0]) - 1;
+				if (sStringDataCommandArgs[0] != "") {
+					if (isNumberull(sStringDataCommandArgs[0]) == true) {
+						nNotesLine = std::stoull(sStringDataCommandArgs[0]) - 1;
 						if (nNotesLine > NotesMain.GetCurrentNotesCount() - 1) {
 							// Line number too large
 							VerbosityDisplay("In Commands() - ERROR: String-based number argument is too large/small in correlation to number of notes currently in notes array.\n");
@@ -4649,9 +4791,9 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 			}
 			else if (cCommandArgs[i] == 'm') {
 
-				if (sStringCommandArgs[0] != "") {
-					if (isNumber(sStringCommandArgs[0]) == true) {
-						nNotesLine = std::stoull(sStringCommandArgs[0]) - 1;
+				if (sStringDataCommandArgs[0] != "") {
+					if (isNumberull(sStringDataCommandArgs[0]) == true) {
+						nNotesLine = std::stoull(sStringDataCommandArgs[0]) - 1;
 					}
 					else {
 						// Not a number or it is negative
@@ -4667,8 +4809,8 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 				}
 
 				// Notes text
-				if (sStringCommandArgs[1] != "") {
-					sNotesText = sStringCommandArgs[1];
+				if (sStringDataCommandArgs[1] != "") {
+					sNotesText = sStringDataCommandArgs[1];
 				}
 				else {
 					VerbosityDisplay("ERROR: In Commands() - Vital argument not found.\n");
@@ -4844,8 +4986,8 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 			std::string sNoteBuffer = "";
 
 			bool bIteratorChange = false;
-			int nPreviousIterator = 0;
-			for (int i = NotesMain.GetCurrentNotesCount(); i < NotesMain.GetMaxNotesArraySize(); i++) {
+			size_t nPreviousIterator = 0;
+			for (size_t i = NotesMain.GetCurrentNotesCount(); i < NotesMain.GetMaxNotesArraySize(); i++) {
 				std::cout << "Note ";
 				colour(NumberToColour(RandNum(16, 1)), ConfigObjMain.sColourGlobalBack);
 				std::cout << i + 1;
@@ -4885,7 +5027,7 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 				else if (sNoteBuffer.find("^") == 0) {
 					// Possibly a number - search until the end of a string
 					std::string sNumberCandidate = sNoteBuffer.substr(1, std::string::npos);
-					if (isNumber(sNumberCandidate)) {
+					if (isNumberull(sNumberCandidate)) {
 						bIteratorChange = true;
 						nPreviousIterator = i;
 						i = std::stoull(sNumberCandidate);
@@ -5052,7 +5194,6 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 			return;
 		}
 	}
-
 
 	// Unknown command - fail
 	else {

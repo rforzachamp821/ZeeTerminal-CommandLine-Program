@@ -1,7 +1,50 @@
 #pragma once
 
 // ZeeTerminal Source Code Version
-constexpr const char* ZT_VERSION = "0.4.0";
+constexpr const char* ZT_VERSION = "0.4.2";
+
+// Array size for all argument arrays
+constexpr int nArgArraySize = 128;
+
+// Normal colour definitions - ANSI-only
+const std::string BLK_ANSI = "0;0;0";
+const std::string RED_ANSI = "230;0;0";
+const std::string GRN_ANSI = "22;198;12";
+const std::string YLW_ANSI = "231;186;0";
+const std::string BLU_ANSI = "0;0;255";
+const std::string MAG_ANSI = "136;23;152";
+const std::string CYN_ANSI = "58;150;221";
+const std::string WHT_ANSI = "215;215;215"; // Used to be 242;242;242
+// Bright colour definitions - ANSI-only
+const std::string GRAY_ANSI = "118;118;118";
+const std::string LRED_ANSI = "251;96;127"; // 231;72;86 is normal
+const std::string LGRN_ANSI = "0;255;0";
+const std::string LYLW_ANSI = "255;255;0";
+const std::string LBLU_ANSI = "59;120;255";
+const std::string LMAG_ANSI = "180;0;158";
+const std::string LCYN_ANSI = "97;214;214";
+const std::string LWHT_ANSI = "255;255;255";
+
+
+// Normal colour definitions - WIN32
+const std::string BLK_WIN32 = "0";
+const std::string BLU_WIN32 = "1";
+const std::string GRN_WIN32 = "2";
+const std::string CYN_WIN32 = "3";
+const std::string RED_WIN32 = "4";
+const std::string MAG_WIN32 = "5";
+const std::string YLW_WIN32 = "6";
+const std::string WHT_WIN32 = "7";
+// Bright colour definitions - WIN32
+const std::string GRAY_WIN32 = "8";
+const std::string LBLU_WIN32 = "9";
+const std::string LGRN_WIN32 = "10";
+const std::string LCYN_WIN32 = "11";
+const std::string LRED_WIN32 = "12";
+const std::string LMAG_WIN32 = "13";
+const std::string LYLW_WIN32 = "14";
+const std::string LWHT_WIN32 = "15";
+
 
 // Normal colour definitions
 std::string BLK = "0;0;0";
@@ -30,10 +73,10 @@ std::string LWHT = "255;255;255";
 #define STRIKE 9
 
 // Test formatting definitions as a string (easier for output)
-#define ULINE_STR "\x1b[4m"
-#define BOLD_STR "\x1b[1m"
-#define BLINK_STR "\x1b[5m"
-#define STRIKE_STR "\x1b[9m"
+std::string ULINE_STR = "\x1b[4m";
+std::string BOLD_STR = "\x1b[1m";
+std::string BLINK_STR = "\x1b[5m";
+std::string STRIKE_STR = "\x1b[9m";
 
 
 // Text formatting definitions - Reset
@@ -60,3 +103,11 @@ std::string NOSTRIKE_STR = "\x1b[29m";
 
 // Definition to use math definitions
 #define _USE_MATH_DEFINES
+
+// Definition to use the codecvt library - it is deprecated but no safe replacement exists yet
+#ifndef _SILENCE_CXX17_CODECVT_HEADER_DEPRECATION_WARNING
+	#define _SILENCE_CXX17_CODECVT_HEADER_DEPRECATION_WARNING
+#endif // !_SILENCE_CXX17_CODECVT_HEADER_DEPRECATION_WARNING
+
+// Define wordWrap function with default arguments
+std::string wordWrap(std::string, long long int = -1, long long int = 0);

@@ -12,7 +12,7 @@ protected:
 	size_t GetColumnSize(std::vector<std::string> vsMembers) {
 		size_t nLargestSize = 0;
 
-		for (int i = 0; i < vsMembers.size(); i++) {
+		for (uint64_t i = 0; i < vsMembers.size(); i++) {
 			if (vsMembers[i].size() > nLargestSize) {
 				nLargestSize = vsMembers[i].size();
 			}
@@ -44,13 +44,13 @@ public:
 	// Output the table based on all user arguments
 	void OutputTable() {
 
-		std::vector<int> vnColumnSizes(vsTable[0].size(), 0); // For column sizes
+		std::vector<uint64_t> vnColumnSizes(vsTable[0].size(), 0); // For column sizes
 
 		// Find the maximum width of each column
 		for (const auto& row : vsTable) {
-			for (int i = 0; i < row.size(); ++i) {
+			for (uint64_t i = 0; i < row.size(); ++i) {
 				// To work without max() windows macro
-				vnColumnSizes[i] = (((vnColumnSizes[i]) > (static_cast<int>(row[i].size()))) ? (vnColumnSizes[i]) : (static_cast<int>(row[i].size())));
+				vnColumnSizes[i] = (((vnColumnSizes[i]) > (static_cast<uint64_t>(row[i].size()))) ? (vnColumnSizes[i]) : (static_cast<uint64_t>(row[i].size())));
 			}
 		}
 
@@ -63,22 +63,22 @@ public:
 		// Bug #14774 workaround
 		// THIS IS ONLY TEMPORARY UNTIL MS FIXES THEIR STUFF
 		if (bConsoleBugGCSBI) {
-			int nWindowHeight = csbiTable.srWindow.Bottom - csbiTable.srWindow.Top;
+			uint64_t nWindowHeight = csbiTable.srWindow.Bottom - csbiTable.srWindow.Top;
 			if (csbiTable.dwCursorPosition.Y == nWindowHeight) {
 				cls();
 			}
 		}
 
-		for (int i = 0; i < vnColumnSizes.size(); i++) {
+		for (uint64_t i = 0; i < vnColumnSizes.size(); i++) {
 			if (vnColumnSizes[i] >= (csbiTable.srWindow.Right - csbiTable.srWindow.Left) / vsTable[0].size()) {
 				vnColumnSizes[i] = (csbiTable.srWindow.Right - csbiTable.srWindow.Left) / vsTable[0].size();
 			}
 		}
 
-		int nNumOfVertLines = 1; // For other members in the same row to adapt the length of their vertical lines - defaults to 1, for 1 line.
-		for (int i = 0; i < vsTable.size(); i++) {
+		uint64_t nNumOfVertLines = 1; // For other members in the same row to adapt the length of their vertical lines - defaults to 1, for 1 line.
+		for (uint64_t i = 0; i < vsTable.size(); i++) {
 
-			for (int j = 0; j < vsTable[i].size(); j++) {
+			for (uint64_t j = 0; j < vsTable[i].size(); j++) {
 
 				// If string is too long, apply word wrapping around the vertical line
 				if (vsTable[i][j].size() > vnColumnSizes[j]) {
@@ -108,7 +108,7 @@ public:
 					GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbiTemp);
 
 					// Output correct number of vertical lines
-					for (int i = 0; i < nNumOfVertLines; i++) {
+					for (uint64_t i = 0; i < nNumOfVertLines; i++) {
 						GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbiTable);
 						std::cout << "\b\b\b | ";
 						SetCursorPosition(csbiTable.dwCursorPosition.X, (csbiTable.dwCursorPosition.Y + 1));
@@ -123,8 +123,8 @@ public:
 
 			if (i == 0) {
 				// Output line for table headings
-				for (int j = 0; j < vnColumnSizes.size(); j++) {
-					for (int k = 0; k < vnColumnSizes[j]; k++) {
+				for (uint64_t j = 0; j < vnColumnSizes.size(); j++) {
+					for (uint64_t k = 0; k < vnColumnSizes[j]; k++) {
 						std::cout << '_';
 					}
 					std::cout << "_|_";
