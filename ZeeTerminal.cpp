@@ -454,16 +454,10 @@ void ClearKeyboardBuffer() {
 
 // Function to set console cursor position
 inline void SetCursorPosition(int x, int y) {
-	
-	if (!bAnsiVTSequences) {
-		COORD CursorPos{};
-		CursorPos.X = x;
-		CursorPos.Y = y;
-		SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), CursorPos);
-	}
-	else {
-		std::cout << "\033[" << y + 1 << ";" << x + 1 << "H";
-	}
+	COORD CursorPos{};
+	CursorPos.X = x;
+	CursorPos.Y = y;
+	SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), CursorPos);
 
 	return;
 }
