@@ -30,8 +30,13 @@
 #include <shobjidl.h>
 #include <powrprof.h>
 #include <codecvt>
+#include <filesystem>
+#include "Engine\TerminalDefaultAttributes.cpp"
 #include "Engine\RGBColourPreset-System.cpp"
 #include "Engine\ConfigFile-System.cpp"
+#include "Engine\SystemInfo.cpp"
+#include "Engine\LogFile-System.cpp"
+#include "Engine\FileParse-System.cpp"
 #include "Engine\ScreenNavigateEngine.cpp"
 #include "Engine\OptionSelectEngine.cpp"
 #include "Engine\TableEngine.cpp"
@@ -46,22 +51,26 @@
 #pragma comment(lib, "powrprof.lib") // To access power profile libs
 
 // Runtime variables
-RGBColourPresetSystem	RGBPreset[3]; // Possibly [5] in a future update?
-bool					bConsoleBugGCSBI = false; // WindowsTerminal Bug PR#14774 Workaround
 bool					bAnsiVTSequences = true;
+bool					bConfigAndLogSystemsInitialised = false; // Switch to symbolise that the config and log systems have been initialised
+bool					bDisp = true; // Switch for showing the start command screen ("Command: > "), similar to CMD's @echo off. 
 std::string				sCommandInputRAW = "";
 std::string				sStringOptionCommandArgs[nArgArraySize]; // Made global because you can't pass an std::string array into a function, therefore Commands() wouldn't work properly
-                                                       // on multi-argument commands.
+                                                                 // on multi-argument commands.
 std::string				sStringDataCommandArgs[nArgArraySize]; // Made global because you can't pass an std::string array into a function, therefore Commands() wouldn't work properly
-                                                     // on multi-argument commands.
+                                                               // on multi-argument commands.
 uint64_t				nNumOfInputtedCommands = 0; // Counter for number of inputted commands since the start of the ZeeTerminal session.
 uint64_t				nNumOfSuccessfulInputtedCommands = 0; // Counter for number of successful inputted commands since the start of the ZeeTerminal session.
 
 std::string				sLastColourFore = ""; // Last set colour of any kind - foreground
 std::string				sLastColourBack = ""; // Last set colour of any kind - background
 
+TerminalDefaultAttributes	DefaultAttributesObj;
+RGBColourPresetSystem	RGBPreset[3]; // Possibly [5] in a future update?
 ConfigFileSystem		ConfigObjMain; // Configuration Object
+LogFileSystem			LogFileMain; // LogFile System Object
 NotesSystem				NotesMain; // Notes Object
+
 
 // Sets cursor attributes automatically when called
 inline void SetCursorAttributes() {
@@ -177,12 +186,14 @@ inline void colour(std::string sColourForegroundChoice, std::string sColourBackg
 
 		// Now, modify the background input choice 
 		// Check for number
-		if (isNumberi(sColourForegroundChoice) && isNumberi(sColourBackgroundChoice)) {
+		if (isNumberi(sColourForegroundChoice, false) && isNumberi(sColourBackgroundChoice, false)) {
 			nBackgroundColourFinal = std::stoi(sColourBackgroundChoice);
 			nForegroundColourFinal = std::stoi(sColourForegroundChoice);
 		}
 		else {
-			// Check failed, do not change colour
+			// Check failed, do not change colour; stream error message to std::cerr without using colours (to prevent forkbomb)
+			std::cerr << wordWrap("ERROR: In colour() - Invalid WIN32 colour argument(s) detected. The arguments must be numbers as strings only."
+				"\nArguments: sColourForegroundChoice: <" + sColourForegroundChoice + ">, sColourBackgroundChoice: <" + sColourBackgroundChoice + ">.\n");
 			return;
 		}
 
@@ -266,6 +277,202 @@ long double RandNum(long double max, long double min)
 	return dist(mtRandNumGen);
 }
 
+// LogWindowsEvent - Logs an event of choice on the Windows Event Log Database.
+// Arguments: vsEventDataArray - Vector array of event data strings to forward to the event report.
+//            dwBinaryDataSize - The size of the lpBinaryData argument. Set this to 0 if no binary data will be included.
+//            lpBinaryData - Binary data to forward to the event report.
+// Return Values: TRUE or 1 for success, FALSE or 0 for fail.
+// 
+bool LogWindowsEvent(std::vector<std::string> vsEventDataArray, DWORD dwBinaryDataSize, LPVOID lpBinaryData)
+{
+	// Create handle around ZeeTerminal source
+	HANDLE hEventSource = RegisterEventSourceA(NULL, "ZeeTerminal");
+	size_t nEventDataArraySize = vsEventDataArray.size();
+
+	// Convert std::string array to LPCSTR
+	LPCSTR* lpEventData = new LPCSTR[nEventDataArraySize];
+	// Use for loop
+	for (size_t i = 0; i < nEventDataArraySize; i++) {
+		lpEventData[i] = vsEventDataArray[i].c_str();
+	}
+
+	// Report the event to event log
+	if (!ReportEventA(hEventSource, EVENTLOG_ERROR_TYPE, 0, 0, NULL, nEventDataArraySize, dwBinaryDataSize, lpEventData, lpBinaryData)) {
+		VerbosityDisplay("In LogWindowsEvent(): ERROR - Failed to report event on ReportEventA function. Error code " + std::to_string(GetLastError()) + ": " + std::system_category().message(GetLastError()) + ".\n");
+		return false;
+	}
+
+	// Uninitialise and exit
+	DeregisterEventSource(hEventSource);
+	delete[] lpEventData;
+
+	return true;
+}
+
+// OutputBoxWithText - Outputs a box outline, with text inside.
+//                   - The box is drawn to the maximum text width, and if that is too big, it's drawn to the terminal width.
+// Arguments: sText - The text to be boxed.
+//            sColourOutlineFore - The foreground colour for the outline. 
+//            sColourOutlineBack - The background colour for the outline.
+//            sColourTextFore - The foreground colour for the text.
+//            sColourTextBack - The background colour for the text.
+// Return Values: None
+//
+void OutputBoxWithText(std::string sText, std::string sColourOutlineFore, std::string sColourOutlineBack, std::string sColourTextFore, std::string sColourTextBack) 
+{
+	CONSOLE_SCREEN_BUFFER_INFO csbiDirections;
+	int nBoxWidth = 0;
+	std::vector<std::string> sLines = {};
+	std::string sBuffer = "";
+
+	// Use a for loop to check for box width, height, line length and contents, etc
+	for (int i = 0, nCounter = 0; i < sText.length(); i++, nCounter++) {
+		if (sText[i] == '\n') {
+
+			// Early check for line size
+			if (nBoxWidth < nCounter) {
+				// Get current terminal width
+				GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbiDirections);
+
+				// Check for oversized line length
+				if (csbiDirections.srWindow.Right - csbiDirections.srWindow.Left - 3 > nCounter) {
+					nBoxWidth = nCounter;
+				}
+				else {
+					nBoxWidth = csbiDirections.srWindow.Right - csbiDirections.srWindow.Left - 3;
+
+					// Create new lines
+					// Get change between box width and counter to determine number of lines
+					int nNumOfLines = ((nCounter - nBoxWidth) / nBoxWidth) + 1;
+
+					// Append new lines to vector
+					for (int j = 0; j <= nNumOfLines; j++) {
+
+						// Get line
+						sLines.push_back(sBuffer.substr(0, nBoxWidth));
+
+						// Erase line from string
+						sBuffer.erase(0, nBoxWidth);
+					}
+
+					// Reset counter
+					nCounter = 0;
+
+					// Reset buffer
+					sBuffer = "";
+
+					continue;
+				}
+
+			}
+
+			// Reset counter
+			nCounter = 0;
+
+			// Push accumulated buffer contents into vector
+			sLines.push_back(sBuffer);
+
+			// Reset buffer
+			sBuffer = "";
+
+			continue;
+		}
+
+		if (nBoxWidth < nCounter) {
+			// Get current terminal width
+			GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbiDirections);
+
+			// Check for oversized line length
+			if (csbiDirections.srWindow.Right - csbiDirections.srWindow.Left - 3 > nCounter) {
+				nBoxWidth = nCounter;
+			}
+			else {
+				nBoxWidth = csbiDirections.srWindow.Right - csbiDirections.srWindow.Left - 3;
+			}
+		}
+
+		sBuffer += sText[i];
+	}
+
+	// Check for line size - determines final box width
+	int nBufferLength = sBuffer.length();
+	if (nBoxWidth < nBufferLength) {
+		// Get current terminal width
+		GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbiDirections);
+
+		// Check for oversized line length
+		if (csbiDirections.srWindow.Right - csbiDirections.srWindow.Left - 3 > nBufferLength) {
+			nBoxWidth = nBufferLength;
+			if (sBuffer != "") sLines.push_back(sBuffer);
+		}
+		else {
+			nBoxWidth = csbiDirections.srWindow.Right - csbiDirections.srWindow.Left - 3;
+
+			// Create new lines
+			// Get change between box width and counter to determine number of lines
+			int nNumOfLines = ((nBufferLength - nBoxWidth) / nBoxWidth) + 1;
+
+			// Append new lines to vector
+			for (int j = 0; j <= nNumOfLines; j++) {
+
+				// Get line
+				sLines.push_back(sBuffer.substr(0, nBoxWidth));
+
+				// Erase line from string
+				sBuffer.erase(0, nBoxWidth);
+			}
+
+			// Reset buffer
+			sBuffer = "";
+		}
+	}
+	else sLines.push_back(sBuffer);
+
+
+	// to support 1 asterisk and 1 whitespace on each side of the text
+	nBoxWidth += 4;
+
+	GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbiDirections);
+	if (csbiDirections.srWindow.Right - csbiDirections.srWindow.Left + 1 < nBoxWidth) {
+		nBoxWidth = csbiDirections.srWindow.Right - csbiDirections.srWindow.Left + 1;
+	}
+
+
+	// Firstly, output box top
+	colour(sColourOutlineFore, sColourOutlineBack);
+	std::cout << std::string(nBoxWidth, '=');
+
+	// Secondly, output text with appropriate padding using for loop to reiterate through line vector
+	std::cout << '\n';
+	for (int i = 0; i < sLines.size(); i++) {
+		sBuffer = sLines[i];
+		for (int j = 0; j < nBoxWidth - sLines[i].length() - 4; j++) { // -4 as the box width was first incremented by 4 before this
+			sBuffer += ' '; // Add space
+		}
+
+		// Output padding
+		colour(sColourOutlineFore, sColourOutlineBack);
+		std::cout << "* ";
+		colour(sColourTextFore, sColourTextBack);
+
+		// Output line and spaces
+		std::cout << sBuffer;
+
+		// Output padding
+		colour(sColourOutlineFore, sColourOutlineBack);
+		std::cout << " *\n";
+	}
+
+	// Finally, output box bottom
+	colour(sColourOutlineFore, sColourOutlineBack);
+	std::cout << std::string(nBoxWidth, '=');
+
+	std::cout << '\n';
+	colour(sColourTextFore, sColourTextBack);
+
+	return;
+}
+
 // Converter from wide string to string
 std::string ws2s(const std::wstring& wstr) {
 	// Use UTF-8 for this
@@ -280,6 +487,26 @@ std::wstring s2ws(const std::string& str) {
 	std::wstring_convert<std::codecvt_utf8<wchar_t>, wchar_t> converterX;
 
 	return converterX.from_bytes(str);
+}
+
+// Converter from boolean to string ("true" or "false")
+std::string BoolToString(const bool bValue) 
+{
+	// Convert to respective strings
+	switch (bValue) {
+	case true:
+		return "True";
+		break;
+	case false:
+		return "False";
+		break;
+	default:
+		return "Failed";
+		break;
+	}
+
+	// If switch wasn't exited, return failed (there's no way this could've happened in a normal scenario)
+	return "failed";
 }
 
 // Checks whether std::string argument is a number or not - long double
@@ -304,8 +531,12 @@ bool isNumberld(const std::string sNumberTest) {
 	try {
 		long double nRangeTest = std::stold(sNumberTest);
 	}
-	catch (const std::out_of_range& oorIsNumber) {
+	catch (const std::out_of_range&) {
 		VerbosityDisplay("In isNumberld(): Exception caught - Number is too high/low (out of range).");
+		return false;
+	}
+	catch (const std::invalid_argument&) {
+		VerbosityDisplay("In isNumberld(): Exception caught - Argument cannot be converted whatsoever (invalid argument).");
 		return false;
 	}
 
@@ -332,8 +563,12 @@ bool isNumberll(const std::string sNumberTest) {
 	try {
 		long long int nRangeTest = std::stoll(sNumberTest);
 	}
-	catch (const std::out_of_range& oorIsNumber) {
+	catch (const std::out_of_range&) {
 		VerbosityDisplay("In isNumberll(): Exception caught - Number is too high/low (out of range).");
+		return false;
+	}
+	catch (const std::invalid_argument&) {
+		VerbosityDisplay("In isNumberll(): Exception caught - Argument cannot be converted whatsoever (invalid argument).");
 		return false;
 	}
 
@@ -360,8 +595,12 @@ bool isNumberl(const std::string sNumberTest) {
 	try {
 		long int nRangeTest = std::stol(sNumberTest);
 	}
-	catch (const std::out_of_range& oorIsNumber) {
+	catch (const std::out_of_range&) {
 		VerbosityDisplay("In isNumberl(): Exception caught - Number is too high/low (out of range).");
+		return false;
+	}
+	catch (const std::invalid_argument&) {
+		VerbosityDisplay("In isNumberl(): Exception caught - Argument cannot be converted whatsoever (invalid argument).");
 		return false;
 	}
 
@@ -369,7 +608,8 @@ bool isNumberl(const std::string sNumberTest) {
 }
 
 // Checks whether std::string argument is a number or not - integer
-bool isNumberi(const std::string sNumberTest) {
+// bSetErrorsAsVerbose - Any errors that occur are set as verbose when this is TRUE, else the messages are streamed to std::cerr.
+bool isNumberi(const std::string sNumberTest, bool bSetErrorsAsVerbose) {
 	// Not a number as there's nothing in the string
 	if (sNumberTest.length() <= 0) return false;
 
@@ -388,8 +628,14 @@ bool isNumberi(const std::string sNumberTest) {
 	try {
 		int nRangeTest = std::stoi(sNumberTest);
 	}
-	catch (const std::out_of_range& oorIsNumber) {
-		VerbosityDisplay("In isNumberi(): Exception caught - Number is too high/low (out of range).");
+	catch (const std::out_of_range&) {
+		if (bSetErrorsAsVerbose) VerbosityDisplay("In isNumberi(): Exception caught - Number is too high/low (out of range).");
+		else std::cerr << wordWrap("In isNumberi(): Exception caught - Number is too high/low (out of range).\n");
+		return false;
+	}
+	catch (const std::invalid_argument&) {
+		if (bSetErrorsAsVerbose) VerbosityDisplay("In isNumberi(): Exception caught - Argument cannot be converted whatsoever (invalid argument).");
+		else std::cerr << wordWrap("In isNumberi(): Exception caught - Argument cannot be converted whatsoever (invalid argument).\n");
 		return false;
 	}
 
@@ -412,8 +658,12 @@ bool isNumberull(const std::string sNumberTest) {
 	try {
 		uint64_t nRangeTest = std::stoull(sNumberTest);
 	}
-	catch (const std::out_of_range& oorIsNumber) {
+	catch (const std::out_of_range&) {
 		VerbosityDisplay("In isNumberull(): Exception caught - Number is too high/low (out of range).");
+		return false;
+	}
+	catch (const std::invalid_argument&) {
+		VerbosityDisplay("In isNumberull(): Exception caught - Argument cannot be converted whatsoever (invalid argument).");
 		return false;
 	}
 
@@ -436,8 +686,12 @@ bool isNumberul(const std::string sNumberTest) {
 	try {
 		unsigned long int nRangeTest = std::stoul(sNumberTest);
 	}
-	catch (const std::out_of_range& oorIsNumber) {
+	catch (const std::out_of_range&) {
 		VerbosityDisplay("In isNumberul(): Exception caught - Number is too high/low (out of range).");
+		return false;
+	}
+	catch (const std::invalid_argument&) {
+		VerbosityDisplay("In isNumberul(): Exception caught - Argument cannot be converted whatsoever (invalid argument).");
 		return false;
 	}
 
@@ -447,7 +701,7 @@ bool isNumberul(const std::string sNumberTest) {
 // Function to clear keyboard buffer
 void ClearKeyboardBuffer() {
 	while (_kbhit()) {
-		_getch();
+		_getch_nolock(); // faster than _getch() - not thread-safe but this function is meant to be single-threaded
 	}
 	return;
 }
@@ -457,7 +711,15 @@ inline void SetCursorPosition(int x, int y) {
 	COORD CursorPos{};
 	CursorPos.X = x;
 	CursorPos.Y = y;
-	SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), CursorPos);
+	if (!SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), CursorPos)) {
+		// Don't display on windows terminal VT bug
+		bool bHideMessage = false;
+		if (CheckIfCursorExceedScreenBufferHeight()) {
+			bHideMessage = true;
+		}
+
+		VerbosityDisplay("In SetCursorPosition(): ERROR - Failed to set console cursor position with error code " + std::to_string(GetLastError()) + ".\n", 10000, bHideMessage);
+	}
 
 	return;
 }
@@ -528,178 +790,40 @@ void DirectionsDisplay(std::string sPrompt)
 {
 	if (ConfigObjMain.bDisplayDirections == true) 
 	{
-		CONSOLE_SCREEN_BUFFER_INFO csbiDirections;
-		int nBoxWidth = 0;
-		std::vector<std::string> sLines = {};
-		std::string sBuffer = "";
-
-		// Use a for loop to check for box width, height, line length and contents, etc
-		for (int i = 0, nCounter = 0; i < sPrompt.length(); i++, nCounter++) {
-			if (sPrompt[i] == '\n') {
-
-				// Early check for line size
-				if (nBoxWidth < nCounter) {
-					// Get current terminal width
-					GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbiDirections);
-
-					// Check for oversized line length
-					if (csbiDirections.srWindow.Right - csbiDirections.srWindow.Left - 3 > nCounter) {
-						nBoxWidth = nCounter;
-					}
-					else {
-						nBoxWidth = csbiDirections.srWindow.Right - csbiDirections.srWindow.Left - 3;
-
-						// Create new lines
-						// Get change between box width and counter to determine number of lines
-						int nNumOfLines = ((nCounter - nBoxWidth) / nBoxWidth) + 1;
-
-						// Append new lines to vector
-						for (int j = 0; j <= nNumOfLines; j++) {
-
-							// Get line
-							sLines.push_back(sBuffer.substr(0, nBoxWidth));
-
-							// Erase line from string
-							sBuffer.erase(0, nBoxWidth);
-						}
-
-						// Reset counter
-						nCounter = 0;
-
-						// Reset buffer
-						sBuffer = "";
-
-						continue;
-					}
-
-				}
-
-				// Reset counter
-				nCounter = 0;
-
-				// Push accumulated buffer contents into vector
-				sLines.push_back(sBuffer);
-
-				// Reset buffer
-				sBuffer = "";
-
-				continue;
-			}
-
-			if (nBoxWidth < nCounter) {
-				// Get current terminal width
-				GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbiDirections);
-
-				// Check for oversized line length
-				if (csbiDirections.srWindow.Right - csbiDirections.srWindow.Left - 3 > nCounter) {
-					nBoxWidth = nCounter;
-				}
-				else {
-					nBoxWidth = csbiDirections.srWindow.Right - csbiDirections.srWindow.Left - 3;
-				}
-			}
-
-			sBuffer += sPrompt[i];
-		}
-
-		// Check for line size - determines final box width
-		int nBufferLength = sBuffer.length();
-		if (nBoxWidth < nBufferLength) {
-			// Get current terminal width
-			GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbiDirections);
-
-			// Check for oversized line length
-			if (csbiDirections.srWindow.Right - csbiDirections.srWindow.Left - 3 > nBufferLength) {
-				nBoxWidth = nBufferLength;
-			}
-			else {
-				nBoxWidth = csbiDirections.srWindow.Right - csbiDirections.srWindow.Left - 3;
-
-				// Create new lines
-				// Get change between box width and counter to determine number of lines
-				int nNumOfLines = ((nBufferLength - nBoxWidth) / nBoxWidth) + 1;
-
-				// Append new lines to vector
-				for (int j = 0; j <= nNumOfLines; j++) {
-
-					// Get line
-					sLines.push_back(sBuffer.substr(0, nBoxWidth));
-
-					// Erase line from string
-					sBuffer.erase(0, nBoxWidth);
-				}
-
-				// Reset buffer
-				sBuffer = "";
-			}
-		}
-		else sLines.push_back(sBuffer);
-
-
-		// to support 1 asterisk and 1 whitespace on each side of the text
-		nBoxWidth += 4;
-
-		GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbiDirections);
-		if (csbiDirections.srWindow.Right - csbiDirections.srWindow.Left + 1 < nBoxWidth) {
-			nBoxWidth = csbiDirections.srWindow.Right - csbiDirections.srWindow.Left + 1;
-		}
-
-
-		// Firstly, output box top
-		colour(LRED, ConfigObjMain.sColourGlobalBack);
-		std::cout << std::string(nBoxWidth, '=');
-		colour(GRN, ConfigObjMain.sColourGlobalBack);
-
-		// Secondly, output text with appropriate padding using for loop to reiterate through line vector
-		std::cout << '\n';
-		for (int i = 0; i < sLines.size(); i++) {
-			sBuffer = sLines[i];
-			for (int j = 0; j < nBoxWidth - sLines[i].length() - 4; j++) { // -4 as the box width was first incremented by 4 before this
-				sBuffer += ' '; // Add space
-			}
-
-			// Output padding
-			colour(LRED, ConfigObjMain.sColourGlobalBack);
-			std::cout << "* ";
-			colour(GRN, ConfigObjMain.sColourGlobalBack);
-
-			// Output line and spaces
-			std::cout << sBuffer;
-
-			// Output padding
-			colour(LRED, ConfigObjMain.sColourGlobalBack);
-			std::cout << " *\n";
-			colour(GRN, ConfigObjMain.sColourGlobalBack);
-		}
-
-		// Finally, output box bottom
-		colour(LRED, ConfigObjMain.sColourGlobalBack);
-		std::cout << std::string(nBoxWidth, '=');
-
-		std::cout << '\n';
-		colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
+		// Output directions
+		OutputBoxWithText(sPrompt, LRED, ConfigObjMain.sColourGlobalBack, GRN, ConfigObjMain.sColourGlobalBack);
 	}
 
 	return;
 }
 
 // Function to display verbose messages at specific times
-inline void VerbosityDisplay(std::string sPrompt) {
-	if (ConfigObjMain.bDisplayVerboseMessages == true) {
+inline void VerbosityDisplay(std::string sPrompt, int nObjectID, bool bForceDontDisplayMessage, bool bForceDontLog) {
+	if (ConfigObjMain.bDisplayVerboseMessages == true && bForceDontDisplayMessage == false) {
 		colour(GRAY, BLK);
 		std::cerr << "Verbose Message: " << sPrompt << std::endl;
 		colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
 	}
+
+	// Only log when systems initialised, logging enabled, force-disable logging disabled and verbose logging enabled
+	if (bConfigAndLogSystemsInitialised && ConfigObjMain.bEnableLogging && ConfigObjMain.bVerboseMessageLogging && !bForceDontLog) {
+		LogFileMain.AddLogLine(sPrompt, 1, nObjectID);
+	}
+
 	return;
 }
 
 // Function to display error messages at specific times
-inline void UserErrorDisplay(std::string sError) {
+inline void UserErrorDisplay(std::string sError, int nObjectID) {
 
 	// Output user-space error in red text with word wrapping
 	colour(RED, ConfigObjMain.sColourGlobalBack);
-	std::cerr << wordWrap(sError) << std::endl;
+	std::cerr << wordWrap(sError);
 	colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
+
+	if (bConfigAndLogSystemsInitialised && ConfigObjMain.bEnableLogging && ConfigObjMain.bUserSpaceErrorLogging) {
+		LogFileMain.AddLogLine(sError, 2, nObjectID);
+	}
 
 	return;
 }
@@ -707,6 +831,11 @@ inline void UserErrorDisplay(std::string sError) {
 // Function to handle +/- number input - long double
 long double NumInputld(std::string sPrompt) {
 	long double num;
+
+	// Add log line
+	if (bConfigAndLogSystemsInitialised && ConfigObjMain.bEnableLogging && ConfigObjMain.bUserInputInfoLogging) {
+		LogFileMain.AddLogLine("In NumInputld(): Input session begin with prompt: {" + sPrompt + "}.", 4);
+	}
 
 	while (true) {
 		std::cout << wordWrap(sPrompt);
@@ -726,6 +855,11 @@ long double NumInputld(std::string sPrompt) {
 			std::cin.ignore(std::numeric_limits<int>::max(), '\n');
 			break;
 		}
+	}
+
+	// Add log line
+	if (bConfigAndLogSystemsInitialised && ConfigObjMain.bEnableLogging && ConfigObjMain.bUserInputInfoLogging) {
+		LogFileMain.AddLogLine("In NumInputld(): Input session end with return value: " + std::to_string(num) + ".", 4);
 	}
 
 	return num;
@@ -735,6 +869,11 @@ long double NumInputld(std::string sPrompt) {
 long long int NumInputll(std::string sPrompt) {
 	long long int num;
 
+	// Add log line
+	if (bConfigAndLogSystemsInitialised && ConfigObjMain.bEnableLogging && ConfigObjMain.bUserInputInfoLogging) {
+		LogFileMain.AddLogLine("In NumInputll(): Input session begin with prompt: {" + sPrompt + "}.", 4);
+	}
+
 	while (true) {
 		std::cout << wordWrap(sPrompt);
 		colour(LYLW, ConfigObjMain.sColourGlobalBack);
@@ -753,6 +892,11 @@ long long int NumInputll(std::string sPrompt) {
 			std::cin.ignore(std::numeric_limits<int>::max(), '\n');
 			break;
 		}
+	}
+
+	// Add log line
+	if (bConfigAndLogSystemsInitialised && ConfigObjMain.bEnableLogging && ConfigObjMain.bUserInputInfoLogging) {
+		LogFileMain.AddLogLine("In NumInputll(): Input session end with return value: " + std::to_string(num) + ".", 4);
 	}
 
 	return num;
@@ -762,6 +906,11 @@ long long int NumInputll(std::string sPrompt) {
 long int NumInputl(std::string sPrompt) {
 	long int num;
 
+	// Add log line
+	if (bConfigAndLogSystemsInitialised && ConfigObjMain.bEnableLogging && ConfigObjMain.bUserInputInfoLogging) {
+		LogFileMain.AddLogLine("In NumInputl(): Input session begin with prompt: {" + sPrompt + "}.", 4);
+	}
+
 	while (true) {
 		std::cout << wordWrap(sPrompt);
 		colour(LYLW, ConfigObjMain.sColourGlobalBack);
@@ -782,12 +931,22 @@ long int NumInputl(std::string sPrompt) {
 		}
 	}
 
+	// Add log line
+	if (bConfigAndLogSystemsInitialised && ConfigObjMain.bEnableLogging && ConfigObjMain.bUserInputInfoLogging) {
+		LogFileMain.AddLogLine("In NumInputl(): Input session end with return value: " + std::to_string(num) + ".", 4);
+	}
+
 	return num;
 }
 
 // Function to handle +/- number input - int
 int NumInputi(std::string sPrompt) {
 	int num;
+
+	// Add log line
+	if (bConfigAndLogSystemsInitialised && ConfigObjMain.bEnableLogging && ConfigObjMain.bUserInputInfoLogging) {
+		LogFileMain.AddLogLine("In NumInputi(): Input session begin with prompt: {" + sPrompt + "}.", 4);
+	}
 
 	while (true) {
 		std::cout << wordWrap(sPrompt);
@@ -807,6 +966,11 @@ int NumInputi(std::string sPrompt) {
 			std::cin.ignore(std::numeric_limits<int>::max(), '\n');
 			break;
 		}
+	}
+
+	// Add log line
+	if (bConfigAndLogSystemsInitialised && ConfigObjMain.bEnableLogging && ConfigObjMain.bUserInputInfoLogging) {
+		LogFileMain.AddLogLine("In NumInputi(): Input session end with return value: " + std::to_string(num) + ".", 4);
 	}
 
 	return num;
@@ -817,6 +981,11 @@ uint64_t PositiveNumInputull(std::string sPrompt) {
 	uint64_t num = 0;
 	std::string sInput = "";
 	bool bSuccess = true;
+
+	// Add log line
+	if (bConfigAndLogSystemsInitialised && ConfigObjMain.bEnableLogging && ConfigObjMain.bUserInputInfoLogging) {
+		LogFileMain.AddLogLine("In PositiveNumInputull(): Input session begin with prompt: {" + sPrompt + "}.", 4);
+	}
 
 	while (true) {
 		// Reset variables on next iteration
@@ -852,6 +1021,11 @@ uint64_t PositiveNumInputull(std::string sPrompt) {
 		}
 	}
 
+	// Add log line
+	if (bConfigAndLogSystemsInitialised && ConfigObjMain.bEnableLogging && ConfigObjMain.bUserInputInfoLogging) {
+		LogFileMain.AddLogLine("In PositiveNumInputull(): Input session end with return value: " + std::to_string(num) + ".", 4);
+	}
+
 	return num;
 }
 
@@ -860,6 +1034,11 @@ unsigned long int PositiveNumInputul(std::string sPrompt) {
 	unsigned long int num = 0;
 	std::string sInput = "";
 	bool bSuccess = true;
+
+	// Add log line
+	if (bConfigAndLogSystemsInitialised && ConfigObjMain.bEnableLogging && ConfigObjMain.bUserInputInfoLogging) {
+		LogFileMain.AddLogLine("In PositiveNumInputul(): Input session begin with prompt: {" + sPrompt + "}.", 4);
+	}
 
 	while (true) {
 		// Reset variables on next iteration
@@ -895,6 +1074,11 @@ unsigned long int PositiveNumInputul(std::string sPrompt) {
 		}
 	}
 
+	// Add log line
+	if (bConfigAndLogSystemsInitialised && ConfigObjMain.bEnableLogging && ConfigObjMain.bUserInputInfoLogging) {
+		LogFileMain.AddLogLine("In PositiveNumInputul(): Input session end with return value: " + std::to_string(num) + ".", 4);
+	}
+
 	return num;
 }
 
@@ -902,18 +1086,33 @@ unsigned long int PositiveNumInputul(std::string sPrompt) {
 std::string StrInput(std::string sPrompt) {
 	std::string string;
 
+	// Add log line
+	if (bConfigAndLogSystemsInitialised && ConfigObjMain.bEnableLogging && ConfigObjMain.bUserInputInfoLogging) {
+		LogFileMain.AddLogLine("In StrInput(): Input session begin with prompt: {" + sPrompt + "}.", 4);
+	}
+
 	// Prompt
 	std::cout << wordWrap(sPrompt);
 	colour(LYLW, ConfigObjMain.sColourGlobalBack);
 	getline(std::cin, string);
 	colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
 
+	// Add log line
+	if (bConfigAndLogSystemsInitialised && ConfigObjMain.bEnableLogging && ConfigObjMain.bUserInputInfoLogging) {
+		LogFileMain.AddLogLine("In StrInput(): Input session end with return value: {" + string + "}.", 4);
+	}
+
 	return string;
 }
 
-// YesNo - allows for y/n input
-bool YesNo(std::string sPrompt) {
+// YesNoInput - allows for y/n input
+bool YesNoInput(std::string sPrompt) {
 	char cInput;
+
+	// Add log line
+	if (bConfigAndLogSystemsInitialised && ConfigObjMain.bEnableLogging && ConfigObjMain.bUserInputInfoLogging) {
+		LogFileMain.AddLogLine("In YesNoInput(): Input session begin with prompt: {" + sPrompt + "}.", 4);
+	}
 
 	while (true) {
 		std::cout << wordWrap(sPrompt);
@@ -933,7 +1132,23 @@ bool YesNo(std::string sPrompt) {
 			break;
 		}
 	}
-	if (cInput == 'y' || cInput == 'Y') return true; else return false;
+	if (cInput == 'y' || cInput == 'Y') {
+		// Add log line
+		if (bConfigAndLogSystemsInitialised && ConfigObjMain.bEnableLogging && ConfigObjMain.bUserInputInfoLogging) {
+			LogFileMain.AddLogLine("In YesNoInput(): Input session end with return value: TRUE.", 4);
+		}
+		return true;
+	}
+	else {
+		// Add log line
+		if (bConfigAndLogSystemsInitialised && ConfigObjMain.bEnableLogging && ConfigObjMain.bUserInputInfoLogging) {
+			LogFileMain.AddLogLine("In YesNoInput(): Input session end with return value: FALSE.", 4);
+		}
+		return false;
+	}
+
+	// Unknown error, just post TRUE
+	return true;
 }
 
 // SetWindowTitle - Function to set title for the console window.
@@ -961,7 +1176,7 @@ bool SetWindowTitle(std::string sTitle) {
 	return true;
 }
 
-// Clear screen function (Flushes screen buffer)
+// Clear screen function (Flushes whole screen buffer)
 void cls() {
 
 	// Using ANSI escape codes to clear the screen is a lot faster and cross-platform
@@ -990,8 +1205,7 @@ void cls() {
 			*(DWORD*)&v5.Left = 0;
 			ScrollConsoleScreenBufferW(h, &v5, 0, v4, &v3);
 			v6.dwCursorPosition = { 0 };
-			HANDLE v1 = GetStdHandle(0xFFFFFFF5);
-			SetConsoleCursorPosition(v1, v6.dwCursorPosition);
+			SetCursorPosition(v6.dwCursorPosition.X, v6.dwCursorPosition.Y);
 		}
 		return;
 	}
@@ -1001,6 +1215,9 @@ void cls() {
 
 // Function that outputs text with random colours 
 void RandomColourOutput(std::string sText) {
+
+	// Add word wrapping
+	sText = wordWrap(sText);
 
 	// j is for string check, i is for colour indicator
 	// for loop
@@ -1098,8 +1315,20 @@ void slowcharCentredFn(bool bNewLine, std::string sText) {
 
 	// Check to prevent memory overspill
 	if (sText.length() >= (nWidth + 1)) {
+		sText = wordWrap(sText);
+
 		for (int i = 0; i <= sText.length(); i++) {
-			sleep(ConfigObjMain.nSlowCharSpeed);
+			// Pause for a couple of milliseconds to make output slow
+			if (i > 0) {
+				// Space backtrack for word wrapping detection
+				if (not (sText[i - 1] == ' ' && sText[i] == ' ')) {
+					sleep(ConfigObjMain.nSlowCharSpeed);
+				}
+			}
+			else {
+				sleep(ConfigObjMain.nSlowCharSpeed);
+			}
+
 			std::cout << sText[i];
 		}
 		// In case a key was pressed while operation was commencing
@@ -1130,7 +1359,18 @@ void slowcolourfn(std::string nColourFore, std::string nColourBack, std::string 
 	size = sSlowchar.size();
 	colour(nColourFore, nColourBack);
 	for (int i = 0; i <= size; i++) {
-		sleep(ConfigObjMain.nSlowCharSpeed);
+
+		// Pause for a couple of milliseconds to make output slow
+		if (i > 0) {
+			// Space backtrack for word wrapping detection
+			if (not (sSlowchar[i - 1] == ' ' && sSlowchar[i] == ' ')) {
+				sleep(ConfigObjMain.nSlowCharSpeed);
+			}
+		}
+		else {
+			sleep(ConfigObjMain.nSlowCharSpeed);
+		}
+
 		std::cout << sSlowchar[i];
 	}
 	// In case a key was pressed while operation was commencing
@@ -1148,7 +1388,17 @@ void slowcharfn(bool nline, std::string sSlowchar) {
 	sSlowchar = wordWrap(sSlowchar);
 	size = sSlowchar.size();
 	for (int i = 0; i <= size; i++) {
-		sleep(ConfigObjMain.nSlowCharSpeed);
+
+		if (i > 0) {
+			// Space backtrack for word wrapping detection
+			if (not (sSlowchar[i - 1] == ' ' && sSlowchar[i] == ' ')) {
+				sleep(ConfigObjMain.nSlowCharSpeed);
+			}
+		}
+		else {
+			sleep(ConfigObjMain.nSlowCharSpeed);
+		}
+
 		std::cout << sSlowchar[i];
 	}
 
@@ -1164,6 +1414,9 @@ void slowcharfn(bool nline, std::string sSlowchar) {
 
 // Function for outputting characters with random colours
 void SlowCharColourful(std::string sText, bool bIncludeBackground) {
+
+	// Add word wrapping
+	sText = wordWrap(sText);
 
 	// Repeat output with random colour each time
 	for (int i = 0; i < sText.size(); i++) 
@@ -1187,12 +1440,21 @@ void SlowCharColourful(std::string sText, bool bIncludeBackground) {
 		std::cout << sText[i];
 
 		// Pause for a couple of milliseconds to make output slow
-		sleep(ConfigObjMain.nSlowCharSpeed);
+		if (i > 0) {
+			// Space backtrack for word wrapping detection
+			if (not (sText[i - 1] == ' ' && sText[i] == ' ')) {
+				sleep(ConfigObjMain.nSlowCharSpeed);
+			}
+		}
+		else {
+			sleep(ConfigObjMain.nSlowCharSpeed);
+		}
 	}
 
 	// Finish off with newline
 	colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
 	std::cout << '\n';
+	ClearKeyboardBuffer();
 	return;
 }
 
@@ -1282,31 +1544,22 @@ bool EnableShutdownPrivileges()
 	return bSuccess;
 }
 
-// A function to check for a specific bug affecting CONSOLE_SCREEN_BUFFER_INFO::dwCursorPosition
-// positioning reports, in the new Windows Terminal and OpenConsole.exe.
-bool ConsoleWTBugCheck() {
-	// Get console size
-	HANDLE hTest = GetStdHandle(STD_OUTPUT_HANDLE);
-	CONSOLE_SCREEN_BUFFER_INFO csbiTest;
-	GetConsoleScreenBufferInfo(hTest, &csbiTest);
-	int nConsoleHeight = csbiTest.srWindow.Bottom - csbiTest.srWindow.Top;
+// Check if cursor exceeds the maximum set screen buffer height
+// Returns TRUE if this is the case, otherwise FALSE is returned.
+// the cls() function is recommended to be called after this function if TRUE is returned,
+// as the terminal buffer may need to be reset.
+//
+bool CheckIfCursorExceedScreenBufferHeight() 
+{
+	// Get console screen buffer info - have all data ready before check
+	CONSOLE_SCREEN_BUFFER_INFO csbiCursorScreenBufCheck;
+	GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbiCursorScreenBufCheck);
 
-	// Spam enters until a few more than console bottom
-	for (int i = 0; i <= (nConsoleHeight + 4); i++) {
-		std::cout << '\n';
-	}
-
-	// Get the console cursor position after that
-	GetConsoleScreenBufferInfo(hTest, &csbiTest);
-	int nVerticalCPosition = csbiTest.dwCursorPosition.Y;
-	cls();
-
-	if (nVerticalCPosition <= nConsoleHeight) {
+	// Check by comparing set screen buffer height with cursor height
+	if (csbiCursorScreenBufCheck.dwCursorPosition.Y >= csbiCursorScreenBufCheck.dwSize.Y - 1) {
 		return true;
 	}
-	else {
-		return false;
-	}
+	else return false;
 }
 
 // Switch colours depending on ANSI or WIN32 fallback support
@@ -1388,8 +1641,6 @@ void ColourTypeSwitch()
 
 			ConfigObjMain.sColourSubheadingBack = Win32ToAnsiColours(ConfigObjMain.sColourSubheadingBack);
 			if (ConfigObjMain.sColourSubheadingBack == "") ConfigObjMain.sColourSubheadingBack = MAG;
-
-			ConfigObjMain.WriteConfigFile();
 		}
 	}
 
@@ -1465,11 +1716,16 @@ void ColourTypeSwitch()
 
 			ConfigObjMain.sColourSubheadingBack = AnsiToWin32Colours(ConfigObjMain.sColourSubheadingBack);
 			if (ConfigObjMain.sColourSubheadingBack == "") ConfigObjMain.sColourSubheadingBack = MAG;
-
-			ConfigObjMain.WriteConfigFile();
 		}
 
+		// Check validity of WIN32 colours - to prevent errors in colour system
+		if (CheckColourWin32Validity() == false) {
+			VerbosityDisplay("In ColourTypeSwitch(): ERROR - CheckColourWin32Validity() exited and reported one or more ConfigObjMain.sColour values being incorrect. One or more of these values have been reset to defaults.");
+		}
 	}
+
+	// Finally, write to config file
+	ConfigObjMain.WriteConfigFile();
 
 	return;
 }
@@ -1487,9 +1743,6 @@ void ProgramInitialisation()
 		// Pick random background colour
 		int nRandBackground = (int)RandNum(16, 1);
 		ColourBackgroundSwitch(&nRandBackground, &ConfigObjMain.sColourGlobalBack, &ConfigObjMain.sColourGlobal);
-
-		// Set colours to the whole screen
-		cls();
 	}
 
 	// Check for Virtual Terminal (ANSI) Sequence Support
@@ -1497,15 +1750,10 @@ void ProgramInitialisation()
 		// Disable ANSI virtual terminal sequences - do not refer to the configuration file
 		bAnsiVTSequences = false;
 
-		VerbosityDisplay("This terminal cannot do Virtual Terminal Sequences.\nThis session will use the WIN32 API fallback colour set for operation.\n");
-
 		// Set the colours
 		ColourTypeSwitch();
 
-		// Clear screen to set screen buffer to black colour
-		colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
-
-		cls();
+		VerbosityDisplay("This terminal cannot do Virtual Terminal Sequences.\nThis session will use the WIN32 API fallback colour set for operation.\n");
 	}
 	else {
 		// Use user-set setting in the configuration file
@@ -1514,28 +1762,11 @@ void ProgramInitialisation()
 		// Set the colours
 		ColourTypeSwitch();
 
-		// Clear screen to set screen buffer to black colour
-		colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
-		cls();
-
 		VerbosityDisplay("This terminal has Virtual Terminal Sequences support.\nThis session will run with ANSI RGB colour support.\n");
 	}
 
-	// Check for existence of bug PR#14774 in console window
-	if (ConsoleWTBugCheck()) {
-		// Enable workaround
-		bConsoleBugGCSBI = true;
-
-		VerbosityDisplay("This console window has bug PR#14774 on the Windows Terminal GitHub. A workaround will be used throughout program operation.");
-		std::cout << "\n\n";
-	}
-	else {
-		// Keep workaround disabled
-		bConsoleBugGCSBI = false;
-
-		VerbosityDisplay("This console window does not have bug PR#14774 on the Windows Terminal GitHub, and its workaround will not be used.");
-		std::cout << "\n\n";
-	}
+	// Clear screen to set screen buffer to black colour
+	colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
 
 	// Set console cursor attributes
 	SetCursorAttributes();
@@ -1545,10 +1776,6 @@ void ProgramInitialisation()
 
 	// Set window title to 'ZeeTerminal'
 	SetWindowTitle("ZeeTerminal");
-
-	// Update Notes Array (Memory Notes) from notes file
-	VerbosityDisplay("Updating Notes Array (Memory Notes) from Notes file, using NotesSystem::ReadFromNotesFile()...\n");
-	NotesMain.ReadFromNotesFile();
 
 	// Finally, close away all of the initialisation messages with cls()
 	cls();
@@ -1562,14 +1789,15 @@ int main(int argc, char* argv[])
 	std::string sCommandInput = "";
 	std::string sCommand = "";
 	std::string sCommandArgsBuffer = "";
-	char sCommandInputArgs[nArgArraySize] = {};
+	char cCommandInputArgs[nArgArraySize] = {};
+	bool bRunCommandLoopOnce = false; // Run the command loop once, should only be used for singular command arguments
 
 	// Get the program ready, sort out environment
 	std::cout << "Getting ready...\n";
 	// Initialise main() variables
-	// sCommandInputArgs and sStringCommandArgs
+	// cCommandInputArgs and sStringCommandArgs
 	for (int i = 0; i < nArgArraySize; i++) {
-		sCommandInputArgs[i] = ' ';
+		cCommandInputArgs[i] = ' ';
 		sStringDataCommandArgs[i] = "";
 		sStringOptionCommandArgs[i] = "";
 	}
@@ -1577,76 +1805,169 @@ int main(int argc, char* argv[])
 	// Initialise everything else in program
 	ProgramInitialisation();
 
-	colour(NumberToColour(RandNum(16, 1)), ConfigObjMain.sColourGlobalBack);
+	// Arguments to ZeeTerminal session
+	if (argc > 1) {
+		std::string sArgv[2];
+		sArgv[0] = argv[0];
+		sArgv[1] = argv[1];
 
-	if (bAnsiVTSequences == true) std::cout << BLINK_STR;
-	slowcharfn(true, "Welcome to ZeeTerminal!");
-	if (bAnsiVTSequences == true) std::cout << NOBLINK_STR;
 
-	// Alert new user about the existence of a short tutorial
-	if (ConfigObjMain.GetFileAgeInfo() == true) {
-		colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
-		// Sleep statements to keep user calm
-		sleep(500);
-		slowcharfn(true, "\nIt looks like you haven't used this application before.");
-		sleep(100);
+		if (sArgv[1] == "-c") 
+		{
+			// The command argument is nonexistent and wasn't found because the argument count is only 2 (the program and the '-c') - post error.
+			if (argc <= 2) {
+				UserErrorDisplay("ERROR - No command argument found with option -c. Please check that a command argument is after the -c argument, and try again.\n");
+				return 0;
+			}
 
-		if (YesNo("\nWould you like a short tutorial on how to use it? ['y' for yes, 'n' for no]: > ")) {
-			colour(LGRN, ConfigObjMain.sColourGlobalBack);
-			std::cout << "Sure!\n\n";
-			colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
+			// vsFileParseCommands is used as bRunningFromScriptOrArgCommand will be set to TRUE, so the parser would just read the first value like FileParse.
+			// The program would terminate right after the first command as bRunCommandLoopOnce will be set to TRUE, therefore no invalid memory access error should occur.
+			vsFileParseCommands.clear();
+			vsFileParseCommands.push_back(argv[2]);
+			bRunningFromScriptOrArgCommand = true;
+			bRunCommandLoopOnce = true; // One command from argument will end the terminal operation
 
-			Tutorial();
+		}
+		else if (sArgv[1] == "-h" || sArgv[1] == "--help") {
+			// Output help message for user
+			std::cout << "___ZeeTerminal Help___\n\n__Syntax__:\nFor running a script: ZeeTerminal.exe <script filepath>\nFor running a singular command: ZeeTerminal.exe -c <command>\n\n"
+				<< "If you would like to run a script OR command where either contains space characters, use quotation marks (\"\").\n --> For example: ZeeTerminal.exe \"C:\\Users\\Public\\A Test Script.txt\"\n\n"
+				<< "__Possible Arguments__:\n  -->  '-h'  OR  '--help'\tDisplays this help message.\n  -->  -c\t\t\tUse this argument to interpret the next string as a command.\n\n"
+				<< "__Examples__:\n -->  ZeeTerminal.exe -c \"echo Hello, World!\"\n -->  ZeeTerminal.exe -c devtools\n -->  ZeeTerminal.exe TestScript.txt\n -->  ZeeTerminal.exe \"Random Directory\\A Test Script.txt\"\n\n";
+
+			// Exit after that - nothing else needs to be run
+			return 0;
 		}
 		else {
-			colour(LGRN, ConfigObjMain.sColourGlobalBack);
-			std::cout << "Alright, got it.\n";
-			colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
+			// Initialise FileParse system with first argument - if failed, the function will uninitialise properly immediately.
+			if (!InitialiseFileParse(sArgv[1], true)) {
+				UserErrorDisplay("ERROR - An error occured while initialising the FileParse System. Possibly a nonexistent file path?\n");
+				return 0;
+			}
 		}
 	}
 
-	colour(NumberToColour(RandNum(16, 1)), ConfigObjMain.sColourGlobalBack);
-	std::cout << "\nPress ENTER to begin...\n";
-	if (bAnsiVTSequences) std::cout << "\x1b[" << NOBLINK << "m";
-	std::cin.ignore(std::numeric_limits<int>::max(), '\n');
+	// If an argument was given, messages that usually would appear when a user is using it should not be displayed.
+	// This is indicated by the boolean below:
+	//
+	if (bRunningFromScriptOrArgCommand == false)
+	{
+		colour(NumberToColour(RandNum(16, 1)), ConfigObjMain.sColourGlobalBack);
 
-	// Help message
-	colour(YLW, ConfigObjMain.sColourGlobalBack);
-	std::cout << "[Type ";
-	colour(LCYN, ConfigObjMain.sColourGlobalBack);
-	std::cout << "\"Help\" ";
-	colour(YLW, ConfigObjMain.sColourGlobalBack);
-	std::cout << "to get all commands.]\n[Type ";
-	colour(LCYN, ConfigObjMain.sColourGlobalBack);
-	std::cout << "\"Tutorial\"";
-	colour(YLW, ConfigObjMain.sColourGlobalBack);
-	std::cout << " to get a tutorial on how to use the program.]\n\n";
+		if (bAnsiVTSequences == true) std::cout << BLINK_STR;
+		slowcharfn(true, "Welcome to ZeeTerminal!");
+		if (bAnsiVTSequences == true) std::cout << NOBLINK_STR;
 
+		// Alert new user about the existence of a short tutorial
+		// Helps with new users to get familiar with the program
+		if (ConfigObjMain.GetFileAgeInfo() == true) {
+			colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
+			// Sleep statements to keep user calm
+			sleep(500);
+			slowcharfn(true, "\nIt looks like you haven't used this application before.");
+			sleep(100);
+
+			if (YesNoInput("\nWould you like a short tutorial on how to use it? ['y' for yes, 'n' for no]: > ")) {
+				colour(LGRN, ConfigObjMain.sColourGlobalBack);
+				std::cout << "Sure!\n\n";
+				colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
+
+				Tutorial();
+			}
+			else {
+				colour(LGRN, ConfigObjMain.sColourGlobalBack);
+				std::cout << "Alright, got it.\n";
+				colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
+			}
+		}
+
+		colour(NumberToColour(RandNum(16, 1)), ConfigObjMain.sColourGlobalBack);
+		std::cout << "\nPress ENTER to begin...\n";
+		std::cin.ignore(std::numeric_limits<int>::max(), '\n');
+
+		// Help message
+		colour(YLW, ConfigObjMain.sColourGlobalBack);
+		std::cout << "[Type ";
+		colour(LCYN, ConfigObjMain.sColourGlobalBack);
+		std::cout << "\"Help\" ";
+		colour(YLW, ConfigObjMain.sColourGlobalBack);
+		std::cout << "to get all commands.]\n[Type ";
+		colour(LCYN, ConfigObjMain.sColourGlobalBack);
+		std::cout << "\"Tutorial\"";
+		colour(YLW, ConfigObjMain.sColourGlobalBack);
+		std::cout << " to get a tutorial on how to use the program.]\n\n";
+	}
+
+
+	size_t nFileParseIterator = 0;
 	while (true) 
 	{
+		// Reset all command processing variables to defaults
+		sCommand = "";
+		sCommandArgsBuffer = "";
+		sCommandInput = "";
+		sCommandInputRAW = "";
+
 		// Set colours to default
 		colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
 
-		// Prompt and get input
-		std::cout << "Command: > ";
-		colour(LYLW, ConfigObjMain.sColourGlobalBack);
-		std::getline(std::cin, sCommandInput);
-		colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
+		// The below if-statement is present because after the user-initiated command execution that activates FileParse is complete, the nFileParseIterator variable is incremented.
+		// The nFileParseIterator variable incrementing is unwanted as no command from the actual file has been read yet, so it's essentially skipping the first line of the file,
+		// hence the nFileParseIterator variable is set to 0 again and the bLastCommandWasFileParse variable is set to false.
+		//
+		if (bLastCommandWasFileParse && nFileParseIterator >= 1) {
+			bLastCommandWasFileParse = false;
+			nFileParseIterator = 0;
+		}
+
+		// Output 'command' if the display boolean is true
+		if (bDisp == true) {
+			// Prompt and get input
+			std::cout << "Command: > ";
+		}
+
+		// Different input methods depending on running off script or actual user wanting to input
+		// From script
+		if (bRunningFromScriptOrArgCommand == true) {
+			// Display command if wanted
+			if (bDisp == true) {
+				colour(LYLW, ConfigObjMain.sColourGlobalBack);
+				std::cout << vsFileParseCommands[nFileParseIterator] << '\n';
+				colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
+			}
+			// Send the next parsed command to command input
+			sCommandInput = vsFileParseCommands[nFileParseIterator];
+		}
+		// From actual user input
+		else {
+			// Get input from std::cin
+			colour(LYLW, ConfigObjMain.sColourGlobalBack);
+			std::getline(std::cin, sCommandInput, '\n');
+			colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
+		}
 
 		// Optimisation for no input
 		if (sCommandInput == "") {
-			continue;
+			if (bRunningFromScriptOrArgCommand) {
+				// Do nothing - This shouldn't be triggered but is there to prevent crashes
+				// if there actually is a bug in the FileParse system.
+			}
+			else {
+				continue;
+			}
 		}
 		else {
-			// Initialise sCommandInputArgs to make all spaces
+			// Initialise cCommandInputArgs to make all spaces
 			for (int i = 0; i < nArgArraySize; i++) {
-				sCommandInputArgs[i] = ' ';
+				cCommandInputArgs[i] = ' ';
 				sStringDataCommandArgs[i] = "";
 				sStringOptionCommandArgs[i] = "";
 			}
 		}
 
 		// Copy command from sCommandInput into sCommand until space
+		//
+		// Create stringstream
 		std::istringstream sCommandInputIn(sCommandInput);
 
 		// For loop to start checking from after any spaces inputted by the user
@@ -1655,9 +1976,28 @@ int main(int argc, char* argv[])
 			if (sCommand != "") break;
 		}
 
+		// For loop to find and remove tabs in the command string - these are unwanted, especially if they're used for intentation such as within a script
+		while (true) {
+			// Find next tab character
+			size_t nTabLocation = sCommand.find('\t');
+			// if nothing found, break out of the loop
+			if (nTabLocation == std::string::npos) break;
+			// Erase/remove the tab character
+			sCommand.erase(nTabLocation, 1);
+		}
+
 		// Optimisation for spaces
 		if (sCommand == "") {
-			continue;
+			if (bRunCommandLoopOnce) {
+				break; // No command, so just leave
+			}
+			else if (bRunningFromScriptOrArgCommand) {
+				// Do nothing - This shouldn't be triggered but is there to prevent crashes
+				// if there actually is a bug in the FileParse system.
+			}
+			else {
+				continue; // Normal method - skip everything below
+			}
 		}
 
 		// Put raw input into sCommandInputRAW (done now to prevent overwrite before making sCommand lowercase)
@@ -1677,7 +2017,36 @@ int main(int argc, char* argv[])
 			colour(YLW, ConfigObjMain.sColourGlobalBack);
 			slowcharfn(false, "Exiting...\n");
 			colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
-			return 0;
+
+			// Don't exit the terminal when exiting on script completion is disabled - just terminate FileParse and set up everything back to normal.
+			if (!bExitOnScriptCompletion && bRunningFromScriptOrArgCommand) 
+			{
+				// Add log line
+				if (bConfigAndLogSystemsInitialised && ConfigObjMain.bEnableLogging && ConfigObjMain.bCommandInputInfoLogging) {
+					LogFileMain.AddLogLine("Exit command executed. Exiting on completion disabled and running from script, so FileParse uninitialisation initiated.", 3);
+				}
+
+				UninitialiseFileParse();
+				nFileParseIterator = 0; // zero out counter and stop counting
+				bRunningFromScriptOrArgCommand = false;
+				bRunCommandLoopOnce = false;
+
+				// Display success message
+				colour(LGRN, ConfigObjMain.sColourGlobalBack);
+				std::cout << CentreText("___FileParse Script successfully executed!___") << "\n\n";
+				colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
+
+				// Now that FileParse has been shut off and terminated, running the continue line on the loop should be safe.
+				continue;
+			}
+			else {
+				// Add log line
+				if (bConfigAndLogSystemsInitialised && ConfigObjMain.bEnableLogging && ConfigObjMain.bCommandInputInfoLogging) {
+					LogFileMain.AddLogLine("Exit command executed. Exiting on completion enabled or user executed the command, so exit process initiated.", 3);
+				}
+
+				break; // exit terminal command loop
+			}
 		}
 
 		// Copy the rest of the stringstream contents into sCommandArgsBuffer
@@ -1823,38 +2192,75 @@ int main(int argc, char* argv[])
 			}
 		}
 
-		// Copy the letter after a dash into sCommandInputArgs
+		// Copy the letter after a dash into cCommandInputArgs
 		for (size_t i = 0, j = 0; i < sCommandArgsBuffer.length() && j < nArgArraySize; i++) {
 			if (i > 0) {
 				// Character after must not be a space to prevent conflict with string parser 
 				if (sCommandArgsBuffer[i - 1] != '-' && sCommandArgsBuffer[i + 1] != '-' && sCommandArgsBuffer[i] == '-') {
-					sCommandInputArgs[j] = std::tolower(sCommandArgsBuffer[i + 1]);
+					cCommandInputArgs[j] = std::tolower(sCommandArgsBuffer[i + 1]);
 					j++;
 				}
 			}
 			else {
-				// This time, just remove the check for sCommandArgsBuffer[i - 1] to prevent OOR exception
+				// This time, just remove the check for sCommandArgsBuffer[nFileParseIterator - 1] to prevent OOR exception
 				if (sCommandArgsBuffer[i + 1] != '-' && sCommandArgsBuffer[i] == '-') {
-					sCommandInputArgs[j] = std::tolower(sCommandArgsBuffer[i + 1]);
+					cCommandInputArgs[j] = std::tolower(sCommandArgsBuffer[i + 1]);
 					j++;
 				}
 			}
 
 		}
 
+		// Add a log line for command execution
+		if (bConfigAndLogSystemsInitialised && ConfigObjMain.bEnableLogging && ConfigObjMain.bCommandInputInfoLogging)
+		{
+			// Get number of char args
+			size_t nCharArraySize = 0;
+			for (; nCharArraySize < nArgArraySize && cCommandInputArgs[nCharArraySize] != ' '; nCharArraySize++) {}
+
+			// Get number of data string args
+			size_t nDataStringArraySize = 0;
+			for (; nDataStringArraySize < nArgArraySize && sStringDataCommandArgs[nDataStringArraySize] != ""; nDataStringArraySize++) {}
+
+			// Get number of option string args
+			size_t nOptionStringArraySize = 0;
+			for (; nOptionStringArraySize < nArgArraySize && sStringOptionCommandArgs[nOptionStringArraySize] != ""; nOptionStringArraySize++) {}
+
+			// Add log line
+			LogFileMain.AddLogLine("Executing command [" + sCommand + "] with "
+				+ std::to_string(nCharArraySize) + " character arguments, "
+				+ std::to_string(nOptionStringArraySize) + " option string arguments, and "
+				+ std::to_string(nDataStringArraySize) + " data string arguments (User Input: [" + sCommandInput + "]).", 3);
+		}
+
 		// Finally, call commands function
+		//
 		nNumOfInputtedCommands++;
 		nNumOfSuccessfulInputtedCommands++;
-		Commands(sCommand, sCommandInputArgs, sCommandArgsBufferRAW);
+		Commands(sCommand, cCommandInputArgs, sCommandArgsBufferRAW);
 		std::cout << '\n';
 
-		// Reset all command processing variables to defaults
-		sCommand = "";
-		sCommandArgsBuffer = "";
-		sCommandInput = "";
-		sCommandInputRAW = "";
+		// Exit on argument command completion OR exit on script completion (line position check and if exiting after script completion is enabled)
+		if (bRunCommandLoopOnce == true || (nFileParseIterator >= vsFileParseCommands.size() - 1 && bExitOnScriptCompletion == true)) {
+			break;
+		}
+
+		// If not exiting on script completion, just uninitialise everything related to the FileParse system and continue as normal
+		else if (nFileParseIterator >= vsFileParseCommands.size() - 1 && bExitOnScriptCompletion == false) {
+			UninitialiseFileParse();
+			nFileParseIterator = 0; // zero out counter and stop counting
+			bRunningFromScriptOrArgCommand = false;
+			bRunCommandLoopOnce = false;
+
+			// Display success message
+			colour(LGRN, ConfigObjMain.sColourGlobalBack);
+			std::cout << CentreText("___FileParse Script successfully executed!___") << "\n\n";
+			colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
+		}
+
+		// Increment if running from script
+		if (bRunningFromScriptOrArgCommand) nFileParseIterator++;
 	}
 
 	return 0;
-
 }

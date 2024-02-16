@@ -1,8 +1,6 @@
-
-void VerbosityDisplay(std::string);
-void UserErrorDisplay(std::string);
-bool isNumberi(const std::string);
-bool isNumberll(const std::string);
+//
+// ConfigFile-System.cpp - Responsible for handling and managing the configuration file system of ZeeTerminal.
+//
 
 extern RGBColourPresetSystem RGBPreset[3];
 
@@ -11,6 +9,9 @@ extern RGBColourPresetSystem RGBPreset[3];
 //
 class ConfigFileSystem 
 {
+private:
+	// Object ID
+	int nObjectID;
 
 protected:
 
@@ -36,7 +37,15 @@ protected:
 			+ "bCursorBlink=" + std::to_string(bCursorBlink) + "\n"
 			+ "bTermCustomThemeSupport=" + std::to_string(bTermCustomThemeSupport) + "\n"
 			+ "bAutoReadableContrast=" + std::to_string(bAutoReadableContrast) + "\n"
+			+ "bUseNewOptionSelect=" + std::to_string(bUseNewOptionSelect) + "\n"
 			+ "bAnsiVTSequences=" + std::to_string(bAnsiVTSequences) + "\n\n"
+
+			+ "# LogFile System settings switches\n#\n"
+			+ "bEnableLogging=" + std::to_string(bEnableLogging) + "\n"
+			+ "bVerboseMessageLogging=" + std::to_string(bVerboseMessageLogging) + "\n"
+			+ "bUserSpaceErrorLogging=" + std::to_string(bUserSpaceErrorLogging) + "\n"
+			+ "bCommandInputInfoLogging=" + std::to_string(bCommandInputInfoLogging) + "\n"
+			+ "bUserInputInfoLogging=" + std::to_string(bUserInputInfoLogging) + "\n\n"
 
 			+ "# Integer Non-Switch Setting Variables\n#\n"
 			+ "nSlowCharSpeed=" + std::to_string(nSlowCharSpeed) + "\n"
@@ -85,6 +94,14 @@ public:
 	bool bTermCustomThemeSupport = false;
 	bool bAutoReadableContrast = true;
 	bool bAnsiVTSequences = true;
+	bool bUseNewOptionSelect = true;
+
+	// LogFile System Settings
+	bool bEnableLogging = false;
+	bool bVerboseMessageLogging = true;
+	bool bUserSpaceErrorLogging = false;
+	bool bCommandInputInfoLogging = true;
+	bool bUserInputInfoLogging = false;
 
 	long long int nSlowCharSpeed = 32;
 	long long int nCursorShape = 5; // TYPES are: block blinking (1), block steady (2), underline blinking (3), underline steady (4), bar blinking (5), bar steady (6)
@@ -106,7 +123,12 @@ public:
 
 	// Constructor
 	ConfigFileSystem() {
-		VerbosityDisplay("ConfigFileSystem Object has been created.\n");
+		static int nStaticID = 10000;
+		// Wrap-around to prevent overflow
+		if (nStaticID >= std::numeric_limits<int>::max() - 1) nStaticID = 10000;
+		nObjectID = ++nStaticID;
+
+		VerbosityDisplay("ConfigFileSystem Object has been created.\n", nObjectID);
 
 		// Update configuration string contents
 		UpdateConfigContents();
@@ -119,7 +141,7 @@ public:
 
 	// Destructor
 	~ConfigFileSystem() {
-		VerbosityDisplay("ConfigFileSystem Object has been destroyed.\n");
+		VerbosityDisplay("ConfigFileSystem Object has been destroyed.\n", nObjectID);
 
 		return;
 	}
@@ -135,10 +157,10 @@ public:
 
 		// 2. Check if open successful; if not, use default location; if not, return false
 		if (CreateConfigOut.fail() == true) {
-			VerbosityDisplay("In ConfigFileSystem::CreateConfigFile(): Warning - User file location cannot be opened. Attempting to create config file in default location.\n");
+			VerbosityDisplay("In ConfigFileSystem::CreateConfigFile(): Warning - User file location cannot be opened. Attempting to create config file in default location.\n", nObjectID);
 			CreateConfigOut.open(sConfigFileDefaultLocation);
 			if (CreateConfigOut.fail() == true) {
-				VerbosityDisplay("In ConfigFileSystem::CreateConfigFile(): ERROR - Default location could not be opened. Configuration file creation failed.");
+				VerbosityDisplay("In ConfigFileSystem::CreateConfigFile(): ERROR - Default location could not be opened. Configuration file creation failed.", nObjectID);
 				return false;
 			}
 			else {
@@ -170,15 +192,15 @@ public:
 
 		// 3. Test for file existence in user-set location and ZeeTerminal folder
 		if (TestStreamIn.fail() == true) {
-			VerbosityDisplay("In ConfigFileSystem::WriteConfigFile(): Warning- User-defined file seems to be nonexistent. Attempting to write to default location.\n");
+			VerbosityDisplay("In ConfigFileSystem::WriteConfigFile(): Warning- User-defined file seems to be nonexistent. Attempting to write to default location.\n", nObjectID);
 			TestStreamIn.clear();
 			TestStreamIn.open(sConfigFileDefaultLocation);
 
 			if (TestStreamIn.fail() == true) {
-				VerbosityDisplay("In ConfigFileSystem::WriteConfigFile(): Warning - Default location file not found. Attempting to create new configuration file.\n");
+				VerbosityDisplay("In ConfigFileSystem::WriteConfigFile(): Warning - Default location file not found. Attempting to create new configuration file.\n", nObjectID);
 				if (CreateConfigFile() == false) {
-					VerbosityDisplay("In ConfigFileSystem::WriteConfigFile(): ERROR - Write attempt has failed.\n");
-					UserErrorDisplay("Configuration file write attempt has failed.\n");
+					VerbosityDisplay("In ConfigFileSystem::WriteConfigFile(): ERROR - Write attempt has failed.\n", nObjectID);
+					UserErrorDisplay("Configuration file write attempt has failed.\n", nObjectID);
 					return false;
 				}
 				else sConfigFinalLocation = sConfigFileUserLocation;
@@ -195,13 +217,18 @@ public:
 
 		// Unexpected failure - just exit
 		if (MainStreamOut.fail()) {
-			VerbosityDisplay("In ConfigFileSystem::WriteConfigFile(): ERROR - Unexpected failure has occured. Config file write attempt failed.\n");
-			UserErrorDisplay("Configuration file write attempt has failed.\n");
+			VerbosityDisplay("In ConfigFileSystem::WriteConfigFile(): ERROR - Unexpected failure has occured. Config file write attempt failed.\n", nObjectID);
+			UserErrorDisplay("Configuration file write attempt has failed.\n", nObjectID);
 			MainStreamOut.close();
 			return false;
 		}
 
-		VerbosityDisplay("In ConfigFileSystem::WriteConfigFile(): Note - A write operation to configuration file has began.");
+		VerbosityDisplay("In ConfigFileSystem::WriteConfigFile(): Note - A write operation to configuration file has began.", nObjectID);
+
+		// Set all RGB preset values to defaults now if not set by user, so that they get written correctly to be used without UB
+		for (uint8_t i = 0; i < sizeof(RGBPreset) / sizeof(RGBColourPresetSystem); i++) {
+			RGBPreset[i].ResetIfNotSetByUser();
+		}
 
 		// 6. Write to config file
 		UpdateConfigContents();
@@ -231,15 +258,15 @@ public:
 
 		// 3. Test for file existence in user-set location and ZeeTerminal folder
 		if (TestStreamIn.fail() == true) {
-			VerbosityDisplay("In ConfigFileSystem::ReadConfigFile(): Warning- User-defined file seems to be nonexistent. Attempting to read from default location.\n");
+			VerbosityDisplay("In ConfigFileSystem::ReadConfigFile(): Warning- User-defined file seems to be nonexistent. Attempting to read from default location.\n", nObjectID);
 			TestStreamIn.clear();
 			TestStreamIn.open(sConfigFileDefaultLocation);
 
 			if (TestStreamIn.fail() == true) {
-				VerbosityDisplay("In ConfigFileSystem::ReadConfigFile(): Warning - Default location file not found. Attempting to create new configuration file.\n");
+				VerbosityDisplay("In ConfigFileSystem::ReadConfigFile(): Warning - Default location file not found. Attempting to create new configuration file.\n", nObjectID);
 				if (CreateConfigFile() == false) {
-					VerbosityDisplay("In ConfigFileSystem::ReadConfigFile(): ERROR - Read attempt has failed.\n");
-					UserErrorDisplay("Configuration file read attempt has failed.\n");
+					VerbosityDisplay("In ConfigFileSystem::ReadConfigFile(): ERROR - Read attempt has failed.\n", nObjectID);
+					UserErrorDisplay("Configuration file read attempt has failed.\n", nObjectID);
 					return false;
 				}
 				else sConfigFinalLocation = sConfigFileUserLocation;
@@ -256,15 +283,15 @@ public:
 
 		// Unexpected failure - just exit
 		if (MainStreamIn.fail()) {
-			VerbosityDisplay("In ConfigFileSystem::ReadConfigFile(): ERROR - Unexpected failure has occured. Config file read attempt failed.\n");
-			UserErrorDisplay("Configuration file read attempt has failed.\n");
+			VerbosityDisplay("In ConfigFileSystem::ReadConfigFile(): ERROR - Unexpected failure has occured. Config file read attempt failed.\n", nObjectID);
+			UserErrorDisplay("Configuration file read attempt has failed.\n", nObjectID);
 			MainStreamIn.close();
 			return false;
 		}
 
 		// Check every line until the end of the file
 		//
-		VerbosityDisplay("In ConfigFileSystem::ReadConfigFile(): Note - Configuration File Read Operation has commenced.\n");
+		VerbosityDisplay("In ConfigFileSystem::ReadConfigFile(): Note - Configuration File Read Operation has commenced.\n", nObjectID);
 		uint64_t nLineNum = 0;
 		while (!MainStreamIn.eof()) {
 			nLineNum++;
@@ -283,7 +310,7 @@ public:
 				if (sLineBuffer[i] == '=') bEqualSpotted = true;
 			}
 			if (bEqualSpotted == false) {
-				VerbosityDisplay("In ConfigFileSystem::ReadConfigFile(): Warning - Line " + std::to_string(nLineNum) + " - no equal sign found, so doesn't have correct formatting. Skipping.\n");
+				VerbosityDisplay("In ConfigFileSystem::ReadConfigFile(): Warning - Line " + std::to_string(nLineNum) + " - no equal sign found, so doesn't have correct formatting. Skipping.\n", nObjectID);
 				continue;
 			}
 
@@ -296,7 +323,7 @@ public:
 
 			// Check if anything is in the option string
 			if (sOptionBuffer == "") {
-				VerbosityDisplay("In ConfigFileSystem::ReadConfigFile(): Warning - Line " + std::to_string(nLineNum) + " - No option string found before equal sign. Please check for option string and try again. Skipping.\n");
+				VerbosityDisplay("In ConfigFileSystem::ReadConfigFile(): Warning - Line " + std::to_string(nLineNum) + " - No option string found before equal sign. Please check for option string and try again. Skipping.\n", nObjectID);
 				continue;
 			}
 
@@ -305,7 +332,7 @@ public:
 
 			// Check if anything is in the value string
 			if (sValueBuffer == "") {
-				VerbosityDisplay("In ConfigFileSystem::ReadConfigFile(): Warning - Line " + std::to_string(nLineNum) + " - No value string found after equal sign. Please check for value string and try again. Skipping.\n");
+				VerbosityDisplay("In ConfigFileSystem::ReadConfigFile(): Warning - Line " + std::to_string(nLineNum) + " - No value string found after equal sign. Please check for value string and try again. Skipping.\n", nObjectID);
 				continue;
 			}
 
@@ -361,8 +388,27 @@ public:
 			else if (sOptionBuffer == "bAutoReadableContrast") {
 				if (isNumberi(sValueBuffer)) bAutoReadableContrast = std::stoi(sValueBuffer);
 			}
+			else if (sOptionBuffer == "bUseNewOptionSelect") {
+				if (isNumberi(sValueBuffer)) bUseNewOptionSelect = std::stoi(sValueBuffer);
+			}
 			else if (sOptionBuffer == "bAnsiVTSequences") {
 				if (isNumberi(sValueBuffer)) bAnsiVTSequences = std::stoi(sValueBuffer);
+			}
+
+			else if (sOptionBuffer == "bEnableLogging") {
+				if (isNumberi(sValueBuffer)) bEnableLogging = std::stoi(sValueBuffer);
+			}
+			else if (sOptionBuffer == "bVerboseMessageLogging") {
+				if (isNumberi(sValueBuffer)) bVerboseMessageLogging = std::stoi(sValueBuffer);
+			}
+			else if (sOptionBuffer == "bUserSpaceErrorLogging") {
+				if (isNumberi(sValueBuffer)) bUserSpaceErrorLogging = std::stoi(sValueBuffer);
+			}
+			else if (sOptionBuffer == "bCommandInputInfoLogging") {
+				if (isNumberi(sValueBuffer)) bCommandInputInfoLogging = std::stoi(sValueBuffer);
+			}
+			else if (sOptionBuffer == "bUserInputInfoLogging") {
+				if (isNumberi(sValueBuffer)) bUserInputInfoLogging = std::stoi(sValueBuffer);
 			}
 
 			// Integer Variables
@@ -373,7 +419,7 @@ public:
 				if (isNumberll(sValueBuffer)) {
 					long long int nTester = std::stoll(sValueBuffer);
 					if (nTester != 1 && nTester != 2 && nTester != 3 && nTester != 4 && nTester != 5 && nTester != 6) {
-						VerbosityDisplay("In ConfigFileSystem::ReadConfigFile(): Warning - nCursorShape value incorrect. Must be 1,2,3,4,5 or 6. Value left unchanged.\n");
+						VerbosityDisplay("In ConfigFileSystem::ReadConfigFile(): Warning - nCursorShape value incorrect. Must be 1,2,3,4,5 or 6. Value left unchanged.\n", nObjectID);
 					}
 					else nCursorShape = nTester;
 				}
@@ -408,7 +454,7 @@ public:
 
 			// Not a referenced option
 			else {
-				VerbosityDisplay("In ConfigFileSystem::ReadConfigFile(): Warning - Line " + std::to_string(nLineNum) + " - Unknown/unreferenced option used. Will not read from this line.\n");
+				VerbosityDisplay("In ConfigFileSystem::ReadConfigFile(): Warning - Line " + std::to_string(nLineNum) + " - Unknown/unreferenced option used. Will not read from this line.\n", nObjectID);
 			}
 
 			// 12. Repeat until all lines have been checked.
@@ -417,7 +463,7 @@ public:
 		// 13. Close all streams, post verbose message that read operation has complete.
 		MainStreamIn.close();
 		UpdateConfigContents();
-		VerbosityDisplay("In ConfigFileSystem::ReadConfigFile(): Note - Config File read operation has been successfully completed.\n");
+		VerbosityDisplay("In ConfigFileSystem::ReadConfigFile(): Note - Config File read operation has been successfully completed.\n", nObjectID);
 
 		return true;
 	}
@@ -447,14 +493,14 @@ public:
 
 		// 3. Test for file existence in user-set location and ZeeTerminal folder
 		if (TestStreamIn.fail() == true) {
-			VerbosityDisplay("In ConfigFileSystem::GetConfigFileContents(): Warning - User-defined file seems to be nonexistent. Attempting to read from default location.\n");
+			VerbosityDisplay("In ConfigFileSystem::GetConfigFileContents(): Warning - User-defined file seems to be nonexistent. Attempting to read from default location.\n", nObjectID);
 			TestStreamIn.clear();
 			TestStreamIn.open(sConfigFileDefaultLocation);
 
 			if (TestStreamIn.fail() == true) {
-				VerbosityDisplay("In ConfigFileSystem::GetConfigFileContents(): Warning - Default location file not found. Attempting to create new configuration file.\n");
+				VerbosityDisplay("In ConfigFileSystem::GetConfigFileContents(): Warning - Default location file not found. Attempting to create new configuration file.\n", nObjectID);
 				if (CreateConfigFile() == false) {
-					VerbosityDisplay("In ConfigFileSystem::GetConfigFileContents(): ERROR - File Get attempt has failed.\n");
+					VerbosityDisplay("In ConfigFileSystem::GetConfigFileContents(): ERROR - File Get attempt has failed.\n", nObjectID);
 					return "\nFAILED\n";
 				}
 				else sConfigFinalLocation = sConfigFileUserLocation;
@@ -471,13 +517,13 @@ public:
 
 		// Unexpected failure - just exit
 		if (MainStreamIn.fail()) {
-			VerbosityDisplay("In ConfigFileSystem::GetConfigFileContents(): ERROR - Unexpected failure has occured. Config File Get attempt failed.\n");
+			VerbosityDisplay("In ConfigFileSystem::GetConfigFileContents(): ERROR - Unexpected failure has occured. Config File Get attempt failed.\n", nObjectID);
 			MainStreamIn.close();
 			return "\nFAILED\n";
 		}
 
 		// 6. Load file contents into buffer, post message that get file contents operation has began
-		VerbosityDisplay("In ConfigFileSystem::GetConfigFileContents(): Note - Get File Contents operation has began.\n");
+		VerbosityDisplay("In ConfigFileSystem::GetConfigFileContents(): Note - Get File Contents operation has began.\n", nObjectID);
 		*sLineBuffer = "";
 		*sFileBuffer = "";
 		while (!MainStreamIn.eof()) {
@@ -488,7 +534,7 @@ public:
 		// 7. Return the file contents, close stream(s)
 		MainStreamIn.close();
 		delete sLineBuffer;
-		VerbosityDisplay("In ConfigFileSystem::GetConfigFileContents(): Note - Get File Contents operation has completed successfully.\n");
+		VerbosityDisplay("In ConfigFileSystem::GetConfigFileContents(): Note - Get File Contents operation has completed successfully.\n", nObjectID);
 
 		return *sFileBuffer;
 	}

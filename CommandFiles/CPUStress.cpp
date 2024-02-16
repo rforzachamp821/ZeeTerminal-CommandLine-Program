@@ -1,11 +1,6 @@
-
-void colour(std::string, std::string);
-void ClearKeyboardBuffer();
-void slowcolourfn(std::string, std::string, std::string);
-void slowcharCentredFn(bool, std::string);
-std::string StrInput(std::string);
-void sleep(long long int);
-void Exiting();
+//
+// CPUStress.cpp - Responsible for the CPUStress command's inner workings.
+//
 
 std::atomic<bool> StopCpuStress = false;
 // Get logical core count of cpu

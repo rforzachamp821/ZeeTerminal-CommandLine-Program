@@ -2,6 +2,9 @@
 // TableEngine - A class that allows for creating tables at any point in time in your code.
 // 
 class TableEngine {
+private:
+	// Object ID
+	int nObjectID;
 protected:
 
 	std::vector<std::vector<std::string>> vsTable;
@@ -25,13 +28,16 @@ public:
 	
 	// TableEngine constructor
 	TableEngine() {
-		VerbosityDisplay("TableEngine Object Created.\n");
+		static int nStaticID = 10000;
+		nObjectID = ++nStaticID;
+
+		VerbosityDisplay("TableEngine Object Created.\n", nObjectID);
 		return; // Nothing needs to be initialised as there's only a vector
 	}
 
 	// TableEngine destructor
 	~TableEngine() {
-		VerbosityDisplay("TableEngine Object Destroyed.\n");
+		VerbosityDisplay("TableEngine Object Destroyed.\n", nObjectID);
 		return;
 	}
 
@@ -60,14 +66,8 @@ public:
 		CONSOLE_SCREEN_BUFFER_INFO csbiTable;
 		GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbiTable);
 
-		// Bug #14774 workaround
-		// THIS IS ONLY TEMPORARY UNTIL MS FIXES THEIR STUFF
-		if (bConsoleBugGCSBI) {
-			uint64_t nWindowHeight = csbiTable.srWindow.Bottom - csbiTable.srWindow.Top;
-			if (csbiTable.dwCursorPosition.Y == nWindowHeight) {
-				cls();
-			}
-		}
+		// Check for cursor exceeding screen buffer height (could be bug #14774 workaround on Windows Terminal GitHub)
+		if (CheckIfCursorExceedScreenBufferHeight()) cls();
 
 		for (uint64_t i = 0; i < vnColumnSizes.size(); i++) {
 			if (vnColumnSizes[i] >= (csbiTable.srWindow.Right - csbiTable.srWindow.Left) / vsTable[0].size()) {

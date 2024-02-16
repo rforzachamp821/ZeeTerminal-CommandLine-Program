@@ -18,7 +18,7 @@
 // -> (10+5^2)((5*-2)+9-3^3)/2
 // -> 3(sin(5)acos(-1))
 //
-// - This calculation algorithm is currently limited by the maximum precision of long double (16 digits of precision). 
+// - This calculation algorithm's display output is currently limited by the maximum precision of long double (16 digits of precision). 
 // 
 // - Please beware that the number outputted may not actually be 16 digits and possibly less, due to natural IEE754 limits.
 // 
@@ -34,12 +34,24 @@ protected:
 	const long double dDegToRad = dPiConstant / 180;
 	const long double dRadToDeg = 180 / dPiConstant;
 
+	const char        cDefaultDecimalPoint = '.';
+	const char        cDefaultThousandsSeparator = ',';
+	const char        cEuropeanDecimalPoint = ',';
+	const char        cEuropeanThousandsSeparator = '.';
+
+	char              cDecimalPoint = '.';
+	char              cThousandsSeparator = ',';
+
 
 	// isNumber - Checks whether std::string argument is a true number or not
 	// Arguments: sNumberTest - The number string to check.
 	// Return Values: TRUE or 1 for number, FALSE or 0 for not a number.
 	//
 	bool isNumber(const std::string sNumberTest) {
+
+		// Variables
+		bool bDecimalPointAlreadyFound = false;
+
 		// Not a number as there's nothing in the string
 		if (sNumberTest.length() <= 0) return false;
 
@@ -51,7 +63,11 @@ protected:
 			}
 
 			// skip character if it's a decimal point
-			if (sNumberTest[i] == '.') continue;
+			if (sNumberTest[i] == cDefaultDecimalPoint && bDecimalPointAlreadyFound == false) {
+				// Allow it only once
+				bDecimalPointAlreadyFound = true;
+				continue;
+			}
 			else if (isdigit(sNumberTest[i]) == false) return false;
 		}
 
@@ -60,11 +76,132 @@ protected:
 			long double nRangeTest = std::stold(sNumberTest);
 		}
 		catch (const std::out_of_range& oorIsNumber) {
-			UserErrorDisplay("Exception caught - Number is too high/low (out of range).");
+			UserErrorDisplay("Exception caught - Number is too high/low (out of range).\n");
 			return false;
 		}
 
 		return true;
+	}
+
+	// FormatValueForDisplay - Formats a specific value for display output.
+	//                       - Has a max of 15-16dp.
+	// Arguments: dValue - The number to format.
+	// Return Value: Formatted number as a string.
+	//
+	std::string FormatValueForDisplay(long double dValue) {
+		// Create stringstream and send info to it
+		std::stringstream ssFormatted;
+		ssFormatted << std::fixed << std::setprecision(std::numeric_limits<long double>::digits10 - GetWholeNumberDigitLength(dValue) - 1) << dValue;
+
+		std::string sFormatBuffer = EradicateTrailingZeroes(ssFormatted.str());
+
+		// Change decimal point to European notation if necessary
+		//
+		// Find last decimal point and replace with european one
+		size_t nDecimalPointPos = sFormatBuffer.find_last_of(cDefaultDecimalPoint);
+
+		// Exit when not found
+		if (nDecimalPointPos == std::string::npos) return sFormatBuffer;
+
+		// Replace
+		sFormatBuffer.replace(nDecimalPointPos, 1, std::string(1, cDecimalPoint));
+
+		// Return string from stringstream
+		return sFormatBuffer;
+	}
+
+	// FormatValueForAlgorithm - Formats a specific value for internal algorithm calculations.
+	//                         - Has a max of 18-19dp.
+	// Arguments: dValue - The number to format.
+	// Return Value: Formatted number as a string.
+	//
+	std::string FormatValueForAlgorithm(long double dValue) {
+		// Create stringstream and send info to it
+		std::stringstream ssFormatted;
+		ssFormatted << std::fixed << std::setprecision(std::numeric_limits<long double>::max_digits10 + 1) << dValue;
+
+		// Return string from stringstream
+		return ssFormatted.str();
+	}
+
+	// FormatStringForDisplay - Formats a calculation string for display output, by rounding the numbers inside and removing the zeroes from them.
+	// Arguments: sCalculationString - The string to format.
+	// Return value: Formatted string.
+	//
+	std::string FormatStringForDisplay(std::string sCalculationString) 
+	{
+		// 1. Get calculation string and declare for loop, variables
+		size_t nLastEndNumberPos = 0;
+		while (true) 
+		{
+			// 2. Search from left to right, for first numerical character (ignore '-'). Exit loop on std::string::npos
+			size_t nNumberPosStart = nLastEndNumberPos;
+			for (; nNumberPosStart < sCalculationString.length(); nNumberPosStart++) {
+				// Number exits the loop
+				if (isdigit(sCalculationString[nNumberPosStart])) {
+					break;
+				}
+			}
+
+			// Return on completion
+			if (nNumberPosStart >= sCalculationString.length()) return sCalculationString;
+
+			// 3. Using for loop, loop to end of number by checking numerical characters (ignore '.')
+			size_t nNumberPosEnd = nNumberPosStart;
+			for (; nNumberPosEnd < sCalculationString.length(); nNumberPosEnd++) {
+				// Non-number exits the loop
+				if (!isdigit(sCalculationString[nNumberPosEnd]) && sCalculationString[nNumberPosEnd] != '.') {
+					break;
+				}
+			}
+
+			// Return on completion
+			if (nNumberPosEnd > sCalculationString.length()) return sCalculationString;
+
+			// 4. Parse string from both points, and convert to number
+			long double dFormatBuffer = 0.0;
+			std::string sFormatBuffer = sCalculationString.substr(nNumberPosStart, (nNumberPosEnd - nNumberPosStart));
+
+			// 5. Convert string to a number, with type checking beforehand
+			if (!isNumber(sFormatBuffer)) {
+				nErrorLevel = 2;
+				return sCalculationString;
+			}
+
+			// Convert string to number
+			dFormatBuffer = std::stold(sFormatBuffer);
+
+			// 6. Pass number to custom formatting function, and replace contents of string's number with new, display-formatted number string
+			size_t nValueLength = FormatValueForDisplay(dFormatBuffer).length();
+			sCalculationString.replace(nNumberPosStart, (nNumberPosEnd - nNumberPosStart), FormatValueForDisplay(dFormatBuffer));
+
+			// Set last ended number position to start pos + nValueLength
+			nLastEndNumberPos = nNumberPosStart + nValueLength;
+		}
+
+		return sCalculationString;
+	}
+	
+	// FormatStringForAlgorithm - Formats a calculation string for algorithm use, including changing number formatting to the American notation.
+	// Arguments: sCalculationString - The string to format.
+	// Return value: Formatted string.
+	//
+	std::string FormatStringForAlgorithm(std::string sCalculationString) 
+	{
+		while (true) {
+			// Change decimal notation to American
+			size_t nDecimalPointLocation = sCalculationString.find_last_of(cEuropeanDecimalPoint);
+
+			// Exit when not found
+			if (nDecimalPointLocation == std::string::npos) {
+				break;
+			}
+
+			// Replace
+			sCalculationString.replace(nDecimalPointLocation, 1, std::string(1, cDefaultDecimalPoint));
+		}
+
+		return sCalculationString;
 	}
 
 	// nErrorLevel - The type of error that occured when calculating. The following values are what they are:
@@ -79,7 +216,12 @@ protected:
 
 	// dLastAns - The last calculated value known on the object.
 	//          - Used for the (Ans) user-space variable.
+	//
 	long double dLastAns = 0;
+
+	// Object ID
+	int nObjectID;
+
 
 	// Calculate - Main calculation algorithm that calculates using each of the 4 basic mathematical operators,
 	//             with negative number support along with that. The nErrorLevel variable is modified when 
@@ -97,13 +239,16 @@ protected:
 		}
 
 		// Display first calculation if working out is allowed
-		if (bDisplayWorkingOutProcess) std::cout << "--> " << sCalculationString << '\n';
+		if (bDisplayWorkingOutProcess) std::cout << "--> " << FormatStringForDisplay(sCalculationString) << '\n';
 
 
 		// 1. Powers
 		while (true)
 		{
 			size_t nSymbolLocation = 0;
+
+			// Check for any unnecessary arithmetic symbols before the run
+			RemoveUnnecessaryArithmeticSymbols(sCalculationString);
 
 			// a. Find multiplication symbol (*) and get location; if not found, break
 			nSymbolLocation = sCalculationString.find("^", 0);
@@ -146,7 +291,7 @@ protected:
 			// c. Check for first number location before power sign
 			size_t nNumber1StartLocation = nSymbolLocation - 1;
 			for (; nNumber1StartLocation >= 0; nNumber1StartLocation--) {
-				if (isdigit(sCalculationString[nNumber1StartLocation]) == false && sCalculationString[nNumber1StartLocation] != '.') { // decimal point accepted
+				if (isdigit(sCalculationString[nNumber1StartLocation]) == false && sCalculationString[nNumber1StartLocation] != cDefaultDecimalPoint) { // decimal point accepted
 					nNumber1StartLocation++; // to avoid the non-numerical character
 					break; // Start of number found
 				}
@@ -164,7 +309,7 @@ protected:
 						continue;
 					}
 				}
-				if (isdigit(sCalculationString[nNumber2EndLocation]) == false && sCalculationString[nNumber2EndLocation] != '.') { // decimal point accepted
+				if (isdigit(sCalculationString[nNumber2EndLocation]) == false && sCalculationString[nNumber2EndLocation] != cDefaultDecimalPoint) { // decimal point accepted
 					nNumber2EndLocation--; // to avoid the non-numerical character
 					break; // Start of number found
 				}
@@ -174,8 +319,8 @@ protected:
 			}
 
 			// e. Convert strings into numbers with checks
-			std::string sNumber1 = sCalculationString.substr(nNumber1StartLocation, (nSymbolLocation)-nNumber1StartLocation);
-			std::string sNumber2 = sCalculationString.substr(nSymbolLocation + 1, nNumber2EndLocation - (nSymbolLocation));
+			std::string sNumber1 = sCalculationString.substr(nNumber1StartLocation, nSymbolLocation - nNumber1StartLocation);
+			std::string sNumber2 = sCalculationString.substr(nSymbolLocation + 1, nNumber2EndLocation - nSymbolLocation);
 
 			if (isNumber(sNumber1) == false) {
 				nErrorLevel = 3;
@@ -196,14 +341,10 @@ protected:
 
 			dFinalNumAns = std::powl(dNumber1, dNumber2);
 
-			// Use ostringstream to keep 16-dp accuracy of long double
-			std::ostringstream ossPowers;
-			ossPowers << std::setprecision(std::numeric_limits<long double>::max_digits10 - 2) << dFinalNumAns;
-
 			// g. Replace string with power of numbers
-			sCalculationString.replace(nNumber1StartLocation, (nNumber2EndLocation + 1) - nNumber1StartLocation, ossPowers.str());
+			sCalculationString.replace(nNumber1StartLocation, (nNumber2EndLocation + 1) - nNumber1StartLocation, FormatValueForAlgorithm(dFinalNumAns));
 
-			if (bDisplayWorkingOutProcess) std::cout << "--> " << sCalculationString << '\n';
+			if (bDisplayWorkingOutProcess) std::cout << "--> " << FormatStringForDisplay(sCalculationString) << '\n';
 
 			// Check for infinity- if found, return with error level 4
 			if (sCalculationString.find("inf", 0) != std::string::npos) {
@@ -218,6 +359,9 @@ protected:
 			// 0 for multiplication, 1 for division
 			bool bMultiplicationOrDivision = 0;
 			size_t nSymbolLocation = 0;
+
+			// Check for any unnecessary arithmetic symbols before the run
+			sCalculationString = RemoveUnnecessaryArithmeticSymbols(sCalculationString);
 
 			// Find what's first - division or multiplication
 			if (sCalculationString.find("/", 0) > sCalculationString.find("*", 0)) {
@@ -272,7 +416,7 @@ protected:
 			// c. Check for first number location before division/multiplication sign
 			size_t nNumber1StartLocation = nSymbolLocation - 1;
 			for (; nNumber1StartLocation >= 0; nNumber1StartLocation--) {
-				if (isdigit(sCalculationString[nNumber1StartLocation]) == false && sCalculationString[nNumber1StartLocation] != '.') { // decimal point accepted
+				if (isdigit(sCalculationString[nNumber1StartLocation]) == false && sCalculationString[nNumber1StartLocation] != cDefaultDecimalPoint) { // decimal point accepted
 					nNumber1StartLocation++; // to avoid the non-numerical character
 					break; // Start of number found
 				}
@@ -290,7 +434,7 @@ protected:
 						continue;
 					}
 				}
-				if (isdigit(sCalculationString[nNumber2EndLocation]) == false && sCalculationString[nNumber2EndLocation] != '.') { // decimal point accepted
+				if (isdigit(sCalculationString[nNumber2EndLocation]) == false && sCalculationString[nNumber2EndLocation] != cDefaultDecimalPoint) { // decimal point accepted
 					nNumber2EndLocation--; // to avoid the non-numerical character
 					break; // Start of number found
 				}
@@ -303,7 +447,7 @@ protected:
 			bool bNegativeIsOperator = false;
 			if (nNumber1StartLocation > 0) {
 				if (sCalculationString[nNumber1StartLocation - 1] == '-') {
-					nNumber1StartLocation--;
+					nNumber1StartLocation--; // Include negative
 
 					// Possible negative operator
 					if (nNumber1StartLocation > 0) {
@@ -316,8 +460,8 @@ protected:
 
 
 			// e. Convert strings into numbers with checks
-			std::string sNumber1 = sCalculationString.substr(nNumber1StartLocation, (nSymbolLocation)-nNumber1StartLocation);
-			std::string sNumber2 = sCalculationString.substr(nSymbolLocation + 1, nNumber2EndLocation - (nSymbolLocation));
+			std::string sNumber1 = sCalculationString.substr(nNumber1StartLocation, nSymbolLocation - nNumber1StartLocation);
+			std::string sNumber2 = sCalculationString.substr(nSymbolLocation + 1, nNumber2EndLocation - nSymbolLocation);
 
 			if (isNumber(sNumber1) == false) {
 				nErrorLevel = 3;
@@ -352,21 +496,17 @@ protected:
 				else dFinalNumAns = dNumber1 / dNumber2;
 			}
 
-			// Use ostringstream to keep 16-dp accuracy of long double
-			std::ostringstream ossDivMult;
-			ossDivMult << std::setprecision(std::numeric_limits<long double>::max_digits10 - 2) << dFinalNumAns;
-
 			// Check for negative operator and if the end number was positive
 			if (dFinalNumAns >= 0 && bNegativeIsOperator == true) {
 				// g. Divide numbers and replace whole division/multiplication operation string with new number and a plus at the beginning to prevent combination of 2 numbers without operator
-				sCalculationString.replace(nNumber1StartLocation, (nNumber2EndLocation + 1) - nNumber1StartLocation, '+' + ossDivMult.str());
+				sCalculationString.replace(nNumber1StartLocation, (nNumber2EndLocation + 1) - nNumber1StartLocation, '+' + FormatValueForAlgorithm(dFinalNumAns));
 			}
 			else {
 				// g. Divide numbers and replace whole division/multiplication operation string with new number
-				sCalculationString.replace(nNumber1StartLocation, (nNumber2EndLocation + 1) - nNumber1StartLocation, ossDivMult.str());
+				sCalculationString.replace(nNumber1StartLocation, (nNumber2EndLocation + 1) - nNumber1StartLocation, FormatValueForAlgorithm(dFinalNumAns));
 			}
 
-			if (bDisplayWorkingOutProcess) std::cout << "--> " << sCalculationString << '\n';
+			if (bDisplayWorkingOutProcess) std::cout << "--> " << FormatStringForDisplay(sCalculationString) << '\n';
 
 			// Check for infinity- if found, return with error level 4
 			if (sCalculationString.find("inf", 0) != std::string::npos) {
@@ -382,6 +522,9 @@ protected:
 
 			// 1 is addition, 0 is subtraction
 			bool bIsAdditionOrSubtraction = true;
+
+			// Check for any unnecessary arithmetic symbols before the run
+			sCalculationString = RemoveUnnecessaryArithmeticSymbols(sCalculationString);
 
 			// a. Find what is first (addition or subtraction)
 			if (sCalculationString.find("+", nSearchLocation) < sCalculationString.find("-", nSearchLocation))
@@ -428,7 +571,7 @@ protected:
 			// c. Check for first number location before add/subtraction sign
 			size_t nNumber1StartLocation = nSymbolLocation - 1;
 			for (; nNumber1StartLocation >= 0; nNumber1StartLocation--) {
-				if (isdigit(sCalculationString[nNumber1StartLocation]) == false && sCalculationString[nNumber1StartLocation] != '.') { // decimal point accepted
+				if (isdigit(sCalculationString[nNumber1StartLocation]) == false && sCalculationString[nNumber1StartLocation] != cDefaultDecimalPoint) { // decimal point accepted
 					nNumber1StartLocation++; // to avoid the non-numerical character
 					break; // Start of number found
 				}
@@ -440,7 +583,7 @@ protected:
 			// d. Check for second number location after add/subtraction sign
 			size_t nNumber2EndLocation = nSymbolLocation + 1;
 			for (; nNumber2EndLocation <= sCalculationString.length() - 1; nNumber2EndLocation++) {
-				if (isdigit(sCalculationString[nNumber2EndLocation]) == false && sCalculationString[nNumber2EndLocation] != '.') { // decimal point accepted
+				if (isdigit(sCalculationString[nNumber2EndLocation]) == false && sCalculationString[nNumber2EndLocation] != cDefaultDecimalPoint) { // decimal point accepted
 					nNumber2EndLocation--; // to avoid the non-numerical character
 					break; // Start of number found
 				}
@@ -485,14 +628,10 @@ protected:
 				dFinalAddSubAns = dNumber1 - dNumber2;
 			}
 
-			// Use ostringstream to keep 16-dp accuracy of long double
-			std::ostringstream ossAddSub;
-			ossAddSub << std::setprecision(std::numeric_limits<long double>::max_digits10 - 2) << dFinalAddSubAns;
-
 			// Replace whole part of calculation string with calculated product
-			sCalculationString.replace(nNumber1StartLocation, (nNumber2EndLocation + 1) - nNumber1StartLocation, ossAddSub.str());
+			sCalculationString.replace(nNumber1StartLocation, (nNumber2EndLocation + 1) - nNumber1StartLocation, FormatValueForAlgorithm(dFinalAddSubAns));
 
-			if (bDisplayWorkingOutProcess) std::cout << "--> " << sCalculationString << '\n';
+			if (bDisplayWorkingOutProcess) std::cout << "--> " << FormatStringForDisplay(sCalculationString) << '\n';
 
 			// Check for infinity- if found, return with error level 4
 			if (sCalculationString.find("inf", 0) != std::string::npos) {
@@ -503,6 +642,9 @@ protected:
 			// Set the search location to 0 - all negative checks are no longer needed and are finished
 			nSearchLocation = 0;
 		}
+
+		// Check for any unnecessary arithmetic symbols after all runs
+		sCalculationString = RemoveUnnecessaryArithmeticSymbols(sCalculationString);
 
 		// Check for infinity- if found, return with error level 4
 		if (sCalculationString.find("inf", 0) != std::string::npos) {
@@ -556,7 +698,7 @@ protected:
 
 			// Display working out if wanted by user and switch
 			if (bDisplayWorkingOutProcess) {
-				std::cout << "Bracket (" << sBracketCalculation << "):\n";
+				std::cout << "Bracket (" << FormatStringForDisplay(sBracketCalculation) << "):\n";
 			}
 
 			long double dBracketResult = 0;
@@ -597,7 +739,7 @@ protected:
 				dBracketResult = std::asinl(dBracketResult);
 				dBracketResult *= dRadToDeg; // Convert final answer from radians to degrees
 				nFirstBracketPos -= 4;
-				if (bDisplayWorkingOutProcess) std::cout << "asin() function calculation result: " << dBracketResult << "\n";
+				if (bDisplayWorkingOutProcess) std::cout << "asin() function calculation result: " << FormatValueForDisplay(dBracketResult) << "\n";
 			}
 			else if (sCalculationString.rfind("acos(", nFirstBracketPos) + 4 == nFirstBracketPos && sCalculationString.rfind("acos(", nFirstBracketPos) != std::string::npos) {
 
@@ -610,40 +752,40 @@ protected:
 				dBracketResult = std::acosl(dBracketResult);
 				dBracketResult *= dRadToDeg;
 				nFirstBracketPos -= 4;
-				if (bDisplayWorkingOutProcess) std::cout << "acos() function calculation result: " << dBracketResult << "\n";
+				if (bDisplayWorkingOutProcess) std::cout << "acos() function calculation result: " << FormatValueForDisplay(dBracketResult) << "\n";
 			}
 			else if (sCalculationString.rfind("atan(", nFirstBracketPos) + 4 == nFirstBracketPos && sCalculationString.rfind("atan(", nFirstBracketPos) != std::string::npos) {
 				dBracketResult = std::atanl(dBracketResult);
 				dBracketResult *= dRadToDeg;
 				nFirstBracketPos -= 4;
-				if (bDisplayWorkingOutProcess) std::cout << "atan() function calculation result: " << dBracketResult << "\n";
+				if (bDisplayWorkingOutProcess) std::cout << "atan() function calculation result: " << FormatValueForDisplay(dBracketResult) << "\n";
 			}
 			else if (sCalculationString.rfind("sin(", nFirstBracketPos) + 3 == nFirstBracketPos && sCalculationString.rfind("sin(", nFirstBracketPos) != std::string::npos) {
 				dBracketResult = std::sinl(dBracketResult * dDegToRad); // Formula for converting degrees to radians: Deg * (Pi / 180) (std::sinl only accepts radians)
 				nFirstBracketPos -= 3;
-				if (bDisplayWorkingOutProcess) std::cout << "sin() function calculation result: " << dBracketResult << "\n";
+				if (bDisplayWorkingOutProcess) std::cout << "sin() function calculation result: " << FormatValueForDisplay(dBracketResult) << "\n";
 			}
 			else if (sCalculationString.rfind("cos(", nFirstBracketPos) + 3 == nFirstBracketPos && sCalculationString.rfind("cos(", nFirstBracketPos) != std::string::npos) {
 				dBracketResult = std::cosl(dBracketResult * dDegToRad);
 				nFirstBracketPos -= 3;
-				if (bDisplayWorkingOutProcess) std::cout << "cos() function calculation result: " << dBracketResult << "\n";
+				if (bDisplayWorkingOutProcess) std::cout << "cos() function calculation result: " << FormatValueForDisplay(dBracketResult) << "\n";
 			}
 			else if (sCalculationString.rfind("tan(", nFirstBracketPos) + 3 == nFirstBracketPos && sCalculationString.rfind("tan(", nFirstBracketPos) != std::string::npos) {
 				dBracketResult = std::tanl(dBracketResult * dDegToRad);
 				nFirstBracketPos -= 3;
-				if (bDisplayWorkingOutProcess) std::cout << "tan() function calculation result: " << dBracketResult << "\n";
+				if (bDisplayWorkingOutProcess) std::cout << "tan() function calculation result: " << FormatValueForDisplay(dBracketResult) << "\n";
 			}
 			else if (sCalculationString.rfind("sqrt(", nFirstBracketPos) + 4 == nFirstBracketPos && sCalculationString.rfind("sqrt(", nFirstBracketPos) != std::string::npos) {
 				if (bDisplayWorkingOutProcess) std::cout << "Square Root of " << dBracketResult << " calculation result: ";
 				dBracketResult = std::sqrtl(dBracketResult);
 				nFirstBracketPos -= 4;
-				if (bDisplayWorkingOutProcess) std::cout << dBracketResult << "\n";
+				if (bDisplayWorkingOutProcess) std::cout << FormatValueForDisplay(dBracketResult) << "\n";
 			}
 			else if (sCalculationString.rfind("cbrt(", nFirstBracketPos) + 4 == nFirstBracketPos && sCalculationString.rfind("cbrt(", nFirstBracketPos) != std::string::npos) {
 				if (bDisplayWorkingOutProcess) std::cout << "Cube Root of " << dBracketResult << " calculation result: ";
 				dBracketResult = std::cbrtl(dBracketResult);
 				nFirstBracketPos -= 4;
-				if (bDisplayWorkingOutProcess) std::cout << dBracketResult << "\n";
+				if (bDisplayWorkingOutProcess) std::cout << FormatValueForDisplay(dBracketResult) << "\n";
 			}
 
 			if (nLastBracketPos < sCalculationString.length() - 2) 
@@ -671,7 +813,7 @@ protected:
 								continue;
 							}
 						}
-						if (isdigit(sCalculationString[nNumber2EndLocation]) == false && sCalculationString[nNumber2EndLocation] != '.') { // decimal point accepted
+						if (isdigit(sCalculationString[nNumber2EndLocation]) == false && sCalculationString[nNumber2EndLocation] != cDefaultDecimalPoint) { // decimal point accepted
 							nNumber2EndLocation--; // to avoid the non-numerical character
 							break; // Start of number found
 						}
@@ -700,7 +842,7 @@ protected:
 					// Calculate
 					dBracketResult = std::powl(dBracketResult, dNumber2);
 					
-					if (bDisplayWorkingOutProcess) std::cout << dBracketResult << ". This answer will be substituted.\n";
+					if (bDisplayWorkingOutProcess) std::cout << FormatValueForDisplay(dBracketResult) << ". This answer will be substituted.\n";
 
 					// Set the final bracket to the end number location to set that for replacement too
 					nLastBracketPos = nNumber2EndLocation;
@@ -716,11 +858,7 @@ protected:
 			if (nFirstBracketPos > 0) {
 				if (std::isdigit(sCalculationString[nFirstBracketPos - 1]) || sCalculationString[nFirstBracketPos - 1] == ')') 
 				{
-					// Use ostringstream to keep 16-dp accuracy of long double
-					std::ostringstream ossDivMult;
-					ossDivMult << std::setprecision(std::numeric_limits<long double>::max_digits10 - 2) << dBracketResult;
-
-					sFinalBracketProduct = "*" + ossDivMult.str();
+					sFinalBracketProduct = "*" + FormatValueForAlgorithm(dBracketResult);
 					bSpecialFormatting = true;
 				}
 			}
@@ -729,22 +867,14 @@ protected:
 			if (nLastBracketPos < sCalculationString.length() - 1) {
 				if (std::isdigit(sCalculationString[nLastBracketPos + 1]) || sCalculationString[nLastBracketPos + 1] == '(') 
 				{
-					// Use ostringstream to keep 16-dp accuracy of long double
-					std::ostringstream ossDivMult;
-					ossDivMult << std::setprecision(std::numeric_limits<long double>::max_digits10 - 2) << dBracketResult;
-
-					sFinalBracketProduct = ossDivMult.str() + "*";
+					sFinalBracketProduct = FormatValueForAlgorithm(dBracketResult) + "*";
 					bSpecialFormatting = true;
 				}
 			}
 
 			if (!bSpecialFormatting) 
 			{
-				// Use ostringstream to keep 16-dp accuracy of long double
-				std::ostringstream ossDivMult;
-				ossDivMult << std::setprecision(std::numeric_limits<long double>::max_digits10 - 2) << dBracketResult; // -2 and not -1 because it allows for rounding final answer to last decimal place if recurring
-
-				sFinalBracketProduct = ossDivMult.str();
+				sFinalBracketProduct = FormatValueForAlgorithm(dBracketResult);
 			}
 
 			// 4. Change the bracket part of calculation string into result
@@ -772,9 +902,6 @@ protected:
 			The first two get consolidated to a minus symbol, and the last two get consolidated
 			to a plus symbol.
 		*/
-
-		// Display indication if working out process enabled
-		if (bDisplayWorkingOutProcess) std::cout << "Removing unnecessary arithmetic symbols...\n";
 
 		// Loop check until all processes finished and nothing else found
 		bool bFirstNpos = false, bSecondNpos = false, bThirdNpos = false, bFourthNpos = false;
@@ -819,20 +946,19 @@ protected:
 			sCalculationString.erase(0, 1);
 		}
 
-		// Display final result if working out process output enabled
-		if (bDisplayWorkingOutProcess) std::cout << "New calculation: " << sCalculationString << "\n\n";
-
 		// Return
 		return sCalculationString;
 	}
 
-	// RemoveSpaces - Remove spaces from mathematical expression.
-	//                Required in case user uses spaces, as spaces will cause unintended syntax errors.
-	// Arguments: sCalculationString - The calculation string to remove space characters from.
+	// RemoveAllFormatting - Remove spaces/thousands separators from mathematical expression.
+	//                     - Required in case user uses spaces/thousands separators, as spaces/thousands separators will cause unintended syntax errors.
+	// Arguments: sCalculationString - The calculation string to remove space/thousands separator characters from.
 	// Return values: Modified string
 	//
-	std::string RemoveSpaces(std::string sCalculationString) 
+	std::string RemoveAllFormatting(std::string sCalculationString) 
 	{
+
+		// Remove spaces
 		while (true) {
 			size_t nSpaceLocation = sCalculationString.find(' ', 0);
 
@@ -841,6 +967,31 @@ protected:
 
 			// Erase/remove the space from the string
 			sCalculationString.erase(nSpaceLocation, 1);
+		}
+
+		// Remove thousands separator
+		while (true) {
+			size_t nSeparatorLocation = sCalculationString.find(cThousandsSeparator, 0);
+
+			// No thousands separator found; exit
+			if (nSeparatorLocation == std::string::npos) break;
+
+			// Erase/remove the thousands separator from the string
+			sCalculationString.erase(nSeparatorLocation, 1);
+		}
+
+		// Change decimal places to default
+		while (true) {
+			// Change the last decimal point to default notation
+			size_t nDecimalPointPos = sCalculationString.find_last_of(cEuropeanDecimalPoint);
+
+			// Don't do anything when not found
+			if (nDecimalPointPos == std::string::npos) {
+				break;
+			}
+
+			// Erase/remove the decimal point from the string
+			sCalculationString.replace(nDecimalPointPos, 1, std::string(1, cDefaultDecimalPoint));
 		}
 
 		return sCalculationString;
@@ -856,14 +1007,22 @@ public:
 		nErrorLevel = 0;
 		bDisplayWorkingOutProcess = false;
 
-		VerbosityDisplay("CalculationAlgorithm Object Created.\n");
+		// Set notation
+		UseEuropeanNotation(false);
+
+		static int nStaticID = 10000;
+		// Wrap-around to prevent overflow
+		if (nStaticID >= std::numeric_limits<int>::max() - 1) nStaticID = 10000;
+		nObjectID = ++nStaticID;
+
+		VerbosityDisplay("CalculationAlgorithm Object Created.\n", nObjectID);
 
 		return;
 	}
 
 	// CalculationAlgorithm Destructor
 	~CalculationAlgorithm() {
-		VerbosityDisplay("CalculationAlgorithm Object Destroyed.\n");
+		VerbosityDisplay("CalculationAlgorithm Object Destroyed.\n", nObjectID);
 
 		return;
 	}
@@ -915,10 +1074,10 @@ public:
 	// SafeCalculate - Calculates and finds the product of a calculation string provided by the user,
 	//                 which utilises all features contained in the calculation algorithm to prepare
 	//                 the calculation string for the calculation.
-	// Arguments: sCalculationString - The string to find the procust of/calculate.
+	// Arguments: sCalculationString - The string to find the product of/calculate.
 	// Return values: The calculated answer in long double-grade precision.
 	// 
-	// NOTE: This function returns 0.0 if any errors occur.
+	// NOTE: This function returns 0.0 if any errors occur, and sets the error level accordingly.
 	//
 	long double SafeCalculate(std::string sCalculationString) {
 
@@ -931,8 +1090,8 @@ public:
 			sCalculationString[i] = std::tolower(sCalculationString[i]);
 		}
 
-		// Secondly, remove all spaces to make calculation string compatible with everything else
-		sCalculationString = RemoveSpaces(sCalculationString);
+		// Secondly, remove all user formatting to make calculation string compatible with all algorithm operations
+		sCalculationString = RemoveAllFormatting(sCalculationString);
 
 		// Check for any errors
 		if (nErrorLevel > 0) return 0.0;
@@ -943,8 +1102,14 @@ public:
 		// Check for any errors
 		if (nErrorLevel > 0) return 0.0;
 
+		// Display indication if working out process enabled
+		if (bDisplayWorkingOutProcess) std::cout << "Removing unnecessary arithmetic symbols...\n";
+
 		// Fourthly, check for any extra plus/minus pairs and convert them to their necessary +/-
 		sCalculationString = RemoveUnnecessaryArithmeticSymbols(sCalculationString);
+
+		// Display final result if working out process output enabled
+		if (bDisplayWorkingOutProcess) std::cout << "New calculation: " << FormatStringForDisplay(sCalculationString) << "\n\n";
 
 		// Check for any errors
 		if (nErrorLevel > 0) return 0.0;
@@ -957,5 +1122,28 @@ public:
 		else dLastAns = dFinalResult; // For (Ans) user-space variable
 
 		return dFinalResult;
+	}
+
+	// UseEuropeanNotation - When the toggle value is TRUE, allow the use of European Number Notation, with '.' being set as the thousands separator, and ',' being the decimal point.
+	//                     - When set to FALSE though, the notation resets to default, with ',' being set as the thousands separator, and '.' being the decimal point.
+	// Arguments - bToggleValue: The value for setting the notaton. Values are explained in the description above.
+	// Return values: TRUE or 1 for success, FALSE or 0 for fail. If FALSE/0 is returned, a bad value has been passed.
+	//
+	bool UseEuropeanNotation(bool bToggleValue) {
+		switch (bToggleValue) {
+		case true:
+			cDecimalPoint = cEuropeanDecimalPoint;
+			cThousandsSeparator = cEuropeanThousandsSeparator;
+			break;
+		case false:
+			cDecimalPoint = cDefaultDecimalPoint;
+			cThousandsSeparator = cDefaultThousandsSeparator;
+			break;
+		default:
+			VerbosityDisplay("In CalculationAlgorithm::UseEuropeanNotation(): ERROR - Unknown value recieved from bToggleValue, therefore setting notation failed. Not true/false (1/0).\n", nObjectID);
+			return false;
+		}
+
+		return true;
 	}
 };

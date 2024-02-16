@@ -1,15 +1,6 @@
-
-// DEPENDANCIES
-void DirectionsDisplay(std::string);
-void VerbosityDisplay(std::string);
-void CentreColouredText(std::string, short int);
-std::string CentreText(std::string);
-void cls();
-void colour(std::string, std::string);
-void colourTitle();
-void colourHighlight();
-std::string wordWrap(std::string, long long int, long long int);
-void SetCursorPosition(int, int);
+//
+// ScreenNavigateEngine.cpp - Responsible for handling the Screen Navigate Engine, and contains its class.
+//
 
 extern ConfigFileSystem ConfigObjMain;
 
@@ -23,14 +14,22 @@ protected:
 	// Directions text to forward to DirectionsDisplay()
 	std::string sDirectionsText = "Press the 'A' key or left arrow key to move left.\nPress the 'D' key or right arrow key to move right.\nPress ESC to exit.";
 
+	// Object ID
+	int nObjectID;
+
 public:
 
 	int nSizeOfScreens = 0;
 	std::string* sScreens {};
 
 	ScreenNavigateEngine() {
+		static int nStaticID = 10000;
+		// Wrap-around to prevent overflow
+		if (nStaticID >= std::numeric_limits<int>::max() - 1) nStaticID = 10000;
+		nObjectID = ++nStaticID;
+
 		// Display verbosity message if corresponding boolean allows it
-		VerbosityDisplay("New ScreenNavigateEngine Object Created.\n");
+		VerbosityDisplay("New ScreenNavigateEngine Object Created.\n", nObjectID);
 		// Set values to default
 		nSizeOfScreens = 0;
 		sDirectionsText = "Press the 'A' key or left arrow key to move left.\nPress the 'D' key or right arrow key to move right.\nPress ESC to exit.";
@@ -38,7 +37,7 @@ public:
 
 	~ScreenNavigateEngine() {
 		// Display destructor verbose message
-		VerbosityDisplay("ScreenNavigateEngine Object has been destroyed.\n");
+		VerbosityDisplay("ScreenNavigateEngine Object has been destroyed.\n", nObjectID);
 	}
 
 	// SetDirectionsText - Sets the direction text to a custom text, and replaces the default text.

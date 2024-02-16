@@ -1,4 +1,6 @@
-void VerbosityDisplay(std::string);
+//
+// RGBColourPresetSystem.cpp - Responsible for managing the RGB Colour Preset data structure and class + system.
+//
 
 extern bool bAnsiVTSequences;
 
@@ -34,4 +36,34 @@ public:
 		}
 		else return false;
 	}
+
+	// ResetIfNotSetByUser - Resets the RGB preset if it wasn't set by the user already. 
+	//                     - This is usually for changing the preset from ANSI to WIN32 and vice versa if it's already default, so that it works properly in the current configuration.
+	// Arguments: None
+	// Return Values: None
+	//
+	void ResetIfNotSetByUser() {
+		if (bSetByUser == false) {
+			// Initialise values to default
+			sColourPresetForeground = LWHT;
+			sColourPresetBackground = BLK;
+			sPresetName = "EMPTY_PRESET";
+
+			return;
+		}
+	}
+
+	// ResetPreset - Resets this RGB colour preset to the default values.
+	// Arguments: None
+	// Return Values: None
+	void ResetPreset() {
+		// Reset to default values
+		std::string sColourPresetForeground = LWHT;
+		std::string sColourPresetBackground = BLK;
+		std::string sPresetName = "EMPTY_PRESET";
+		bool bSetByUser = false;
+
+		return;
+	}
+
 };

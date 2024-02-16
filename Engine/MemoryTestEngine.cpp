@@ -1,10 +1,9 @@
+//
+// MemoryTestEngine.cpp - Responsible for the Memory Test Engine and its class, used by the MemTest command.
+//
+
 #include <vector>
 #include <Windows.h>
-
-long double RandNum(long double, long double);
-std::string wordWrap(std::string, long long int, long long int);
-void UserErrorDisplay(std::string);
-void VerbosityDisplay(std::string);
 
 
 // MemoryTestEngine - Engine containing components for memory testing and stressing.
@@ -51,10 +50,13 @@ private:
 	// Number of current errors found in memory on current pass (Linear Searches proprietary)
 	uint64_t nNumOfCurrentCheckErrors = 0;
 
+	// Object ID
+	int nObjectID;
+
 	
 	// BinarySearch - A custom multithreaded binary search algorithm with little optimisation (focused on memory stress, not searching specifically)
 	//              - Binary search requires a sorted list, which is how the memory container is initialised.
-	//              - This custom algorithm looks only at the memory container, and does not accept a memory pointer argument.
+	//              - This custom algorithm looks only at the memory container, and does not accept a memory container pointer argument.
 	// Arguments: nSearchNum - The value to search for.
 	//            bMultiThreaded - Use multithreading or not.
 	//            nInitialisationThreadNumber - Thread number out of total thread count, which indicates the part of the array to search through for the thread.
@@ -70,7 +72,7 @@ private:
 
 		if (bMultiThreaded == true && (nInitialisationThreadNumber < 0 || nInitialisationThreadNumber > nNumOfThreads - 1)) {
 			nErrorLevel = 3;
-			VerbosityDisplay("In MemoryTestEngine::BinarySearch(): ERROR - Bad argument to nInitialisationThreadNumber parameter.\n");
+			VerbosityDisplay("In MemoryTestEngine::BinarySearch(): ERROR - Bad argument to nInitialisationThreadNumber parameter.\n", nObjectID);
 			vThreadCompletionIndicator[nInitialisationThreadNumber] = true;
 			return;
 		}
@@ -283,7 +285,7 @@ protected:
 
 		if (bMultiThreaded == true && (nInitialisationThreadNumber < 0 || nInitialisationThreadNumber > nNumOfThreads - 1)) {
 			nErrorLevel = 3;
-			VerbosityDisplay("In MemoryTestEngine::PerformLinearSearchOnMemoryThread(): ERROR - Bad argument to nInitialisationThreadNumber parameter.\n");
+			VerbosityDisplay("In MemoryTestEngine::PerformLinearSearchOnMemoryThread(): ERROR - Bad argument to nInitialisationThreadNumber parameter.\n", nObjectID);
 			vThreadCompletionIndicator[nInitialisationThreadNumber] = true;
 			return;
 		}
@@ -328,7 +330,7 @@ protected:
 
 		if (bMultiThreaded == true && (nInitialisationThreadNumber < 0 || nInitialisationThreadNumber > nNumOfThreads - 1)) {
 			nErrorLevel = 3;
-			VerbosityDisplay("In MemoryTestEngine::PerformExtendedLinearSearchOnMemoryThread(): ERROR - Bad argument to nInitialisationThreadNumber parameter.\n");
+			VerbosityDisplay("In MemoryTestEngine::PerformExtendedLinearSearchOnMemoryThread(): ERROR - Bad argument to nInitialisationThreadNumber parameter.\n", nObjectID);
 			vThreadCompletionIndicator[nInitialisationThreadNumber] = true;
 			return;
 		}
@@ -419,7 +421,12 @@ public:
 	bool bUseTotalPhysicalCapacity = false;
 
 	MemoryTestEngine() {
-		VerbosityDisplay("MemoryTestEngine Object Created.\n");
+		static int nStaticID = 10000;
+		// Wrap-around to prevent overflow
+		if (nStaticID >= std::numeric_limits<int>::max() - 1) nStaticID = 10000;
+		nObjectID = ++nStaticID;
+
+		VerbosityDisplay("MemoryTestEngine Object Created.\n", nObjectID);
 
 		// Reset error level
 		nErrorLevel = 0;
@@ -438,7 +445,7 @@ public:
 	}
 
 	~MemoryTestEngine() {
-		VerbosityDisplay("MemoryTestEngine Object Destroyed.\n");
+		VerbosityDisplay("MemoryTestEngine Object Destroyed.\n", nObjectID);
 
 		// Clear memory container before exit
 		nMemoryContainer.clear();
@@ -457,10 +464,10 @@ public:
 
 		// Initialise memory
 		if (!InitialiseMemoryContainer()) {
-			VerbosityDisplay("ERROR: In MemoryTestEngine::FillMemoryToMaximum() - Memory container failed to initialise.\n" + GetLastErrorInfo() + '\n');
+			VerbosityDisplay("ERROR: In MemoryTestEngine::FillMemoryToMaximum() - Memory container failed to initialise.\n" + GetLastErrorInfo() + '\n', nObjectID);
 
 			colour(RED, ConfigObjMain.sColourGlobalBack);
-			UserErrorDisplay("ERROR: Failed to initialise memory.");
+			UserErrorDisplay("ERROR: Failed to initialise memory.\n", nObjectID);
 			Exiting();
 
 			return false; // Failed to initialise
@@ -514,10 +521,10 @@ public:
 
 		// Initialise memory
 		if (!InitialiseMemoryContainer()) {
-			VerbosityDisplay("ERROR: In MemoryTestEngine::PerformBinarySearchOnMemory() - Memory container failed to initialise.\n" + GetLastErrorInfo() + '\n');
+			VerbosityDisplay("ERROR: In MemoryTestEngine::PerformBinarySearchOnMemory() - Memory container failed to initialise.\n" + GetLastErrorInfo() + '\n', nObjectID);
 
 			colour(RED, ConfigObjMain.sColourGlobalBack);
-			UserErrorDisplay("ERROR: Failed to initialise memory.");
+			UserErrorDisplay("ERROR: Failed to initialise memory.\n", nObjectID);
 			Exiting();
 
 			return false; // Failed to initialise
@@ -636,9 +643,9 @@ public:
 				nErrorLevel = 4;
 
 				// Notify user of memory error
-				VerbosityDisplay("In MemoryTestEngine::PerformBinarySearchOnMemory() - Memory error has been detected.\n");
+				VerbosityDisplay("In MemoryTestEngine::PerformBinarySearchOnMemory() - Memory error has been detected.\n", nObjectID);
 				colour(RED, ConfigObjMain.sColourGlobalBack);
-				UserErrorDisplay("A memory error has been detected during the binary search.\nStopping memory test...\n");
+				UserErrorDisplay("A memory error has been detected during the binary search.\nStopping memory test...\n", nObjectID);
 				colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
 
 				// Uninitialise memory
@@ -688,10 +695,10 @@ public:
 
 		// Initialise memory
 		if (!InitialiseMemoryContainer()) {
-			VerbosityDisplay("ERROR: In MemoryTestEngine::PerformLinearSearchOnMemory() - Memory container failed to initialise.\n" + GetLastErrorInfo() + '\n');
+			VerbosityDisplay("ERROR: In MemoryTestEngine::PerformLinearSearchOnMemory() - Memory container failed to initialise.\n" + GetLastErrorInfo() + '\n', nObjectID);
 
 			colour(RED, ConfigObjMain.sColourGlobalBack);
-			UserErrorDisplay("ERROR: Failed to initialise memory.");
+			UserErrorDisplay("ERROR: Failed to initialise memory.\n", nObjectID);
 			Exiting();
 
 			return false; // Failed to initialise
@@ -759,8 +766,16 @@ public:
 
 				std::cout << "Progress: ";
 				colour(LCYN, ConfigObjMain.sColourGlobalBack);
-				std::cout << ((nCurrentProgressCount * 100) / nContainerSize) << "%\nNumber of errors found: " << nNumOfCurrentCheckErrors << "\033[1A\r";
+				std::cout << ((nCurrentProgressCount * 100) / nContainerSize) << "%\nNumber of errors found: " << nNumOfCurrentCheckErrors;
 				colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
+
+				// Move back to the top
+				// Get current cursor position
+				GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbiMemTest);
+				// Move 1 up
+				csbiMemTest.dwCursorPosition.Y -= 1;
+				csbiMemTest.dwCursorPosition.X = 0;
+				SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), csbiMemTest.dwCursorPosition);
 
 				// CPU optimisation
 				std::this_thread::sleep_for(std::chrono::nanoseconds(1));
@@ -828,7 +843,7 @@ public:
 		if (nErrorLevel == 3)
 		{
 			// Notify user of memory error
-			VerbosityDisplay("In MemoryTestEngine::PerformLinearSearchOnMemory() - Memory error(s) have been detected.\n");
+			VerbosityDisplay("In MemoryTestEngine::PerformLinearSearchOnMemory() - Memory error(s) have been detected.\n", nObjectID);
 			// Failed result
 			colour(RED, ConfigObjMain.sColourGlobalBack);
 			std::cout << wordWrap("Result: Failed (" + std::to_string(nNumOfErrorsFound) + " total errors).");
@@ -876,13 +891,14 @@ public:
 	bool PerformExtendedLinearSearchOnMemory(uint64_t nNumOfPasses, bool bMultiThreaded)
 	{
 		unsigned int nThreadCount = nNumOfThreads;
+		CONSOLE_SCREEN_BUFFER_INFO csbiMemTest{};
 
 		// Initialise memory
 		if (!InitialiseMemoryContainer()) {
-			VerbosityDisplay("ERROR: In MemoryTestEngine::PerformExtendedLinearSearchOnMemory() - Memory container failed to initialise.\n" + GetLastErrorInfo() + '\n');
+			VerbosityDisplay("ERROR: In MemoryTestEngine::PerformExtendedLinearSearchOnMemory() - Memory container failed to initialise.\n" + GetLastErrorInfo() + '\n', nObjectID);
 
 			colour(RED, ConfigObjMain.sColourGlobalBack);
-			UserErrorDisplay("ERROR: Failed to initialise memory.");
+			UserErrorDisplay("ERROR: Failed to initialise memory.\n", nObjectID);
 			Exiting();
 
 			return false; // Failed to initialise
@@ -949,8 +965,16 @@ public:
 
 				std::cout << "Progress: ";
 				colour(LCYN, ConfigObjMain.sColourGlobalBack);
-				std::cout << ((nCurrentProgressCount * 100) / nContainerSize) << "%\nNumber of errors found: " << nNumOfCurrentCheckErrors << "\033[1A\r";
+				std::cout << ((nCurrentProgressCount * 100) / nContainerSize) << "%\nNumber of errors found: " << nNumOfCurrentCheckErrors;
 				colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
+
+				// Move back to the top
+				// Get current cursor position
+				GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbiMemTest);
+				// Move 1 up
+				csbiMemTest.dwCursorPosition.Y -= 1;
+				csbiMemTest.dwCursorPosition.X = 0;
+				SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), csbiMemTest.dwCursorPosition);
 
 				// CPU optimisation
 				std::this_thread::sleep_for(std::chrono::nanoseconds(1));
@@ -1018,7 +1042,7 @@ public:
 		if (nErrorLevel == 3)
 		{
 			// Notify user of memory error
-			VerbosityDisplay("In MemoryTestEngine::PerformExtendedLinearSearchOnMemory() - Memory error(s) have been detected.\n");
+			VerbosityDisplay("In MemoryTestEngine::PerformExtendedLinearSearchOnMemory() - Memory error(s) have been detected.\n", nObjectID);
 			// Failed result
 			colour(RED, ConfigObjMain.sColourGlobalBack);
 			std::cout << wordWrap("Result: Failed (" + std::to_string(nNumOfErrorsFound) + " total errors).");

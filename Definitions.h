@@ -1,7 +1,7 @@
 #pragma once
 
 // ZeeTerminal Source Code Version
-constexpr const char* ZT_VERSION = "0.4.3";
+constexpr const char* ZT_VERSION = "0.5.0";
 
 // Array size for all argument arrays
 constexpr int nArgArraySize = 128;
@@ -109,5 +109,63 @@ std::string NOSTRIKE_STR = "\x1b[29m";
 	#define _SILENCE_CXX17_CODECVT_HEADER_DEPRECATION_WARNING
 #endif // !_SILENCE_CXX17_CODECVT_HEADER_DEPRECATION_WARNING
 
+
+// Define necessary Windows typedefs before functions that need it for their arguments
+typedef unsigned long DWORD;
+typedef void* LPVOID;
+
+
+// All common platform function definitions - done to prevent the need for defining them in every file
+//
 // Define wordWrap function with default arguments
 std::string wordWrap(std::string, long long int = -1, long long int = 0);
+//
+// The rest \|/
+//
+inline void SetCursorAttributes();
+inline void colour(std::string, std::string);
+inline void colourHighlight();
+inline void colourTitle();
+inline void colourSubheading();
+inline void sleep(long long int);
+long double RandNum(long double max, long double min);
+bool LogWindowsEvent(std::vector<std::string>, DWORD, LPVOID);
+void OutputBoxWithText(std::string sText, std::string, std::string, std::string, std::string);
+std::string ws2s(const std::wstring& wstr);
+std::wstring s2ws(const std::string& str);
+std::string BoolToString(const bool bValue);
+bool isNumberld(const std::string sNumberTest);
+bool isNumberll(const std::string sNumberTest);
+bool isNumberl(const std::string sNumberTest);
+bool isNumberi(const std::string sNumberTest, bool bSetErrorsAsVerbose = true);
+bool isNumberull(const std::string sNumberTest);
+bool isNumberul(const std::string sNumberTest);
+void ClearKeyboardBuffer();
+inline void SetCursorPosition(int x, int y);
+void DirectionsDisplay(std::string sPrompt);
+inline void VerbosityDisplay(std::string sPrompt, int nObjectID = 10000, bool bForceDontDisplayMessage = false, bool bForceDontLog = false);
+inline void UserErrorDisplay(std::string sError, int nObjectID = 10000);
+long double NumInputld(std::string sPrompt);
+long long int NumInputll(std::string sPrompt);
+long int NumInputl(std::string sPrompt);
+int NumInputi(std::string sPrompt);
+uint64_t PositiveNumInputull(std::string sPrompt);
+unsigned long int PositiveNumInputul(std::string sPrompt);
+std::string StrInput(std::string sPrompt);
+bool YesNoInput(std::string sPrompt);
+bool SetWindowTitle(std::string sTitle);
+void cls();
+void RandomColourOutput(std::string sText);
+void CentreColouredText(std::string sText, short int nTypeOfText);
+std::string CentreText(std::string sText);
+void slowcharCentredFn(bool bNewLine, std::string sText);
+void slowcolourfn(std::string nColourFore, std::string nColourBack, std::string sSlowchar);
+void slowcharfn(bool nline, std::string sSlowchar);
+void SlowCharColourful(std::string sText, bool bIncludeBackground);
+inline void Exiting();
+inline void ResetColour();
+bool EnableVTMode();
+bool EnableShutdownPrivileges();
+bool CheckIfCursorExceedScreenBufferHeight();
+void ColourTypeSwitch();
+void ProgramInitialisation();
