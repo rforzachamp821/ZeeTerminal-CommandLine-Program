@@ -90,7 +90,7 @@ public:
 		std::wstring wsFilePath;
 		bool bSuccess = true;
 		bool bRepeatActivated = false;
-		bool bUserCursorVisibilitySetting = ConfigObjMain.bShowCursor;
+		bool bUserCursorVisibilitySetting = true;
 
 		std::cout << '\n';
 
@@ -183,8 +183,7 @@ public:
 					std::cout << wordWrap("Press space or 'p' to pause/unpause, 'r' to activate repeating media file, and ESC or 'e' to exit.\nPress the left arrow key to go backwards, and the right arrow key to fast forward.\n\n\n\n");
 				
 				// Turn off cursor visibility, as it would cause flickering when outputting media time
-				ConfigObjMain.bShowCursor = false;
-				SetCursorAttributes();
+				bUserCursorVisibilitySetting = DisableCursorVisibility();
 
 				while (dCurrentPosition < dDuration) {
 
@@ -395,7 +394,7 @@ public:
 		std::string sFilePath = "";
 		bool bRepeatActivated = false;
 		float fCurrentVol = 1.0;
-		bool bUserCursorVisibilitySetting = ConfigObjMain.bShowCursor;
+		bool bUserCursorVisibilitySetting = true;
 
 		// Check for speechmarks in case of copy from file explorer
 		if (sInputFilePath[0] == '"' && sInputFilePath[sInputFilePath.length() - 1] == '"') {
@@ -479,8 +478,7 @@ public:
 			}
 			
 			// Set cursor visibility to false to prevent flickering when showing media time
-			ConfigObjMain.bShowCursor = false;
-			SetCursorAttributes();
+			bUserCursorVisibilitySetting = DisableCursorVisibility();
 			
 			while (dCurrentPosition < dDuration) {
 

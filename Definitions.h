@@ -119,6 +119,10 @@ typedef void* LPVOID;
 //
 // Define wordWrap function with default arguments
 std::string wordWrap(std::string, long long int = -1, long long int = 0);
+
+// Command Asset Function definition - widely used in other engines, so should be defined here
+bool DisableCursorVisibility();
+
 //
 // The rest \|/
 //

@@ -361,7 +361,7 @@ protected:
 			VerbosityDisplay("In LogFileSystem::CreateLogFile(): ERROR - Unknown error on std::ofstream init to log file. Failed to create log file.\n", nObjectID, false, true);
 
 			// Log to Windows Log Database
-			std::vector<std::string> vsErrorInfo{
+			std::vector<std::string> vsErrorInfo {
 				"In LogFileSystem::CreateLogFile(): ERROR - Unknown error on std::ofstream init to log file. Failed to create log file.",
 				"Context: Failed to create and write to new log file, due to out-stream failure.",
 				"Object ID: " + std::to_string(nObjectID),
@@ -378,7 +378,7 @@ protected:
 		UpdateProgramInfo();
 
 		// 3. Write global log title surrounded with "___", and system/program info
-		CreateLogFileOut << "___" + sLogFileName + "___\n\n" << sSystemInfoString << "\n" << sProgramInfoString << "\n\n__LOG START__\n# FORMAT: <Time> <Time since program execution> <Object ID> <Message Type> <Info/Message>\n# If the Object ID of a line equates to 10000, there is no object associated with that line.\n# Anything higher than that means that the line is associated with an object.\n\n";
+		CreateLogFileOut << "# ___" + sLogFileName + "___\n\n" << sSystemInfoString << "\n" << sProgramInfoString << "\n\n# __LOG START__\n# FORMAT: <Time> <Time since program execution> <Object ID> <Message Type> <Info/Message>\n# If the Object ID of a line equates to 10000, there is no object associated with that line.\n# Anything higher than that means that the line is associated with an object.\n\n";
 
 		// 4. Exit
 		CreateLogFileOut.close();

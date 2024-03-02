@@ -1182,6 +1182,10 @@ void cls() {
 	// Using ANSI escape codes to clear the screen is a lot faster and cross-platform
 	if (bAnsiVTSequences == true) {
 		std::cout << "\033c"; // fully clear the scrollback buffer
+		// As everything was reset, set everything back to normal
+		// Cursor attributes
+		SetCursorAttributes();
+
 		colour(sLastColourFore, sLastColourBack); // Set colours to last set colour
 		std::cout << "\033[2J\033[1;1H";
 		return;
@@ -1576,7 +1580,7 @@ void ColourTypeSwitch()
 		NOBOLD_STR = "\x1b[22m";
 		NOBLINK_STR = "\x1b[25m";
 		NOSTRIKE_STR = "\x1b[29m";
-
+		
 		// Set formatting definitions
 		ULINE_STR = "\x1b[4m";
 		BOLD_STR = "\x1b[1m";
@@ -1586,24 +1590,24 @@ void ColourTypeSwitch()
 
 		// Set colour definitions with RGB ANSI
 		// Standard colours
-		BLK = "0;0;0";
-		RED = "230;0;0";
-		GRN = "22;198;12";
-		YLW = "231;186;0";
-		BLU = "0;0;255";
-		MAG = "136;23;152";
-		CYN = "58;150;221";
-		WHT = "215;215;215";
+		BLK = BLK_ANSI;
+		BLU = BLU_ANSI;
+		GRN = GRN_ANSI;
+		CYN = CYN_ANSI;
+		RED = RED_ANSI;
+		MAG = MAG_ANSI;
+		YLW = YLW_ANSI;
+		WHT = WHT_ANSI;
 
 		// Bright colours
-		GRAY = "118;118;118";
-		LRED = "251;96;127";
-		LGRN = "0;255;0";
-		LYLW = "255;255;0";
-		LBLU = "59;120;255";
-		LMAG = "180;0;158";
-		LCYN = "97;214;214";
-		LWHT = "255;255;255";
+		GRAY = GRAY_ANSI;
+		LBLU = LBLU_ANSI;
+		LGRN = LGRN_ANSI;
+		LCYN = LCYN_ANSI;
+		LRED = LRED_ANSI;
+		LMAG = LMAG_ANSI;
+		LYLW = LYLW_ANSI;
+		LWHT = LWHT_ANSI;
 
 		// Check if previous colours were ANSI RGB codes - if not, reset to default and update
 		if (
@@ -1642,6 +1646,11 @@ void ColourTypeSwitch()
 			ConfigObjMain.sColourSubheadingBack = Win32ToAnsiColours(ConfigObjMain.sColourSubheadingBack);
 			if (ConfigObjMain.sColourSubheadingBack == "") ConfigObjMain.sColourSubheadingBack = MAG;
 		}
+
+		// Check validity of ANSI colours - to prevent errors in colour system
+		if (ValidateColourStringsANSI() == false) {
+			VerbosityDisplay("In ColourTypeSwitch(): ERROR - ValidateColourStringsANSI() exited and reported one or more ConfigObjMain.sColour values being incorrect. One or more of these values have been reset to defaults.");
+		}
 	}
 
 	// Use fallback WIN32 API colour variety
@@ -1661,24 +1670,24 @@ void ColourTypeSwitch()
 
 		// Set colour definitions to support the older Windows Console API
 		// Standard colours
-		BLK = "0";
-		BLU = "1";
-		GRN = "2";
-		CYN = "3";
-		RED = "4";
-		MAG = "5";
-		YLW = "6";
-		WHT = "7";
+		BLK = BLK_WIN32;
+		BLU = BLU_WIN32;
+		GRN = GRN_WIN32;
+		CYN = CYN_WIN32;
+		RED = RED_WIN32;
+		MAG = MAG_WIN32;
+		YLW = YLW_WIN32;
+		WHT = WHT_WIN32;
 
 		// Bright colours
-		GRAY = "8";
-		LBLU = "9";
-		LGRN = "10";
-		LCYN = "11";
-		LRED = "12";
-		LMAG = "13";
-		LYLW = "14";
-		LWHT = "15";
+		GRAY = GRAY_WIN32;
+		LBLU = LBLU_WIN32;
+		LGRN = LGRN_WIN32;
+		LCYN = LCYN_WIN32;
+		LRED = LRED_WIN32;
+		LMAG = LMAG_WIN32;
+		LYLW = LYLW_WIN32;
+		LWHT = LWHT_WIN32;
 
 		// Check if previous colours were WIN32 numbers - if not, reset to default and update
 		if (
@@ -1719,8 +1728,8 @@ void ColourTypeSwitch()
 		}
 
 		// Check validity of WIN32 colours - to prevent errors in colour system
-		if (CheckColourWin32Validity() == false) {
-			VerbosityDisplay("In ColourTypeSwitch(): ERROR - CheckColourWin32Validity() exited and reported one or more ConfigObjMain.sColour values being incorrect. One or more of these values have been reset to defaults.");
+		if (ValidateColourStringsWin32() == false) {
+			VerbosityDisplay("In ColourTypeSwitch(): ERROR - ValidateColourStringsWin32() exited and reported one or more ConfigObjMain.sColour values being incorrect. One or more of these values have been reset to defaults.");
 		}
 	}
 
@@ -1765,7 +1774,7 @@ void ProgramInitialisation()
 		VerbosityDisplay("This terminal has Virtual Terminal Sequences support.\nThis session will run with ANSI RGB colour support.\n");
 	}
 
-	// Clear screen to set screen buffer to black colour
+	// Set colours to global colours that have just been retrieved from config file
 	colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
 
 	// Set console cursor attributes
@@ -1777,8 +1786,13 @@ void ProgramInitialisation()
 	// Set window title to 'ZeeTerminal'
 	SetWindowTitle("ZeeTerminal");
 
-	// Finally, close away all of the initialisation messages with cls()
-	cls();
+	// Finally, close away all of the initialisation messages by clearing the screen (non-ANSI terminals fully clear the whole buffer)
+	if (bAnsiVTSequences) {
+		std::cout << "\033[2J\033[1;1H";
+	}
+	else {
+		cls();
+	}
 
 	return;
 }

@@ -744,6 +744,7 @@ public:
 			}
 
 			uint64_t nContainerSize = nMemoryContainer.size();
+			const bool bUserCursorVisibilitySetting = DisableCursorVisibility();
 			// While waiting for thread execution completion
 			while (!bKeyboardTermination) {
 				unsigned int nNumOfCompletedThreads = 0;
@@ -780,6 +781,10 @@ public:
 				// CPU optimisation
 				std::this_thread::sleep_for(std::chrono::nanoseconds(1));
 			}
+
+			// Reset cursor visibility to user settings
+			ConfigObjMain.bShowCursor = bUserCursorVisibilitySetting;
+			SetCursorAttributes();
 
 			// Kill all threads
 			bKillThreads = true;
@@ -944,6 +949,7 @@ public:
 			uint64_t nContainerSize = nMemoryContainer.size();
 
 			// While waiting for thread execution completion
+			const bool bUserCursorVisibilitySetting = DisableCursorVisibility();
 			while (!bKeyboardTermination) {
 				unsigned int nNumOfCompletedThreads = 0;
 
@@ -979,6 +985,10 @@ public:
 				// CPU optimisation
 				std::this_thread::sleep_for(std::chrono::nanoseconds(1));
 			}
+
+			// Reset cursor visibility to user settings
+			ConfigObjMain.bShowCursor = bUserCursorVisibilitySetting;
+			SetCursorAttributes();
 
 			// Kill all threads
 			bKillThreads = true;

@@ -389,6 +389,7 @@ void AnsiSettings(short int nChoice = 0) {
 
 			// Set new colours
 			ColourTypeSwitch(); // This will write to config file by default
+			SetCursorAttributes(); // Set cursor attributes in case user was using non-ANSI setting - make cursor attributes correct
 			colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
 			cls(); // Set colours to whole screen
 
@@ -419,6 +420,7 @@ void AnsiSettings(short int nChoice = 0) {
 
 			// Set new colours
 			ColourTypeSwitch(); // This will write to config file by default
+			SetCursorAttributes(); // Set cursor attributes in case user was using ANSI setting - make cursor attributes correct
 			colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
 			cls(); // Set to whole screen
 

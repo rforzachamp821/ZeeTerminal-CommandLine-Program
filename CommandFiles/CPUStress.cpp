@@ -43,6 +43,7 @@ void CpuBenchmark(short int nSingleOrMulti, long long int nArgNum = -1) {
 	std::chrono::time_point<std::chrono::steady_clock> start, end;
 	std::chrono::duration<long double> ldElapsedTime; // Save the duration of the operation here
 	long long int nInput = 0;
+	bool bUserCursorVisibilitySetting = true;
 
 
 	// Take input
@@ -87,6 +88,9 @@ void CpuBenchmark(short int nSingleOrMulti, long long int nArgNum = -1) {
 		slowcolourfn(LGRN, ConfigObjMain.sColourGlobalBack, "Single-core benchmark has started...\n");
 		ClearKeyboardBuffer();
 
+		// Disable cursor
+		bUserCursorVisibilitySetting = DisableCursorVisibility();
+
 		start = std::chrono::steady_clock::now();
 
 		std::thread SingleCoreWorker(CpuBenchmarkWorker);
@@ -128,12 +132,6 @@ void CpuBenchmark(short int nSingleOrMulti, long long int nArgNum = -1) {
 			Exiting();
 			colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
 		}
-
-		// Reset values to default
-		bCpuStressKeyboardTermination = false;
-		nReiterationCount = 0;
-		StopCpuStress = false;
-		nCurrentReiterationNum = 0;
 	}
 
 	// Multi Core
@@ -146,6 +144,9 @@ void CpuBenchmark(short int nSingleOrMulti, long long int nArgNum = -1) {
 		std::cout << wordWrap("Starting multi-core benchmark with " + std::to_string(nReiterationCount) + " reiterations, " + std::to_string(nLogicalCoreCount) + " logical cores.\n");
 		slowcolourfn(LGRN, ConfigObjMain.sColourGlobalBack, "Multi-core benchmark has started...\n");
 		ClearKeyboardBuffer();
+
+		// Disable cursor
+		bUserCursorVisibilitySetting = DisableCursorVisibility();
 
 		start = std::chrono::steady_clock::now();
 		for (int i = 0; i < nLogicalCoreCount; i++) {
@@ -198,6 +199,11 @@ void CpuBenchmark(short int nSingleOrMulti, long long int nArgNum = -1) {
 	nReiterationCount = 0;
 	StopCpuStress = false;
 	nCurrentReiterationNum = 0;
+
+	// Reset cursor visibility
+	ConfigObjMain.bShowCursor = bUserCursorVisibilitySetting;
+	SetCursorAttributes();
+
 	return;
 }
 

@@ -523,44 +523,145 @@ std::string AnsiToWin32Colours(std::string sAnsiColour)
 
 // Checks all ConfigObjMain.sColour colours to see if they don't exceed the WIN32 colour limit (8192)
 // Returns TRUE for all correct, FALSE for 1 or more variables incorrect.
-bool CheckColourWin32Validity() {
+bool ValidateColourStringsWin32() {
 	bool bSuccess = true;
 
 	// Check validity of WIN32 values - They may not exceed 8192 (base 10).
 	if (not (isNumberi(ConfigObjMain.sColourGlobal) && std::stoi(ConfigObjMain.sColourGlobal) < 8192)) {
-		ConfigObjMain.sColourGlobal = LWHT;
+		ConfigObjMain.sColourGlobal = LWHT_WIN32;
 		bSuccess = false;
 	}
 	if (not (isNumberi(ConfigObjMain.sColourGlobalBack) && std::stoi(ConfigObjMain.sColourGlobalBack) < 8192)) {
-		ConfigObjMain.sColourGlobalBack = BLK;
+		ConfigObjMain.sColourGlobalBack = BLK_WIN32;
 		bSuccess = false;
 	}
 	if (not (isNumberi(ConfigObjMain.sColourHighlight) && std::stoi(ConfigObjMain.sColourHighlight) < 8192)) {
-		ConfigObjMain.sColourHighlight = LWHT;
+		ConfigObjMain.sColourHighlight = LWHT_WIN32;
 		bSuccess = false;
 	}
 	if (not (isNumberi(ConfigObjMain.sColourHighlightBack) && std::stoi(ConfigObjMain.sColourHighlightBack) < 8192)) {
-		ConfigObjMain.sColourHighlightBack = BLU;
+		ConfigObjMain.sColourHighlightBack = BLU_WIN32;
 		bSuccess = false;
 	}
 	if (not (isNumberi(ConfigObjMain.sColourTitle) && std::stoi(ConfigObjMain.sColourTitle) < 8192)) {
-		ConfigObjMain.sColourTitle = BLK;
+		ConfigObjMain.sColourTitle = BLK_WIN32;
 		bSuccess = false;
 	}
 	if (not (isNumberi(ConfigObjMain.sColourTitleBack) && std::stoi(ConfigObjMain.sColourTitleBack) < 8192)) {
-		ConfigObjMain.sColourTitleBack = LCYN;
+		ConfigObjMain.sColourTitleBack = LCYN_WIN32;
 		bSuccess = false;
 	}
 	if (not (isNumberi(ConfigObjMain.sColourSubheading) && std::stoi(ConfigObjMain.sColourSubheading) < 8192)) {
-		ConfigObjMain.sColourSubheading = LWHT;
+		ConfigObjMain.sColourSubheading = LWHT_WIN32;
 		bSuccess = false;
 	}
 	if (not (isNumberi(ConfigObjMain.sColourSubheadingBack) && std::stoi(ConfigObjMain.sColourSubheadingBack) < 8192)) {
-		ConfigObjMain.sColourSubheadingBack = MAG;
+		ConfigObjMain.sColourSubheadingBack = MAG_WIN32;
 		bSuccess = false;
 	}
 
 	return bSuccess;
+}
+
+// VerifyANSIColourString - Verifies an ANSI colour string with the following rules:
+//                        - 1. It must only contain numbers and semicolons
+//                        - 2. The numbers in the colour string must be less than 256.
+// Parameters: sColourString - The colour string to check.
+// Return Values: TRUE or 1 for a valid colour string, FALSE or 0 for a bad colour string.
+//
+bool VerifyANSIColourString(std::string sColourString)
+{
+	std::size_t nLastSemicolonPlus1 = 0;
+
+	// Check if sColourString contains nothing - if so, it's not valid
+	if (sColourString.empty()) return false;
+
+	for (uint8_t i = 0; i < 3; i++)
+	{
+		// Parse up to first non-number
+		std::string sBuffer = "";
+		for (size_t j = nLastSemicolonPlus1; j < sColourString.length(); j++, nLastSemicolonPlus1 = j + 1) {
+			if (sColourString[j] == ';') {
+				break;
+			}
+			else sBuffer.push_back(sColourString[j]);
+		}
+
+		// Check if buffer is empty - if so, it means that the colour string doesn't have enough colour values to make a colour
+		if (sBuffer == "") {
+			return false;
+		}
+		// Check if buffer is a number
+		if (!isNumberi(sBuffer)) {
+			return false;
+		}
+		// Check if number is below 256 (convert as well)
+		if (std::stoi(sBuffer) > 255) {
+			return false;
+		}
+	}
+
+	// Check if whole string checked - if not, it means that there's unwanted characters that are out of the scope of this algorithm, 
+	// and therefore the colour string is invalid
+	if (nLastSemicolonPlus1 - 1 < sColourString.length()) return false;
+
+	return true;
+}
+
+// Checks all ConfigObjMain.sColour colours to see if they are valid, in the 255;255;255 format.
+// Returns TRUE for all correct, FALSE for 1 or more variables incorrect.
+bool ValidateColourStringsANSI() {
+	bool bSuccess = true;
+
+	// Check validity of ANSI string values
+	if (!VerifyANSIColourString(ConfigObjMain.sColourGlobal)) {
+		ConfigObjMain.sColourGlobal = LWHT_ANSI;
+		bSuccess = false;
+	}
+	if (!VerifyANSIColourString(ConfigObjMain.sColourGlobalBack)) {
+		ConfigObjMain.sColourGlobalBack = BLK_ANSI;
+		bSuccess = false;
+	}
+	if (!VerifyANSIColourString(ConfigObjMain.sColourHighlight)) {
+		ConfigObjMain.sColourHighlight = LWHT_ANSI;
+		bSuccess = false;
+	}
+	if (!VerifyANSIColourString(ConfigObjMain.sColourHighlightBack)) {
+		ConfigObjMain.sColourHighlightBack = BLU_ANSI;
+		bSuccess = false;
+	}
+	if (!VerifyANSIColourString(ConfigObjMain.sColourTitle)) {
+		ConfigObjMain.sColourTitle = BLK_ANSI;
+		bSuccess = false;
+	}
+	if (!VerifyANSIColourString(ConfigObjMain.sColourTitleBack)) {
+		ConfigObjMain.sColourTitleBack = LCYN_ANSI;
+		bSuccess = false;
+	}
+	if (!VerifyANSIColourString(ConfigObjMain.sColourSubheading)) {
+		ConfigObjMain.sColourSubheading = LWHT_ANSI;
+		bSuccess = false;
+	}
+	if (!VerifyANSIColourString(ConfigObjMain.sColourSubheadingBack)) {
+		ConfigObjMain.sColourSubheadingBack = MAG_ANSI;
+		bSuccess = false;
+	}
+
+	return bSuccess;
+}
+
+// Function that hides console cursor and returns value of previous setting to set later.
+// Commonly used for progress bars to prevent cursor flickering
+//
+bool DisableCursorVisibility() {
+	bool bPreviousSetting = ConfigObjMain.bShowCursor;
+
+	// Set to FALSE and write cursor attributes
+	ConfigObjMain.bShowCursor = false;
+	SetCursorAttributes();
+
+	// Return previous setting in case user wants to put back to normal
+	return bPreviousSetting;
 }
 
 // Mission Impossible Theme Song in Beeps

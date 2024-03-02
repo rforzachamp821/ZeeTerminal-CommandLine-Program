@@ -616,12 +616,18 @@ void RGBColourPresets() {
 				ConfigObjMain.sColourGlobal = RGBPreset[nOption - 1].sColourPresetForeground;
 				ConfigObjMain.sColourGlobalBack = RGBPreset[nOption - 1].sColourPresetBackground;
 
-				// Check validity of colours (only works when using WIN32 for now, a parser function for ANSI colours is coming soon)
+				// Check validity of colours
 				if (RGBPreset[nOption - 1].CheckIfAnsiPreset() == false) {
-					if (CheckColourWin32Validity() == false) {
+					if (ValidateColourStringsWin32() == false) {
 						bValidColours = false;
 					}
 				}
+				else if (RGBPreset[nOption - 1].CheckIfAnsiPreset() == true) {
+					if (ValidateColourStringsANSI() == false) {
+						bValidColours = false;
+					}
+				}
+
 			}
 
 			// Set colours
@@ -640,7 +646,13 @@ void RGBColourPresets() {
 			{
 				// Should be safe to change colours as colours have been validated/reset
 				colour(YLW, ConfigObjMain.sColourGlobalBack);
-				std::cout << wordWrap("Warning: This preset contains invalid WIN32 values, so one or all of the colours will be set to default to prevent errors.") << std::endl;
+				if (bAnsiVTSequences) {
+					std::cout << wordWrap("Warning: This preset contains invalid ANSI string values, so one or all of the colours will be set to default to prevent errors.") << std::endl;
+				}
+				else {
+					std::cout << wordWrap("Warning: This preset contains invalid WIN32 values, so one or all of the colours will be set to default to prevent errors.") << std::endl;
+				}
+
 			}
 
 			// Write to config file immediately (for current global colours)
@@ -766,7 +778,7 @@ void help(bool bFromTutorial) {
 		"This is an early alpha build of ZeeTerminal, with an entirely new engine and components.\nThis program is made in C++, with a few very small parts of C." +
 		"\n\nThis program uses the DirectShow API in the MediaPlayer command, which is licensed by Microsoft Corporation. (c) Microsoft Corporation.\n\n" +
 		"This program uses the BASS API in the AudioPlayer command, which is licensed by Un4Seen Developments. (c) Un4Seen Developments.\n\n" +
-		"\n(c) Ryan Zorkot, 2023. ZeeTerminal is licensed under the MIT License. The license and credits can be viewed on Page 4.\n\n"
+		"\n(c) Ryan Zorkot, 2024. ZeeTerminal is licensed under the MIT License. The license and credits can be viewed on Page 4.\n\n"
 		"  _____        _____                   _             _ \n"
 		" |__  /___  __|_   _|__ _ __ _ __ ___ (_)_ __   __ _| |\n"
 		"   / // _ \\/ _ \\| |/ _ \\ '__| '_ \\` _ \\| | '_ \\ / _\\` |\n"
@@ -776,7 +788,7 @@ void help(bool bFromTutorial) {
 
 		"___LICENSE AND CREDITS___\n\n"
 		"Massive thank-you to my dad, Hazem Zorkot, for assisting with this project, including with the logo design, name, high-level component ideas, and lots of heads-up messages along the way.\n\n"
-		"ZeeTerminal is licensed under the MIT License. Below is the license info:\n\nCopyright (c) 2023 Ryan Zorkot\n\n"
+		"ZeeTerminal is licensed under the MIT License. Below is the license info:\n\nCopyright (c) 2024 Ryan Zorkot\n\n"
 		"Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the \"Software\"), to deal"
 		" in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell"
 		" copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:\n"
@@ -2328,6 +2340,7 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 	else if (sCommand == "stopwatch" || sCommand == "16") {
 
 		bool bSkipStartScreen = false;
+		bool bUserCursorVisibilitySetting = true;
 
 		// Arguments interface
 		for (int i = 0; i < nArgArraySize; i++) {
@@ -2361,6 +2374,10 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 		// Start stopwatch
 		std::cout << '\n';
 		std::chrono::duration<long double> elapsedSeconds;
+
+		// Disable cursor visibility
+		bUserCursorVisibilitySetting = DisableCursorVisibility();
+
 		auto start = std::chrono::steady_clock::now();
 
 		while (!_kbhit()) { // exit on keypress
@@ -2386,6 +2403,10 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 		std::cout << " seconds.\n\n";
 
 		ClearKeyboardBuffer();
+		// Reset cursor visibility to user settings
+		ConfigObjMain.bShowCursor = bUserCursorVisibilitySetting;
+		SetCursorAttributes();
+
 		return;
 	}
 
@@ -2497,8 +2518,8 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 
 	// Timer
 	else if (sCommand == "timer" || sCommand == "18") {
-
 		long double dInput = 0;
+		bool bUserCursorVisibilitySetting = true;
 
 		CentreColouredText(" ___TIMER___ ", 1);
 		std::cout << '\n';
@@ -2539,6 +2560,9 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 		colour(LBLU, ConfigObjMain.sColourGlobalBack);
 		std::cout << wordWrap("\nPress any key to exit the timer.\n\n");
 		colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
+
+		// Disable cursor visibility
+		bUserCursorVisibilitySetting = DisableCursorVisibility();
 
 		std::chrono::duration<long double> elapsedTime{};
 		auto start = std::chrono::steady_clock::now();
@@ -2583,6 +2607,10 @@ void Commands(const std::string sCommand, char* cCommandArgs, const std::string 
 		std::cout << CentreText("Timer finished!") << '\n';
 		MessageBeep(MB_OK);
 		colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
+
+		// Reset cursor visibility to user settings
+		ConfigObjMain.bShowCursor = bUserCursorVisibilitySetting;
+		SetCursorAttributes();
 
 		return;
 

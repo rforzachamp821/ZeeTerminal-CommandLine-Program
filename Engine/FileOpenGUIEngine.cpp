@@ -71,7 +71,7 @@ public:
 		IFileOpenDialog* pFileOpen = NULL;
 		IShellItem* pItem = NULL;
 
-		LPWSTR pwszFilePath = NULL;
+		LPWSTR pwszFilePath = (LPWSTR)"";
 
 		// Initialise COM libraries
 		hr = CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
