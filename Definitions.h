@@ -1,7 +1,7 @@
 #pragma once
 
 // ZeeTerminal Source Code Version
-constexpr const char* ZT_VERSION = "0.5.0";
+constexpr const char* ZT_VERSION = "0.5.1";
 
 // Array size for all argument arrays
 constexpr int nArgArraySize = 128;
