@@ -9,7 +9,7 @@
  *     /____\___|\___||_|\___|_|  |_| |_| |_|_|_| |_|\__,_|_|
  * 
  */
-// (c) Ryan Zorkot, 2024. Licensed under MIT.
+// (c) RZVelocity64, 2025. Licensed under MIT.
 //
 
 #include <iostream>
