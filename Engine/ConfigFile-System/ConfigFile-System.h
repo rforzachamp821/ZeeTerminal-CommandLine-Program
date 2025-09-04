@@ -51,7 +51,7 @@ public:
 	bool bUserInputInfoLogging = false;
 
 	// CarDodge Game Settings
-	int nCarDodgeCarTurningSpeed = 2; // chars the car will move by - cannot be more than 10, lower than 1
+	int nCarDodgeCarTurningSpeed = 4; // chars the car will move by - cannot be more than 10, lower than 1
 	int nCarDodgeGameStartupCar = 1; // Value can be from 1 to 6 (number on the menu)
 	std::string sCarDodgeGameplayColourFore = LWHT; // Only affects car colours
 	std::string sCarDodgeGameplayColourBack = BLK; // Only affects game background colour, borders aren't affected

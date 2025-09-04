@@ -1084,6 +1084,7 @@ void LogFileSystemSettings(short int nChoice = 0, short int nChoiceLogging = 0, 
 	}
 }
 
+// CarDodge Game Settings
 void CarDodgeGameSettings(short int nChoiceMain = 0, int nChoiceCarTurnSpeed = 0, int nChoiceStartupCar = 0, int nChoiceForeground = 0, int nChoiceBackground = 0) {
 	OptionSelectEngine oseCarDodgeSettings;
 
@@ -1099,6 +1100,7 @@ void CarDodgeGameSettings(short int nChoiceMain = 0, int nChoiceCarTurnSpeed = 0
 		nChoiceMain = oseCarDodgeSettings.OptionSelect("Please select which setting you want to change relating to the Car Dodge game:", " ___CAR DODGE GAME SETTINGS___ ");
 	}
 
+	// Car Turn Speed Settings
 	if (nChoiceMain == 1) {
 		while (true) {
 			if (nChoiceCarTurnSpeed == 0) {
@@ -1107,7 +1109,7 @@ void CarDodgeGameSettings(short int nChoiceMain = 0, int nChoiceCarTurnSpeed = 0
 				colourSubheading(); // extra info colour is the same as subheading colour
 				std::cout << wordWrap("This speed is a measure of characters moved left/right per keypress, so higher numbers are faster.") << NOULINE_STR;
 				colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
-				std::cout << "\nDefault Speed: 2\nCurrent Speed: " << ConfigObjMain.nCarDodgeCarTurningSpeed << wordWrap("\n\nInput 0 to exit. Turning speed cannot be lower than 1 or higher than 10.") << '\n';
+				std::cout << "\nDefault Speed: 4\nCurrent Speed: " << ConfigObjMain.nCarDodgeCarTurningSpeed << wordWrap("\n\nInput 0 to exit. Turning speed cannot be lower than 1 or higher than 10.") << '\n';
 
 				nChoiceCarTurnSpeed = NumInputi("Please input how fast you want the car to turn: > ");
 			}
