@@ -8,6 +8,7 @@
 #include <fstream>
 #include <sstream>
 #include <iomanip>
+#include <chrono>
 
 // A function to give an interface to modify and load RGB colour presets.
 void RGBColourPresets() {
@@ -877,7 +878,7 @@ void DevTools(short int nToolNum) {
 			if (_kbhit()) {
 				if (_getch() == 27) break;
 			}
-
+			
 			end = std::chrono::high_resolution_clock::now();
 			std::cout << "Time: ";
 			colour(LCYN, ConfigObjMain.sColourGlobalBack);

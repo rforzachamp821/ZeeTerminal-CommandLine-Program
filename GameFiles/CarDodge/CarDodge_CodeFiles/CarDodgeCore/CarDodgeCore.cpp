@@ -8,10 +8,10 @@
 #include "../../../../Core/ZeeTerminalCore.h"
 #include "../../../../Core/ZTFormattingDefinitions.h"
 
-#include "../../RyRyCryptor/RyRyCryptor.h"
+#include "../../../../RyRyCryptor/RyRyCryptor.h"
 #include "../CarInfo/CarInfo.h"
 #include "CarDodgeCore.h"
-#include "../../GameFiles/GameHighScoresSystem/GameHighScoresSystem.h"
+#include "../../../../GameFiles/GameHighScoresSystem/GameHighScoresSystem.h"
 
 CarInfo EnemyCars[128];
 CarInfo UserCar;
@@ -105,7 +105,7 @@ void CarDodgeCore::RenderBorders(std::string sSetBorderColourFore, std::string s
 
 	colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
 	cls(); // Set colours to whole screen, clear for gameplay
-	SetCursorPosition(0, 0); // Ensure that the cursor position is at the top left of terminal
+	SetCursorPosition(0, 0); // Ensure that the cursor position is at the top left of termi`nal
 
 	// Set border colours for CarDodgeMain::UpdatePanelInfo()
 	sBorderColourFore = sSetBorderColourFore;

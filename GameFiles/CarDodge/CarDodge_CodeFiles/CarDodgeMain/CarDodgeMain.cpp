@@ -7,7 +7,7 @@
 #include "../../../../Engine/OptionSelectEngine/OptionSelectEngine.h"
 #include "../CarDodgeCore/CarDodgeCore.h"
 #include "../CarInfo/CarInfo.h"
-#include "../../GameFiles/GameHighScoresSystem/GameHighScoresSystem.h"
+#include "../../../../GameFiles/GameHighScoresSystem/GameHighScoresSystem.h"
 #include <conio.h>
 
 extern short int nSessionConsoleHeight;
