@@ -130,7 +130,7 @@ int main(int argc, char* argv[])
 			std::cout << "___ZeeTerminal Help___\n\n__Syntax__:\nFor running a script: ZeeTerminal.exe <script filepath>\nFor running a singular command: ZeeTerminal.exe -c <command>\n\n"
 				<< "If you would like to run a script OR command where either contains space characters, use quotation marks (\"\").\n --> For example: ZeeTerminal.exe \"C:\\Users\\Public\\A Test Script.txt\"\n\n"
 				<< "__Possible Arguments__:\n  -->  '-h'  OR  '--help'\tDisplays this help message.\n  -->  -c\t\t\tUse this argument to interpret the next string as a command.\n\n"
-				<< "__Examples__:\n -->  ZeeTerminal.exe -c \"echo Hello, World!\"\n -->  ZeeTerminal.exe -c devtools\n -->  ZeeTerminal.exe TestScript.txt\n -->  ZeeTerminal.exe \"Random Directory\\A Test Script.txt\"\n\n";
+				<< "__Examples__:\n -->  ZeeTerminal.exe -c \"echo TestString\"\n -->  ZeeTerminal.exe -c devtools\n -->  ZeeTerminal.exe TestScript.txt\n -->  ZeeTerminal.exe \"Random Directory\\A Test Script.txt\"\n\n";
 
 			// Exit after that - nothing else needs to be run
 			return 0;
