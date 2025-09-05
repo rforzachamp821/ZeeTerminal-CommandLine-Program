@@ -8,10 +8,10 @@
 #include "../../../../Core/ZeeTerminalCore.h"
 #include "../../../../Core/ZTFormattingDefinitions.h"
 
-#include "../../RyRyCryptor/RyRyCryptor.h"
+#include "../../../../RyRyCryptor/RyRyCryptor.h"
 #include "../CarInfo/CarInfo.h"
 #include "CarDodgeCore.h"
-#include "../../GameFiles/GameHighScoresSystem/GameHighScoresSystem.h"
+#include "../../../../GameFiles/GameHighScoresSystem/GameHighScoresSystem.h"
 
 CarInfo EnemyCars[128];
 CarInfo UserCar;
