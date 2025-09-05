@@ -105,7 +105,7 @@ void CarDodgeCore::RenderBorders(std::string sSetBorderColourFore, std::string s
 
 	colour(ConfigObjMain.sColourGlobal, ConfigObjMain.sColourGlobalBack);
 	cls(); // Set colours to whole screen, clear for gameplay
-	SetCursorPosition(0, 0); // Ensure that the cursor position is at the top left of termi`nal
+	SetCursorPosition(0, 0); // Ensure that the cursor position is at the top left of terminal
 
 	// Set border colours for CarDodgeMain::UpdatePanelInfo()
 	sBorderColourFore = sSetBorderColourFore;
