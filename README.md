@@ -21,5 +21,6 @@ TerminalAppGen2 is available here: https://github.com/rforzachamp821/TerminalApp
 TerminalApp Gen 1 is available in the following archive: https://github.com/rforzachamp821/Console-Based_Collection 
 
 **Note:** If you find any bugs or issues, or you want to give feedback, please do so in the 'Issues' tab above. It would be really helpful, thanks!
+**Another note:** This application is recommended to run on a 120x30 character (BxH) sized terminal window.
 
-*ZeeTerminal was made by Ryan Zorkot. (c) 2023 Ryan Zorkot.*
+*ZeeTerminal was made by Rforzachamp821. (c) 2025 Rforzachamp821.*
