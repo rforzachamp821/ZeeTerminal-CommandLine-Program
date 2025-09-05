@@ -125,7 +125,7 @@ int main(int argc, char* argv[])
 			bRunCommandLoopOnce = true; // One command from argument will end the terminal operation
 
 		}
-		else if (sArgv[1] == "ZeeTerminalCore.h" || sArgv[1] == "--help") {
+		else if (sArgv[1] == "-h" || sArgv[1] == "--help") {
 			// Output help message for user
 			std::cout << "___ZeeTerminal Help___\n\n__Syntax__:\nFor running a script: ZeeTerminal.exe <script filepath>\nFor running a singular command: ZeeTerminal.exe -c <command>\n\n"
 				<< "If you would like to run a script OR command where either contains space characters, use quotation marks (\"\").\n --> For example: ZeeTerminal.exe \"C:\\Users\\Public\\A Test Script.txt\"\n\n"
