@@ -264,7 +264,7 @@ void About(bool bFromTutorial) {
 		"This is a public stable release build of ZeeTerminal, with an entirely new engine and components.\nThis program is made in C++, with a few very small parts of C." +
 		"\n\nThis program uses the DirectShow API in the MediaPlayer command, licensed by Microsoft Corp. (c) Microsoft Corp.\n\n" +
 		"This program uses the BASS API in the AudioPlayer command, licensed by Un4Seen Developments. (c) Un4Seen Developments.\n\n" +
-		"This program uses the CarDodge game v0.6.0, accessible in the Game command. CarDodge is licensed under Ryan Zorkot with the MIT License. For more information, visit the archived repo: https://github.com/rforzachamp821/CarDodge\n\n"
+		"This program uses the CarDodge game v0.6.0, accessible in the Game command. CarDodge is licensed under Rforzachamp821 with the MIT License. For more information, visit the archived repo: https://github.com/rforzachamp821/CarDodge\n\n"
 		"\nZeeTerminal is licensed under the MIT License. The license and credits can be viewed on Page 4.\n\n"
 		"  _____        _____                   _             _ \n"
 		" |__  /___  __|_   _|__ _ __ _ __ ___ (_)_ __   __ _| |\n"
@@ -274,8 +274,8 @@ void About(bool bFromTutorial) {
 		"                                                       ",
 
 		"___LICENSE AND CREDITS___\n\n"
-		"Massive thank-you to my dad, Hazem Zorkot, for assisting with this project, including with the logo design, name, high-level component ideas, and lots of heads-up messages along the way.\n\n"
-		"ZeeTerminal is licensed under the MIT License. Below is the license info:\n\nCopyright (c) 2024 Ryan Zorkot\n\n"
+		"Massive thank-you to my dad, Hazem, for assisting with this project, including with the logo design, name, high-level component ideas, and lots of heads-up messages along the way.\n\n"
+		"ZeeTerminal is licensed under the MIT License. Below is the license info:\n\nCopyright (c) 2025 Rforzachamp821\n\n"
 		"Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the \"Software\"), to deal"
 		" in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell"
 		" copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:\n"
